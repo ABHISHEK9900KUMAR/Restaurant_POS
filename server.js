@@ -196,6 +196,17 @@ function getPublicCarts() {
 }
 
 // ─── REST API ─────────────────────────────────────────────────────────────────
+
+// ── PIN Authentication ────────────────────────────────────────────────────────
+app.get('/api/auth', (req, res) => {
+  const { pin, role } = req.query;
+  const adminPin  = process.env.ADMIN_PIN  || '1234';
+  const waiterPin = process.env.WAITER_PIN || '5678';
+  if (role === 'admin'  && pin === adminPin)  return res.json({ success: true });
+  if (role === 'waiter' && pin === waiterPin) return res.json({ success: true });
+  return res.status(401).json({ success: false, error: 'Incorrect PIN' });
+});
+
 app.get('/api/menu', (req, res) => {
   res.json({ success: true, data: MENU });
 });

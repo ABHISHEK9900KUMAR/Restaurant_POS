@@ -684,9 +684,97 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
   -webkit-tap-highlight-color: transparent;
 }
 .theme-btn:hover { background: var(--surface3); }
+
+/* ── PIN Screen ──────────────────────────────────────── */
+#pin-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#pin-screen.hidden { display: none; }
+#pin-screen.fade-out { animation: pinFadeOut 0.35s ease forwards; }
+@keyframes pinFadeOut { to { opacity: 0; transform: scale(1.03); } }
+.pin-box {
+  display: flex; flex-direction: column; align-items: center;
+  width: 100%; max-width: 320px;
+}
+.pin-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 700;
+  color: var(--gold); letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+.pin-role {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-dim); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 36px;
+}
+.pin-dots { display: flex; gap: 16px; margin-bottom: 12px; }
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--border2); background: transparent;
+  transition: all 0.15s ease;
+}
+.pin-dot.filled { background: var(--gold); border-color: var(--gold); }
+.pin-error {
+  font-size: 12px; color: var(--red);
+  height: 18px; margin-bottom: 28px;
+  font-weight: 500; text-align: center;
+}
+@keyframes pinShake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+}
+.pin-dots.shake { animation: pinShake 0.4s ease; }
+.pin-pad {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; width: 100%;
+}
+.pin-key {
+  height: 64px; border-radius: var(--radius);
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 20px; font-weight: 600;
+  cursor: pointer; transition: all 0.12s ease;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.pin-key:active { background: var(--surface3); transform: scale(0.94); }
+.pin-key.backspace { font-size: 18px; color: var(--text-dim); }
+.pin-key.empty { background: transparent; border: none; cursor: default; }
 </style>
 </head>
 <body>
+
+<!-- PIN Lock Screen -->
+<div id="pin-screen">
+  <div class="pin-box">
+    <div class="pin-logo">ZingPOS</div>
+    <div class="pin-role">Waiter</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-pad">
+      <button class="pin-key" data-key="1">1</button>
+      <button class="pin-key" data-key="2">2</button>
+      <button class="pin-key" data-key="3">3</button>
+      <button class="pin-key" data-key="4">4</button>
+      <button class="pin-key" data-key="5">5</button>
+      <button class="pin-key" data-key="6">6</button>
+      <button class="pin-key" data-key="7">7</button>
+      <button class="pin-key" data-key="8">8</button>
+      <button class="pin-key" data-key="9">9</button>
+      <div class="pin-key empty"></div>
+      <button class="pin-key" data-key="0">0</button>
+      <button class="pin-key backspace" id="pinBack">⌫</button>
+    </div>
+  </div>
+</div>
 
 <div id="reconnect-banner">⚡ Reconnecting…</div>
 
@@ -1705,6 +1793,71 @@ applyTranslations();
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('zingpos-theme', next);
     syncIcon();
+  });
+})();
+
+// ── PIN Authentication ────────────────────────────────
+(function() {
+  const screen = document.getElementById('pin-screen');
+  const dots   = document.getElementById('pinDots');
+  const errEl  = document.getElementById('pinError');
+  let entry = '';
+
+  if (sessionStorage.getItem('zingpos-waiter-auth') === '1') {
+    screen.classList.add('hidden');
+    return;
+  }
+
+  function renderDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('pd' + i).classList.toggle('filled', i < entry.length);
+    }
+  }
+
+  async function submitPin() {
+    errEl.textContent = '';
+    try {
+      const res = await fetch('/api/auth?pin=' + entry + '&role=waiter');
+      const data = await res.json();
+      if (data.success) {
+        sessionStorage.setItem('zingpos-waiter-auth', '1');
+        screen.classList.add('fade-out');
+        screen.addEventListener('animationend', () => screen.classList.add('hidden'), { once: true });
+      } else {
+        dots.classList.add('shake');
+        dots.addEventListener('animationend', () => dots.classList.remove('shake'), { once: true });
+        errEl.textContent = 'Incorrect PIN. Try again.';
+        entry = ''; renderDots();
+      }
+    } catch(e) {
+      errEl.textContent = 'Connection error. Retry.';
+      entry = ''; renderDots();
+    }
+  }
+
+  document.querySelectorAll('.pin-key[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (entry.length >= 4) return;
+      entry += btn.dataset.key;
+      renderDots();
+      if (entry.length === 4) submitPin();
+    });
+  });
+
+  document.getElementById('pinBack').addEventListener('click', () => {
+    entry = entry.slice(0, -1);
+    errEl.textContent = '';
+    renderDots();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (screen.classList.contains('hidden')) return;
+    if (e.key >= '0' && e.key <= '9' && entry.length < 4) {
+      entry += e.key; renderDots();
+      if (entry.length === 4) submitPin();
+    } else if (e.key === 'Backspace') {
+      entry = entry.slice(0, -1); errEl.textContent = ''; renderDots();
+    }
   });
 })();
 </script>
