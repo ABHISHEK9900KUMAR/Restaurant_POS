@@ -115,20 +115,34 @@ header {
 
 /* ── Customer Form ───────────────────────────────────── */
 .customer-form {
+  margin-bottom: 16px;
+}
+.name-field-wrap {
+  position: relative;
+}
+.name-field-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.name-field-wrap input[type="text"] {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  border-radius: var(--radius-sm);
+  padding: 11px 13px 11px 38px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none;
+  height: 44px; width: 100%;
+  transition: border-color var(--transition);
+  -webkit-appearance: none;
 }
-.customer-form h3 {
-  grid-column: 1 / -1;
-  font-family: 'Playfair Display', serif;
-  font-size: 15px; color: var(--gold);
-}
+.name-field-wrap input[type="text"]:focus { border-color: var(--gold); }
+.name-field-wrap input[type="text"].error { border-color: var(--red); }
+.name-field-wrap .field-error { margin-top: 5px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label {
   font-size: 11px; color: var(--text-dim);
@@ -362,9 +376,8 @@ header {
 
 /* ── Sheet customer details (mobile) ────────────────── */
 .sheet-details {
-  padding: 14px 20px 12px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border);
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   flex-shrink: 0;
 }
 
@@ -987,10 +1000,9 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 <!-- Scrollable menu area -->
 <main class="menu-panel" id="menuPanel">
   <div class="customer-form">
-    <h3 data-i18n="your_details">Your Details</h3>
-    <div class="form-group" style="grid-column:1/-1">
-      <label data-i18n="name">Name</label>
-      <input type="text" id="customerName" placeholder="Your name" autocomplete="off" data-i18n-placeholder="your_name" />
+    <div class="name-field-wrap">
+      <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+      <input type="text" id="customerName" placeholder="Your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="your_name" />
       <span class="field-error" id="nameError" data-i18n="min2">Min 2 characters</span>
     </div>
   </div>
@@ -1024,10 +1036,10 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <button class="sheet-close" id="sheetClose" aria-label="Close cart">✕</button>
     </div>
     <!-- Customer details inside sheet (mobile only) -->
-    <div class="sheet-details" style="grid-template-columns:1fr">
-      <div class="form-group">
-        <label data-i18n="your_name_label">Your Name</label>
-        <input type="text" id="mCustomerName" placeholder="Enter your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="enter_name" />
+    <div class="sheet-details">
+      <div class="name-field-wrap">
+        <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+        <input type="text" id="mCustomerName" placeholder="Your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="your_name" />
         <span class="field-error" id="mNameError" data-i18n="min2">Min 2 characters</span>
       </div>
     </div>
@@ -1048,13 +1060,9 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
             <div class="toggle-thumb"></div>
           </label>
         </div>
-        <div class="discount-row">
-          <input type="number" class="discount-input" id="discountInput" placeholder="Discount %" min="0" max="30" data-i18n-placeholder="discount_pct" />
-        </div>
       </div>
       <div class="bill-summary">
         <div class="bill-row"><span data-i18n="subtotal">Subtotal</span><span id="bSubtotal">₹0.00</span></div>
-        <div class="bill-row discount" id="discountRow" style="display:none"><span data-i18n="discount">Discount</span><span id="bDiscount">-₹0.00</span></div>
         <div class="bill-row" id="serviceRow" style="display:none"><span data-i18n="service_10">Service (10%)</span><span id="bService">₹0.00</span></div>
         <div class="bill-row"><span data-i18n="gst">GST (5%)</span><span id="bGst">₹0.00</span></div>
         <div class="bill-row total"><span data-i18n="total">Total</span><span id="bTotal">₹0.00</span></div>
@@ -1089,13 +1097,9 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
           <div class="toggle-thumb"></div>
         </label>
       </div>
-      <div class="discount-row">
-        <input type="number" class="discount-input" id="discountInputD" placeholder="Discount %" min="0" max="30" data-i18n-placeholder="discount_pct" />
-      </div>
     </div>
     <div class="bill-summary">
       <div class="bill-row"><span data-i18n="subtotal">Subtotal</span><span id="dSubtotal">₹0.00</span></div>
-      <div class="bill-row discount" id="dDiscountRow" style="display:none"><span data-i18n="discount">Discount</span><span id="dDiscount">-₹0.00</span></div>
       <div class="bill-row" id="dServiceRow" style="display:none"><span data-i18n="service_10">Service (10%)</span><span id="dService">₹0.00</span></div>
       <div class="bill-row"><span data-i18n="gst">GST (5%)</span><span id="dGst">₹0.00</span></div>
       <div class="bill-row total"><span data-i18n="total">Total</span><span id="dTotal">₹0.00</span></div>
@@ -1754,10 +1758,7 @@ function getServiceToggle() {
     : document.getElementById('serviceToggle').checked;
 }
 function getDiscountInput() {
-  const v = isDesktop()
-    ? parseFloat(document.getElementById('discountInputD').value)
-    : parseFloat(document.getElementById('discountInput').value);
-  return Math.min(Math.max(0, v || 0), 30);
+  return 0;
 }
 
 function calculateBill() {
@@ -1784,9 +1785,6 @@ function updateBillSummary() {
     document.getElementById('dSubtotal').textContent = fmt(b.subtotal);
     document.getElementById('dGst').textContent = fmt(b.gst);
     document.getElementById('dTotal').textContent = fmt(b.total);
-    const dr = document.getElementById('dDiscountRow');
-    if (b.discountAmount > 0) { dr.style.display = ''; document.getElementById('dDiscount').textContent = '-' + fmt(b.discountAmount); }
-    else dr.style.display = 'none';
     const sr = document.getElementById('dServiceRow');
     if (b.serviceCharge > 0) { sr.style.display = ''; document.getElementById('dService').textContent = fmt(b.serviceCharge); }
     else sr.style.display = 'none';
@@ -1794,9 +1792,6 @@ function updateBillSummary() {
     document.getElementById('bSubtotal').textContent = fmt(b.subtotal);
     document.getElementById('bGst').textContent = fmt(b.gst);
     document.getElementById('bTotal').textContent = fmt(b.total);
-    const dr = document.getElementById('discountRow');
-    if (b.discountAmount > 0) { dr.style.display = ''; document.getElementById('bDiscount').textContent = '-' + fmt(b.discountAmount); }
-    else dr.style.display = 'none';
     const sr = document.getElementById('serviceRow');
     if (b.serviceCharge > 0) { sr.style.display = ''; document.getElementById('bService').textContent = fmt(b.serviceCharge); }
     else sr.style.display = 'none';
@@ -1979,8 +1974,6 @@ function resetForm() {
   ['customerName', 'mCustomerName'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('discountInput').value = '';
-  document.getElementById('discountInputD').value = '';
   document.getElementById('serviceToggle').checked = false;
   document.getElementById('serviceToggleD').checked = false;
 }
@@ -2157,14 +2150,6 @@ function hideOrderError() {
     document.getElementById('serviceToggleD').checked = e.target.checked;
     updateBillSummary(); broadcastCartDebounced();
   });
-});
-['discountInput', 'discountInputD'].forEach(id => {
-  document.getElementById(id).addEventListener('input', debounce((e) => {
-    const v = Math.min(Math.max(0, parseFloat(e.target.value) || 0), 30);
-    document.getElementById('discountInput').value = v || '';
-    document.getElementById('discountInputD').value = v || '';
-    updateBillSummary(); broadcastCartDebounced();
-  }, 300));
 });
 // Sync name across both inputs — entering on first screen carries into cart and vice versa
 function onNameInput(value) {
