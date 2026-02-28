@@ -64,37 +64,37 @@ const CONFIG = {
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
   // Starters — Chinese
-  { id: 'm1',  category: 'Starters',    name: 'Veg Spring Roll',          price: 180, emoji: '🌯', popular: false },
-  { id: 'm2',  category: 'Starters',    name: 'Chilli Paneer (Dry)',       price: 260, emoji: '🧀', popular: true  },
-  { id: 'm3',  category: 'Starters',    name: 'Veg Manchurian (Dry)',      price: 220, emoji: '🥦', popular: false },
-  { id: 'm4',  category: 'Starters',    name: 'Chilli Chicken (Dry)',      price: 280, emoji: '🌶️', popular: true  },
-  { id: 'm5',  category: 'Starters',    name: 'Chicken Manchurian (Dry)',  price: 300, emoji: '🍗', popular: false },
+  { id: 'm1',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Spring Roll',          nameHi: 'वेज स्प्रिंग रोल',          price: 180, emoji: '🌯', popular: false },
+  { id: 'm2',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Paneer (Dry)',       nameHi: 'चिली पनीर (ड्राई)',          price: 260, emoji: '🧀', popular: true  },
+  { id: 'm3',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Manchurian (Dry)',      nameHi: 'वेज मंचूरियन (ड्राई)',       price: 220, emoji: '🥦', popular: false },
+  { id: 'm4',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Chicken (Dry)',      nameHi: 'चिली चिकन (ड्राई)',          price: 280, emoji: '🌶️', popular: true  },
+  { id: 'm5',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Manchurian (Dry)',  nameHi: 'चिकन मंचूरियन (ड्राई)',      price: 300, emoji: '🍗', popular: false },
   // Starters — Tandoori
-  { id: 'm6',  category: 'Starters',    name: 'Paneer Tikka',              price: 280, emoji: '🔥', popular: true  },
-  { id: 'm7',  category: 'Starters',    name: 'Tandoori Mushroom',         price: 250, emoji: '🍄', popular: false },
-  { id: 'm8',  category: 'Starters',    name: 'Tandoori Chicken (Half)',   price: 340, emoji: '🍗', popular: true  },
-  { id: 'm9',  category: 'Starters',    name: 'Chicken Tikka',             price: 320, emoji: '🍖', popular: false },
+  { id: 'm6',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Paneer Tikka',              nameHi: 'पनीर टिक्का',                price: 280, emoji: '🔥', popular: true  },
+  { id: 'm7',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Mushroom',         nameHi: 'तंदूरी मशरूम',               price: 250, emoji: '🍄', popular: false },
+  { id: 'm8',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Chicken (Half)',   nameHi: 'तंदूरी चिकन (हाफ)',          price: 340, emoji: '🍗', popular: true  },
+  { id: 'm9',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Tikka',             nameHi: 'चिकन टिक्का',                price: 320, emoji: '🍖', popular: false },
   // Main Course — North Indian
-  { id: 'm10', category: 'Main Course', name: 'Paneer Butter Masala',      price: 300, emoji: '🧆', popular: true  },
-  { id: 'm11', category: 'Main Course', name: 'Dal Makhani',               price: 240, emoji: '🫘', popular: true  },
-  { id: 'm12', category: 'Main Course', name: 'Butter Chicken',            price: 360, emoji: '🍛', popular: true  },
-  { id: 'm13', category: 'Main Course', name: 'Mutton Rogan Josh',         price: 420, emoji: '🥩', popular: false },
+  { id: 'm10', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Paneer Butter Masala',      nameHi: 'पनीर बटर मसाला',             price: 300, emoji: '🧆', popular: true  },
+  { id: 'm11', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Dal Makhani',               nameHi: 'दाल मखनी',                   price: 240, emoji: '🫘', popular: true  },
+  { id: 'm12', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Butter Chicken',            nameHi: 'बटर चिकन',                   price: 360, emoji: '🍛', popular: true  },
+  { id: 'm13', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Rogan Josh',         nameHi: 'मटन रोगन जोश',               price: 420, emoji: '🥩', popular: false },
   // Main Course — Biryani
-  { id: 'm14', category: 'Main Course', name: 'Veg Biryani',               price: 240, emoji: '🍚', popular: false },
-  { id: 'm15', category: 'Main Course', name: 'Chicken Biryani (Full)',    price: 340, emoji: '🍲', popular: true  },
-  { id: 'm16', category: 'Main Course', name: 'Mutton Biryani',            price: 420, emoji: '🥘', popular: false },
+  { id: 'm14', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Veg Biryani',               nameHi: 'वेज बिरयानी',                price: 240, emoji: '🍚', popular: false },
+  { id: 'm15', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Chicken Biryani (Full)',    nameHi: 'चिकन बिरयानी (फुल)',         price: 340, emoji: '🍲', popular: true  },
+  { id: 'm16', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Biryani',            nameHi: 'मटन बिरयानी',                price: 420, emoji: '🥘', popular: false },
   // Breads
-  { id: 'm17', category: 'Breads',      name: 'Tandoori Roti',             price: 25,  emoji: '🫓', popular: false },
-  { id: 'm18', category: 'Breads',      name: 'Butter Naan',               price: 55,  emoji: '🫓', popular: true  },
-  { id: 'm19', category: 'Breads',      name: 'Garlic Naan',               price: 70,  emoji: '🧄', popular: false },
+  { id: 'm17', category: 'Breads',      categoryHi: 'रोटी',          name: 'Tandoori Roti',             nameHi: 'तंदूरी रोटी',                price: 25,  emoji: '🫓', popular: false },
+  { id: 'm18', category: 'Breads',      categoryHi: 'रोटी',          name: 'Butter Naan',               nameHi: 'बटर नान',                    price: 55,  emoji: '🫓', popular: true  },
+  { id: 'm19', category: 'Breads',      categoryHi: 'रोटी',          name: 'Garlic Naan',               nameHi: 'लहसुन नान',                  price: 70,  emoji: '🧄', popular: false },
   // Beverages
-  { id: 'm20', category: 'Beverages',   name: 'Coke (300ml)',               price: 40,  emoji: '🥤', popular: false },
-  { id: 'm21', category: 'Beverages',   name: 'Sprite (300ml)',             price: 40,  emoji: '🥤', popular: false },
-  { id: 'm22', category: 'Beverages',   name: 'Mineral Water (1L)',         price: 20,  emoji: '💧', popular: false },
+  { id: 'm20', category: 'Beverages',   categoryHi: 'पेय',           name: 'Coke (300ml)',              nameHi: 'कोक (300मिली)',               price: 40,  emoji: '🥤', popular: false },
+  { id: 'm21', category: 'Beverages',   categoryHi: 'पेय',           name: 'Sprite (300ml)',            nameHi: 'स्प्राइट (300मिली)',          price: 40,  emoji: '🥤', popular: false },
+  { id: 'm22', category: 'Beverages',   categoryHi: 'पेय',           name: 'Mineral Water (1L)',        nameHi: 'मिनरल वाटर (1ली)',            price: 20,  emoji: '💧', popular: false },
   // Desserts
-  { id: 'm23', category: 'Desserts',    name: 'Gulab Jamun (2 pcs)',        price: 90,  emoji: '🍮', popular: true  },
-  { id: 'm24', category: 'Desserts',    name: 'Rasgulla (2 pcs)',           price: 90,  emoji: '🍡', popular: false },
-  { id: 'm25', category: 'Desserts',    name: 'Brownie with Ice Cream',     price: 160, emoji: '🍫', popular: true  },
+  { id: 'm23', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Gulab Jamun (2 pcs)',       nameHi: 'गुलाब जामुन (2 पीस)',        price: 90,  emoji: '🍮', popular: true  },
+  { id: 'm24', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Rasgulla (2 pcs)',          nameHi: 'रसगुल्ला (2 पीस)',           price: 90,  emoji: '🍡', popular: false },
+  { id: 'm25', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Brownie with Ice Cream',    nameHi: 'ब्राउनी विद आइसक्रीम',      price: 160, emoji: '🍫', popular: true  },
 ];
 
 // Add dynamic fields to every menu item
@@ -553,7 +553,9 @@ io.on('connection', (socket) => {
   socket.on('customer:browsing', (data) => {
     const { sessionId, itemId, itemName, action } = data;
     if (!sessionId || !activeCarts[sessionId]) return;
-    activeCarts[sessionId].lastActivity = { itemId, itemName, action, timestamp: getTimestamp() };
+    const menuItem = MENU.find(m => m.id === itemId);
+    const itemNameHi = menuItem?.nameHi || itemName;
+    activeCarts[sessionId].lastActivity = { itemId, itemName, itemNameHi, action, timestamp: getTimestamp() };
     io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
   });
 

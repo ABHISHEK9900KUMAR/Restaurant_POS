@@ -1277,6 +1277,8 @@ const TRANSLATIONS = {
     table_occupied: 'Table Occupied',
     table_occupied_sub: 'This table is currently occupied. Please ask a staff member for assistance or scan a different table\'s QR code.',
     all_cat: 'All',
+    out_of_stock: 'Out of Stock',
+    offer_off: 'OFF',
     download_receipt: 'Download',
     share_receipt: 'Share',
     downloading: 'Saving…',
@@ -1350,6 +1352,8 @@ const TRANSLATIONS = {
     table_occupied: 'टेबल व्यस्त है',
     table_occupied_sub: 'यह टेबल अभी व्यस्त है। कृपया किसी स्टाफ सदस्य से सहायता लें या किसी अन्य टेबल का QR स्कैन करें।',
     all_cat: 'सभी',
+    out_of_stock: 'उपलब्ध नहीं',
+    offer_off: 'छूट',
     download_receipt: 'डाउनलोड',
     share_receipt: 'शेयर करें',
     downloading: 'सहेज रहे हैं…',
@@ -1569,6 +1573,17 @@ function updateConnectionUI(connected, reconnecting = false) {
 }
 
 // ── Menu ────────────────────────────────────────────────
+function iName(item) {
+  return currentLang === 'hi' && item.nameHi ? item.nameHi : item.name;
+}
+function iCat(cat) {
+  if (currentLang === 'hi') {
+    const found = (state.menu || []).find(i => i.category === cat);
+    return found?.categoryHi || cat;
+  }
+  return cat;
+}
+
 function renderCategoryNav() {
   const cats = [t('all_cat'), ...new Set(state.menu.map(i => i.category))];
   const nav = document.getElementById('categoryNav');
@@ -1577,7 +1592,7 @@ function renderCategoryNav() {
     const btn = document.createElement('button');
     btn.className = 'cat-btn' + (cat === t('all_cat') ? ' active' : '');
     btn.dataset.cat = cat;
-    btn.textContent = cat;
+    btn.textContent = cat === t('all_cat') ? cat : iCat(cat);
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -1600,7 +1615,7 @@ function renderMenu() {
   cats.forEach(cat => {
     const section = document.createElement('div');
     section.className = 'menu-section'; section.dataset.cat = cat;
-    section.innerHTML = `<div class="section-title">${cat}</div>`;
+    section.innerHTML = `<div class="section-title">${iCat(cat)}</div>`;
     const grid = document.createElement('div');
     grid.className = 'menu-grid';
     state.menu.filter(i => i.category === cat).forEach(item => {
@@ -1611,14 +1626,14 @@ function renderMenu() {
       card.className = 'menu-item' + (oos ? ' out-of-stock' : '');
       card.id = 'card-' + item.id;
       card.innerHTML = `
-        ${hasOffer ? `<div class="item-offer-badge">${item.offer}% OFF</div>` : ''}
+        ${hasOffer ? `<div class="item-offer-badge">${item.offer}% ${t('offer_off')}</div>` : ''}
         <div class="item-emoji">${item.emoji}</div>
-        <div class="item-name">${item.name}</div>
+        <div class="item-name">${iName(item)}</div>
         <div class="item-price${hasOffer ? ' offer' : ''}">
           ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}
         </div>
         ${item.popular && !hasOffer ? `<div class="item-popular">${t('popular')}</div>` : ''}
-        ${oos ? `<div class="item-oos-label">Out of Stock</div>` : ''}
+        ${oos ? `<div class="item-oos-label">${t('out_of_stock')}</div>` : ''}
         <div class="item-badge" id="badge-${item.id}">0</div>
       `;
       if (!oos) card.addEventListener('click', () => addToCart(item));

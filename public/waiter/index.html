@@ -1007,6 +1007,8 @@ const TRANSLATIONS = {
     enter_name: 'Enter name', select_table: '— Select —',
     min2: 'Min 2 characters', select_table_err: 'Select a table',
     all: 'All',
+    out_of_stock: 'Out of Stock',
+    offer_off: 'OFF',
     loading_menu: 'Connecting to menu…', loading_sub: "Make sure you're on the same Wi-Fi",
     cant_reach: "Can't reach the server", cant_reach_sub: 'Check Wi-Fi connection',
     retry: 'Retry',
@@ -1050,6 +1052,8 @@ const TRANSLATIONS = {
     enter_name: 'नाम दर्ज करें', select_table: '— चुनें —',
     min2: 'न्यूनतम 2 अक्षर', select_table_err: 'टेबल चुनें',
     all: 'सभी',
+    out_of_stock: 'उपलब्ध नहीं',
+    offer_off: 'छूट',
     loading_menu: 'मेनू से जोड़ रहे हैं…', loading_sub: 'सुनिश्चित करें कि Wi-Fi से जुड़े हैं',
     cant_reach: 'सर्वर से नहीं जुड़ पाए', cant_reach_sub: 'Wi-Fi कनेक्शन जाँचें',
     retry: 'पुनः प्रयास करें',
@@ -1301,6 +1305,17 @@ function updateTableDropdown() {
 // ════════════════════════════════════════════════════════
 //  Menu Rendering
 // ════════════════════════════════════════════════════════
+function iName(item) {
+  return currentLang === 'hi' && item.nameHi ? item.nameHi : item.name;
+}
+function iCat(cat) {
+  if (currentLang === 'hi') {
+    const found = (state.menu || []).find(i => i.category === cat);
+    return found?.categoryHi || cat;
+  }
+  return cat;
+}
+
 function renderCategoryNav() {
   const cats = [t('all'), ...new Set(state.menu.map(i => i.category))];
   const nav = document.getElementById('categoryNav');
@@ -1309,7 +1324,7 @@ function renderCategoryNav() {
     const btn = document.createElement('button');
     btn.className = 'cat-btn' + (cat === t('all') ? ' active' : '');
     btn.dataset.cat = cat;
-    btn.textContent = cat;
+    btn.textContent = cat === t('all') ? cat : iCat(cat);
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -1332,7 +1347,7 @@ function renderMenu() {
   cats.forEach(cat => {
     const section = document.createElement('div');
     section.className = 'menu-section'; section.dataset.cat = cat;
-    section.innerHTML = `<div class="section-title">${cat}</div>`;
+    section.innerHTML = `<div class="section-title">${iCat(cat)}</div>`;
     const grid = document.createElement('div');
     grid.className = 'menu-grid';
     state.menu.filter(i => i.category === cat).forEach(item => {
@@ -1343,14 +1358,14 @@ function renderMenu() {
       card.className = 'menu-item' + (oos ? ' out-of-stock' : '');
       card.id = 'card-' + item.id;
       card.innerHTML = `
-        ${hasOffer ? `<div class="item-offer-badge">${item.offer}% OFF</div>` : ''}
+        ${hasOffer ? `<div class="item-offer-badge">${item.offer}% ${t('offer_off')}</div>` : ''}
         <div class="item-emoji">${item.emoji}</div>
-        <div class="item-name">${item.name}</div>
+        <div class="item-name">${iName(item)}</div>
         <div class="item-price${hasOffer ? ' offer' : ''}">
           ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}
         </div>
         ${item.popular && !hasOffer ? `<div class="item-popular">${t('popular')}</div>` : ''}
-        ${oos ? `<div class="item-oos-label">Out of Stock</div>` : ''}
+        ${oos ? `<div class="item-oos-label">${t('out_of_stock')}</div>` : ''}
         <div class="item-badge" id="badge-${item.id}">0</div>`;
       if (!oos) card.addEventListener('click', () => addToCart(item));
       grid.appendChild(card);
