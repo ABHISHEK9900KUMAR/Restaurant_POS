@@ -1,0 +1,254 @@
+{
+  "restaurant_name": "Sample Indian Restaurant",
+  "currency": "INR",
+  "categories": [
+    {
+      "id": "CAT01",
+      "name": "Starters",
+      "subcategories": [
+        {
+          "id": "SUB01",
+          "name": "Chinese",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                {
+                  "id": "ITM001",
+                  "name": "Veg Spring Roll",
+                  "description": "Crispy rolls stuffed with mixed vegetables",
+                  "price": 180,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM002",
+                  "name": "Chilli Paneer (Dry)",
+                  "description": "Cottage cheese tossed in spicy Indo-Chinese sauce",
+                  "price": 260,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM003",
+                  "name": "Veg Manchurian (Dry)",
+                  "description": "Fried vegetable balls in garlic soy glaze",
+                  "price": 220,
+                  "is_available": true
+                }
+              ]
+            },
+            {
+              "type": "non_veg",
+              "items": [
+                {
+                  "id": "ITM004",
+                  "name": "Chilli Chicken (Dry)",
+                  "description": "Spicy chicken cubes in soy garlic sauce",
+                  "price": 280,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM005",
+                  "name": "Chicken Manchurian (Dry)",
+                  "description": "Chicken balls tossed in Manchurian sauce",
+                  "price": 300,
+                  "is_available": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "SUB02",
+          "name": "Tandoori",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                {
+                  "id": "ITM006",
+                  "name": "Paneer Tikka",
+                  "description": "Marinated cottage cheese grilled in tandoor",
+                  "price": 280,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM007",
+                  "name": "Tandoori Mushroom",
+                  "description": "Spiced mushrooms cooked in clay oven",
+                  "price": 250,
+                  "is_available": true
+                }
+              ]
+            },
+            {
+              "type": "non_veg",
+              "items": [
+                {
+                  "id": "ITM008",
+                  "name": "Tandoori Chicken (Half)",
+                  "description": "Classic spiced grilled chicken",
+                  "price": 340,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM009",
+                  "name": "Chicken Tikka",
+                  "description": "Boneless chicken marinated & grilled",
+                  "price": 320,
+                  "is_available": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CAT02",
+      "name": "Main Course",
+      "subcategories": [
+        {
+          "id": "SUB03",
+          "name": "North Indian",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                {
+                  "id": "ITM010",
+                  "name": "Paneer Butter Masala",
+                  "description": "Creamy tomato-based curry",
+                  "price": 300,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM011",
+                  "name": "Dal Makhani",
+                  "description": "Slow-cooked black lentils",
+                  "price": 240,
+                  "is_available": true
+                }
+              ]
+            },
+            {
+              "type": "non_veg",
+              "items": [
+                {
+                  "id": "ITM012",
+                  "name": "Butter Chicken",
+                  "description": "Creamy tomato chicken curry",
+                  "price": 360,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM013",
+                  "name": "Mutton Rogan Josh",
+                  "description": "Kashmiri style mutton curry",
+                  "price": 420,
+                  "is_available": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "SUB04",
+          "name": "Biryani",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                {
+                  "id": "ITM014",
+                  "name": "Veg Biryani",
+                  "description": "Aromatic basmati rice with vegetables",
+                  "price": 240,
+                  "is_available": true
+                }
+              ]
+            },
+            {
+              "type": "non_veg",
+              "items": [
+                {
+                  "id": "ITM015",
+                  "name": "Chicken Biryani (Full)",
+                  "description": "Fragrant basmati rice with spiced chicken",
+                  "price": 340,
+                  "is_available": true
+                },
+                {
+                  "id": "ITM016",
+                  "name": "Mutton Biryani",
+                  "description": "Slow-cooked mutton layered with rice",
+                  "price": 420,
+                  "is_available": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CAT03",
+      "name": "Breads",
+      "subcategories": [
+        {
+          "id": "SUB05",
+          "name": "Indian Breads",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                { "id": "ITM017", "name": "Tandoori Roti", "description": "", "price": 25, "is_available": true },
+                { "id": "ITM018", "name": "Butter Naan", "description": "", "price": 55, "is_available": true },
+                { "id": "ITM019", "name": "Garlic Naan", "description": "", "price": 70, "is_available": true }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CAT04",
+      "name": "Beverages",
+      "subcategories": [
+        {
+          "id": "SUB06",
+          "name": "Soft Drinks",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                { "id": "ITM020", "name": "Coke (300ml)", "description": "", "price": 40, "is_available": true },
+                { "id": "ITM021", "name": "Sprite (300ml)", "description": "", "price": 40, "is_available": true },
+                { "id": "ITM022", "name": "Mineral Water (1L)", "description": "", "price": 20, "is_available": true }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CAT05",
+      "name": "Desserts",
+      "subcategories": [
+        {
+          "id": "SUB07",
+          "name": "Indian Sweets",
+          "sections": [
+            {
+              "type": "veg",
+              "items": [
+                { "id": "ITM023", "name": "Gulab Jamun (2 pcs)", "description": "", "price": 90, "is_available": true },
+                { "id": "ITM024", "name": "Rasgulla (2 pcs)", "description": "", "price": 90, "is_available": true },
+                { "id": "ITM025", "name": "Brownie with Ice Cream", "description": "", "price": 160, "is_available": true }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

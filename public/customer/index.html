@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0d0d0d" />
+<title>ZingPOS — Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* ── Reset & Variables ───────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0d0d0d;
+  --surface:    #161616;
+  --surface2:   #1e1e1e;
+  --surface3:   #252525;
+  --border:     #2a2a2a;
+  --border2:    #333;
+  --gold:       #c9a84c;
+  --gold-light: #e2c278;
+  --gold-dim:   #c9a84c22;
+  --green:      #2ecc71;
+  --red:        #e74c3c;
+  --orange:     #f39c12;
+  --text:       #f0ede8;
+  --text-dim:   #8a8580;
+  --text-mid:   #b8b4ae;
+  --radius:     14px;
+  --radius-sm:  9px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg:  0 16px 56px rgba(0,0,0,0.7);
+  --transition: 200ms cubic-bezier(0.4,0,0.2,1);
+  --header-h:   56px;
+}
+
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: var(--header-h);
+  padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--gold); letter-spacing: 0.02em;
+}
+.logo sup {
+  font-size: 9px; font-family: 'DM Sans', sans-serif;
+  font-weight: 600; letter-spacing: 0.06em;
+  color: var(--text-dim); vertical-align: super; margin-left: 3px;
+  text-transform: uppercase;
+}
+.connection-status {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--text-dim);
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-dim); transition: background var(--transition);
+}
+.status-dot.connected   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.reconnecting{ background: var(--orange); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.table-badge {
+  display: flex; align-items: center;
+  background: var(--gold-dim); border: 1px solid var(--gold);
+  color: var(--gold); border-radius: 20px;
+  padding: 4px 12px; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.table-badge.no-table {
+  background: rgba(231,76,60,0.1); border-color: var(--red); color: var(--red);
+}
+
+/* ── Reconnect Banner ────────────────────────────────── */
+#reconnect-banner {
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  background: var(--orange); color: #000;
+  text-align: center; padding: 7px;
+  font-size: 12px; font-weight: 600;
+  z-index: 200; display: none;
+}
+#reconnect-banner.visible { display: block; }
+
+/* ── Hide menu form on mobile, hide sheet-details on desktop ── */
+@media (max-width: 899px) { .customer-form { display: none; } }
+@media (min-width: 900px) { .sheet-details  { display: none; } }
+
+/* ════════════════════════════════════════════════════════
+   MOBILE LAYOUT (default — under 900px)
+   ════════════════════════════════════════════════════════ */
+
+.menu-panel {
+  padding: 16px 16px 100px;
+  overflow-y: auto;
+}
+
+/* ── Customer Form ───────────────────────────────────── */
+.customer-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.customer-form h3 {
+  grid-column: 1 / -1;
+  font-family: 'Playfair Display', serif;
+  font-size: 15px; color: var(--gold);
+}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label {
+  font-size: 11px; color: var(--text-dim);
+  font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+}
+.form-group input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none;
+  transition: border-color var(--transition);
+  height: 42px;
+  -webkit-appearance: none;
+}
+.form-group input:focus { border-color: var(--gold); }
+.form-group input.error { border-color: var(--red); }
+
+.table-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 36px 10px 13px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none;
+  transition: border-color var(--transition);
+  height: 42px; width: 100%;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8580' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  cursor: pointer;
+}
+.table-select:focus { border-color: var(--gold); }
+.table-select.error { border-color: var(--red); }
+.table-select option { background: var(--surface2); color: var(--text); }
+
+.field-error { font-size: 11px; color: var(--red); display: none; }
+.field-error.visible { display: block; }
+
+/* ── Category Nav ────────────────────────────────────── */
+.category-nav {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding-bottom: 12px; margin-bottom: 16px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.category-nav::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.cat-btn:hover  { border-color: var(--gold); color: var(--gold); }
+.cat-btn.active { background: var(--gold); border-color: var(--gold); color: #000; font-weight: 600; }
+
+/* ── Menu Grid ───────────────────────────────────────── */
+.menu-section { margin-bottom: 28px; }
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; color: var(--gold-light);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.menu-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  active-scale: 0.97;
+}
+.menu-item:active { transform: scale(0.97); }
+@media (hover: hover) {
+  .menu-item:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--shadow); }
+}
+.item-emoji  { font-size: 28px; line-height: 1; }
+.item-name   { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.item-price  { font-size: 16px; font-weight: 700; color: var(--gold); margin-top: auto; }
+.item-popular {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--gold-dim); border: 1px solid var(--gold);
+  color: var(--gold); font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 8px; letter-spacing: 0.04em;
+}
+.item-badge {
+  position: absolute; bottom: 10px; right: 10px;
+  background: var(--green); color: #000;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+.item-badge.visible { display: flex; }
+
+/* ── FAB Cart Button (mobile) ────────────────────────── */
+.cart-fab {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  background: var(--gold);
+  border: none; border-radius: 50px;
+  color: #000;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 700;
+  padding: 13px 28px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 28px rgba(201,168,76,0.45);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.cart-fab:active { transform: translateX(-50%) scale(0.96); }
+.cart-fab.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(80px); }
+.fab-icon { font-size: 18px; }
+.fab-badge {
+  background: #000; color: var(--gold);
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+
+/* ── Cart Overlay & Sheet ────────────────────────────── */
+.cart-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.cart-overlay.open { display: block; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.cart-sheet {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  max-height: 90dvh;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.sheet-drag {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border2);
+  margin: 12px auto 0;
+  flex-shrink: 0; cursor: grab;
+}
+.sheet-header {
+  padding: 12px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.sheet-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px; color: var(--text);
+}
+.sheet-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-close:active { background: var(--surface3); }
+
+.sheet-items {
+  flex: 1; overflow-y: auto;
+  padding: 12px 20px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.cart-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 160px; color: var(--text-dim); gap: 8px;
+}
+.cart-empty-icon { font-size: 36px; opacity: 0.3; }
+.cart-empty-text { font-size: 13px; }
+
+.cart-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn 0.18s ease;
+}
+.cart-item:last-child { border-bottom: none; }
+@keyframes slideIn { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+
+.cart-item-emoji { font-size: 22px; flex-shrink: 0; }
+.cart-item-info  { flex: 1; min-width: 0; }
+.cart-item-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-item-price { font-size: 12px; color: var(--text-dim); }
+
+.qty-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.qty-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 17px; font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.qty-btn:active { transform: scale(0.9); }
+.qty-num { font-size: 14px; font-weight: 700; min-width: 22px; text-align: center; }
+
+/* ── Sheet customer details (mobile) ────────────────── */
+.sheet-details {
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Sheet Footer ────────────────────────────────────── */
+.sheet-footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px 20px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.sheet-options {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 14px;
+}
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: var(--text-mid);
+}
+.toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--surface3); border-radius: 11px;
+  border: 1px solid var(--border2);
+  transition: background var(--transition);
+}
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text-dim);
+  transition: all var(--transition);
+}
+input:checked + .toggle-track { background: var(--gold); border-color: var(--gold); }
+.toggle-switch input:checked + .toggle-track + .toggle-thumb { left: 21px; background: #000; }
+
+.discount-row { display: flex; gap: 8px; }
+.discount-input {
+  flex: 1;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 12px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; outline: none;
+  transition: border-color var(--transition);
+  height: 38px; -webkit-appearance: none;
+}
+.discount-input:focus { border-color: var(--gold); }
+
+.bill-summary {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.bill-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-dim);
+}
+.bill-row.total {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  border-top: 1px solid var(--border);
+  padding-top: 7px; margin-top: 3px;
+}
+.bill-row.discount { color: var(--green); }
+
+.error-banner {
+  background: rgba(231,76,60,0.1);
+  border: 1px solid rgba(231,76,60,0.35);
+  color: var(--red); border-radius: var(--radius-sm);
+  padding: 9px 13px; font-size: 12px;
+  display: none; margin-bottom: 10px;
+}
+.error-banner.visible { display: block; }
+
+.place-order-btn {
+  width: 100%;
+  background: var(--gold); border: none; border-radius: var(--radius);
+  color: #000; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 700;
+  padding: 15px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.place-order-btn:active:not(:disabled) { transform: scale(0.98); }
+.place-order-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.spinner {
+  width: 17px; height: 17px;
+  border: 2px solid rgba(0,0,0,0.3); border-top-color: #000;
+  border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+}
+.spinner.visible { display: block; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ── Desktop Sidebar Cart ────────────────────────────── */
+.cart-sidebar {
+  display: none; /* hidden on mobile */
+}
+
+/* ════════════════════════════════════════════════════════
+   TABLET / DESKTOP LAYOUT (≥ 900px)
+   ════════════════════════════════════════════════════════ */
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: auto 1fr;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  header { grid-column: 1 / -1; padding: 0 28px; }
+  .logo  { font-size: 22px; }
+
+  .menu-panel {
+    grid-column: 1; grid-row: 2;
+    padding: 24px 28px 24px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .item-emoji { font-size: 30px; }
+  .item-name  { font-size: 14px; }
+
+  /* Show sidebar cart, hide FAB and sheet */
+  .cart-fab     { display: none !important; }
+  .cart-overlay { display: none !important; }
+
+  .cart-sidebar {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2; grid-row: 2;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px; color: var(--text);
+  }
+  .sidebar-count {
+    background: var(--gold); color: #000;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    transition: transform var(--transition);
+  }
+  .sidebar-count.bump { animation: bump 0.3s ease; }
+  @keyframes bump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+
+  .sidebar-items {
+    flex: 1; overflow-y: auto;
+    padding: 14px 22px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  /* Reuse cart-item, bill, footer styles inside sidebar */
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 22px 20px;
+    flex-shrink: 0;
+  }
+}
+
+/* Larger tablet: wider menu grid */
+@media (min-width: 1200px) {
+  .menu-panel { padding: 28px 36px; }
+  .cart-sidebar { min-width: 380px; }
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
+/* ── Toast ───────────────────────────────────────────── */
+#toast-container {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column-reverse; gap: 8px;
+  z-index: 999; pointer-events: none;
+}
+@media (min-width: 900px) {
+  #toast-container { bottom: 24px; left: auto; right: 20px; transform: none; align-items: flex-end; }
+}
+.toast {
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 11px 18px;
+  font-size: 13px; color: var(--text);
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease;
+  min-width: 240px; max-width: 320px;
+  text-align: center; pointer-events: auto;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+}
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red);   color: var(--red);   }
+.toast.info    { border-color: var(--gold);  color: var(--gold);  }
+.toast.out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateY(12px)} }
+
+/* ── Order Tracker ───────────────────────────────────── */
+#order-tracker {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+#order-tracker.visible {
+  display: block;
+  animation: slideUpFull 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes slideUpFull { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.tracker-wrap {
+  max-width: 500px; margin: 0 auto;
+  padding: 0 20px 48px;
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 100dvh;
+}
+
+/* header row */
+.tracker-topbar {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 20px;
+}
+.tracker-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 700; color: var(--gold);
+}
+.tracker-order-id {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+  color: var(--text-dim); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px;
+}
+
+/* big status icon */
+.tracker-icon-wrap {
+  margin: 4px 0 14px;
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.tracker-icon {
+  font-size: 68px; line-height: 1;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.tracker-icon.pop { animation: iconPop 0.45s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes iconPop { 0%{transform:scale(0.5)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+.tracker-icon.pulse { animation: iconPulse 2s ease-in-out infinite; }
+@keyframes iconPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+
+/* status text */
+.tracker-status-msg {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--text);
+  text-align: center; margin-bottom: 6px;
+  transition: opacity 0.3s;
+}
+.tracker-status-sub {
+  font-size: 14px; color: var(--text-dim);
+  text-align: center; margin-bottom: 32px;
+  line-height: 1.5; padding: 0 8px;
+  transition: opacity 0.3s;
+}
+
+/* step progress bar */
+.tracker-steps {
+  display: flex; align-items: center;
+  width: 100%; margin-bottom: 28px;
+}
+.tracker-step {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  flex-shrink: 0;
+}
+.step-dot {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--surface3); border: 2px solid var(--border2);
+  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.tracker-step.done .step-dot {
+  background: var(--green); border-color: var(--green);
+  transform: scale(1.1);
+}
+.tracker-step.active .step-dot {
+  background: var(--gold); border-color: var(--gold);
+  box-shadow: 0 0 0 4px var(--gold-dim);
+  transform: scale(1.2);
+  animation: dotGlow 1.8s ease-in-out infinite;
+}
+@keyframes dotGlow {
+  0%,100% { box-shadow: 0 0 0 3px var(--gold-dim); }
+  50%     { box-shadow: 0 0 0 7px var(--gold-dim); }
+}
+.step-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text-dim);
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.tracker-step.done .step-label,
+.tracker-step.active .step-label { color: var(--text); }
+
+.step-connector {
+  flex: 1; height: 2px;
+  background: var(--border2); margin-bottom: 20px;
+  position: relative; overflow: hidden; border-radius: 2px;
+}
+.step-connector-fill {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, var(--green), var(--green));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.5s ease 0.1s;
+  border-radius: 2px;
+}
+.step-connector.filled .step-connector-fill { transform: scaleX(1); }
+
+/* items card */
+.tracker-items-card {
+  width: 100%;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  margin-bottom: 10px;
+}
+.tracker-item-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.tracker-item-row:last-child { border-bottom: none; }
+.tracker-item-left { display: flex; align-items: center; gap: 10px; color: var(--text-mid); }
+.tracker-item-emoji { font-size: 19px; }
+.tracker-item-qty { font-size: 11px; color: var(--text-dim); margin-left: 2px; }
+.tracker-item-price { color: var(--text); font-weight: 600; }
+
+.tracker-total-row {
+  width: 100%; display: flex; justify-content: space-between;
+  font-size: 14px; font-weight: 700; color: var(--text);
+  padding: 0 4px; margin-bottom: 32px;
+}
+
+/* new order button */
+.tracker-new-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text-mid); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.tracker-new-btn:hover  { border-color: var(--gold); color: var(--gold); }
+.tracker-new-btn:active { transform: scale(0.98); }
+
+/* ── Tracker Tabs ────────────────────────────────────── */
+.tracker-tabs {
+  display: flex; gap: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin: 16px 0 20px;
+}
+.tracker-tab {
+  flex: 1; padding: 9px 0;
+  border: none; border-radius: calc(var(--radius) - 3px);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.tracker-tab.active {
+  background: var(--surface3);
+  color: var(--gold);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* ── Digital Receipt Panel ───────────────────────────── */
+#trackerReceiptPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.receipt-header { text-align: center; margin-bottom: 14px; }
+.receipt-shop {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700; color: var(--gold);
+  letter-spacing: 1px;
+}
+.receipt-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.receipt-meta {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.receipt-meta-label { color: var(--text-dim); }
+.receipt-meta-value { color: var(--text); font-weight: 600; text-align: right; }
+.receipt-divider {
+  border: none; border-top: 1px dashed var(--border2);
+  margin: 12px 0;
+}
+.receipt-item-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px; padding: 4px 0;
+}
+.receipt-item-name { color: var(--text-mid); flex: 1; }
+.receipt-item-qty  { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.receipt-item-amt  { color: var(--text); font-weight: 500; white-space: nowrap; }
+.receipt-billing-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-dim); padding: 2px 0;
+}
+.receipt-billing-row.discount { color: var(--green); }
+.receipt-total-row {
+  display: flex; justify-content: space-between;
+  font-size: 15px; font-weight: 700; color: var(--text);
+  padding-top: 8px; margin-top: 4px;
+  border-top: 1px solid var(--border2);
+}
+.receipt-footer {
+  text-align: center; font-size: 11px; color: var(--text-dim);
+  margin-top: 14px; line-height: 1.6;
+}
+
+/* ── Receipt Action Buttons ──────────────────────────── */
+.receipt-actions {
+  display: flex; gap: 10px; margin-top: 16px;
+}
+.receipt-action-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 12px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-mid);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.receipt-action-btn:active { transform: scale(0.97); }
+.receipt-action-btn.download {
+  border-color: var(--gold); color: var(--gold); background: var(--gold-dim);
+}
+.receipt-action-btn.download:hover { background: var(--gold); color: #000; }
+.receipt-action-btn.share {
+  border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.1);
+}
+.receipt-action-btn.share:hover { background: #3b82f6; color: #fff; }
+.receipt-action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.receipt-action-btn .btn-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid currentColor; border-top-color: transparent;
+  border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+}
+.receipt-action-btn.loading .btn-spinner { display: block; }
+.receipt-action-btn.loading .btn-icon { display: none; }
+
+/* ── Loading / Error State ───────────────────────────── */
+.page-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 40vh; gap: 14px;
+  color: var(--text-dim); text-align: center; padding: 24px;
+}
+.page-state-icon { font-size: 36px; opacity: 0.5; }
+.page-state-text { font-size: 14px; }
+.page-state-sub  { font-size: 12px; color: var(--text-dim); margin-top: -6px; }
+.load-ring {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.retry-btn {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text-mid); border-radius: var(--radius-sm);
+  padding: 9px 20px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);\n}
+
+/* ── Table Occupied Screen ───────────────────────────── */
+#tableOccupiedScreen {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 32px; text-align: center;
+}
+#tableOccupiedScreen.visible { display: flex; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.occupied-icon  { font-size: 64px; }
+.occupied-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px; font-weight: 700; color: var(--red);
+}
+.occupied-sub   { font-size: 14px; color: var(--text-dim); line-height: 1.6; max-width: 300px; }
+.occupied-table-badge {
+  background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.4);
+  color: var(--red); border-radius: 20px;
+  padding: 6px 20px; font-size: 16px; font-weight: 700; letter-spacing: 0.06em;
+}
+.retry-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* ── Language Toggle ──────────────────────────────────── */
+.lang-toggle {
+  display: flex; align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.lang-btn {
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.lang-btn.active {
+  background: var(--gold);
+  color: #000;
+}
+[lang="hi"] .lang-btn[data-lang="hi"],
+[lang="en"] .lang-btn[data-lang="en"] { background: var(--gold); color: #000; }
+[lang="hi"] .lang-btn[data-lang="en"],
+[lang="en"] .lang-btn[data-lang="hi"] { background: transparent; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div id="reconnect-banner">⚡ Reconnecting…</div>
+
+<!-- ── MOBILE LAYOUT ── -->
+<header>
+  <div class="logo">ZingPOS<sup>Order</sup></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="lang-toggle" id="langToggle" role="group" aria-label="Language toggle">
+      <button class="lang-btn active" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="hi">हिंदी</button>
+    </div>
+    <div class="table-badge" id="tableBadge"><span id="tableBadgeText">—</span></div>
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText" data-i18n="connecting">Connecting…</span>
+    </div>
+  </div>
+</header>
+
+<!-- Scrollable menu area -->
+<main class="menu-panel" id="menuPanel">
+  <div class="customer-form">
+    <h3 data-i18n="your_details">Your Details</h3>
+    <div class="form-group" style="grid-column:1/-1">
+      <label data-i18n="name">Name</label>
+      <input type="text" id="customerName" placeholder="Your name" autocomplete="off" data-i18n-placeholder="your_name" />
+      <span class="field-error" id="nameError" data-i18n="min2">Min 2 characters</span>
+    </div>
+  </div>
+
+  <div class="category-nav" id="categoryNav">
+    <button class="cat-btn active" data-cat="All">All</button>
+  </div>
+
+  <div id="menuContent">
+    <div class="page-state" id="loadingState">
+      <div class="load-ring"></div>
+      <div class="page-state-text" data-i18n="connecting_menu">Connecting to menu…</div>
+      <div class="page-state-sub" data-i18n="connecting_menu_sub">Make sure you're on the same Wi-Fi as the restaurant</div>
+    </div>
+  </div>
+</main>
+
+<!-- FAB (mobile only) -->
+<button class="cart-fab hidden" id="cartFab" aria-label="View cart">
+  <span class="fab-icon">🛒</span>
+  <span id="fabText">View Cart</span>
+  <span class="fab-badge" id="fabCount">0</span>
+</button>
+
+<!-- Cart bottom sheet (mobile) -->
+<div class="cart-overlay" id="cartOverlay" role="dialog" aria-modal="true">
+  <div class="cart-sheet" id="cartSheet">
+    <div class="sheet-drag" id="sheetDrag"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" data-i18n="your_order">Your Order</div>
+      <button class="sheet-close" id="sheetClose" aria-label="Close cart">✕</button>
+    </div>
+    <!-- Customer details inside sheet (mobile only) -->
+    <div class="sheet-details" style="grid-template-columns:1fr">
+      <div class="form-group">
+        <label data-i18n="your_name_label">Your Name</label>
+        <input type="text" id="mCustomerName" placeholder="Enter your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="enter_name" />
+        <span class="field-error" id="mNameError" data-i18n="min2">Min 2 characters</span>
+      </div>
+    </div>
+
+    <div class="sheet-items" id="sheetItems">
+      <div class="cart-empty" id="sheetEmpty">
+        <div class="cart-empty-icon">🛒</div>
+        <div class="cart-empty-text" data-i18n="add_items">Add items to get started</div>
+      </div>
+    </div>
+    <div class="sheet-footer" id="sheetFooter">
+      <div class="sheet-options">
+        <div class="toggle-row">
+          <span data-i18n="service_charge">Service Charge (10%)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="serviceToggle" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="discount-row">
+          <input type="number" class="discount-input" id="discountInput" placeholder="Discount %" min="0" max="30" data-i18n-placeholder="discount_pct" />
+        </div>
+      </div>
+      <div class="bill-summary">
+        <div class="bill-row"><span data-i18n="subtotal">Subtotal</span><span id="bSubtotal">₹0.00</span></div>
+        <div class="bill-row discount" id="discountRow" style="display:none"><span data-i18n="discount">Discount</span><span id="bDiscount">-₹0.00</span></div>
+        <div class="bill-row" id="serviceRow" style="display:none"><span data-i18n="service_10">Service (10%)</span><span id="bService">₹0.00</span></div>
+        <div class="bill-row"><span data-i18n="gst">GST (5%)</span><span id="bGst">₹0.00</span></div>
+        <div class="bill-row total"><span data-i18n="total">Total</span><span id="bTotal">₹0.00</span></div>
+      </div>
+      <div class="error-banner" id="orderError"></div>
+      <button class="place-order-btn" id="placeOrderBtn" disabled>
+        <div class="spinner" id="orderSpinner"></div>
+        <span id="placeOrderText" data-i18n="add_items_to_order">Add items to order</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<aside class="cart-sidebar" id="cartSidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title" data-i18n="your_order">Your Order</div>
+    <div class="sidebar-count" id="sidebarCount">0</div>
+  </div>
+  <div class="sidebar-items" id="sidebarItems">
+    <div class="cart-empty" id="sidebarEmpty">
+      <div class="cart-empty-icon">🛒</div>
+      <div class="cart-empty-text" data-i18n="add_items">Add items to get started</div>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sheet-options">
+      <div class="toggle-row">
+        <span data-i18n="service_charge">Service Charge (10%)</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="serviceToggleD" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="discount-row">
+        <input type="number" class="discount-input" id="discountInputD" placeholder="Discount %" min="0" max="30" data-i18n-placeholder="discount_pct" />
+      </div>
+    </div>
+    <div class="bill-summary">
+      <div class="bill-row"><span data-i18n="subtotal">Subtotal</span><span id="dSubtotal">₹0.00</span></div>
+      <div class="bill-row discount" id="dDiscountRow" style="display:none"><span data-i18n="discount">Discount</span><span id="dDiscount">-₹0.00</span></div>
+      <div class="bill-row" id="dServiceRow" style="display:none"><span data-i18n="service_10">Service (10%)</span><span id="dService">₹0.00</span></div>
+      <div class="bill-row"><span data-i18n="gst">GST (5%)</span><span id="dGst">₹0.00</span></div>
+      <div class="bill-row total"><span data-i18n="total">Total</span><span id="dTotal">₹0.00</span></div>
+    </div>
+    <div class="error-banner" id="dOrderError"></div>
+    <button class="place-order-btn" id="dPlaceOrderBtn" disabled>
+      <div class="spinner" id="dOrderSpinner"></div>
+      <span id="dPlaceOrderText" data-i18n="add_items_to_order">Add items to order</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Table Occupied Screen -->
+<div id="tableOccupiedScreen">
+  <div class="occupied-icon">🚫</div>
+  <div class="occupied-table-badge" id="occupiedTableBadge">T—</div>
+  <div class="occupied-title" id="occupiedTitle">Table Occupied</div>
+  <div class="occupied-sub" id="occupiedSub">This table is currently occupied. Please ask a staff member for assistance or scan a different table's QR code.</div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ── ORDER TRACKER ── -->
+<div id="order-tracker">
+  <div class="tracker-wrap">
+
+    <div class="tracker-topbar">
+      <div class="tracker-brand">ZingPOS</div>
+      <div class="tracker-order-id" id="trackerOrderId"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tracker-tabs">
+      <button class="tracker-tab active" data-tab="status" data-i18n="order_status">Order Status</button>
+      <button class="tracker-tab" data-tab="receipt" data-i18n="view_receipt">View Receipt</button>
+    </div>
+
+    <!-- Status Panel -->
+    <div id="trackerStatusPanel">
+      <div class="tracker-icon-wrap">
+        <div class="tracker-icon" id="trackerIcon">⏳</div>
+      </div>
+
+      <div class="tracker-status-msg" id="trackerMsg" data-i18n="order_received">Order Received</div>
+      <div class="tracker-status-sub" id="trackerSub" data-i18n="hang_tight">Hang tight — we'll start preparing it shortly.</div>
+
+      <!-- Step progress -->
+      <div class="tracker-steps">
+        <div class="tracker-step" data-step="0">
+          <div class="step-dot"></div>
+          <div class="step-label" data-i18n="step_received">Received</div>
+        </div>
+        <div class="step-connector" id="line-0"><div class="step-connector-fill"></div></div>
+        <div class="tracker-step" data-step="1">
+          <div class="step-dot"></div>
+          <div class="step-label" data-i18n="step_preparing">Preparing</div>
+        </div>
+        <div class="step-connector" id="line-1"><div class="step-connector-fill"></div></div>
+        <div class="tracker-step" data-step="2">
+          <div class="step-dot"></div>
+          <div class="step-label" data-i18n="step_ready">Ready</div>
+        </div>
+        <div class="step-connector" id="line-2"><div class="step-connector-fill"></div></div>
+        <div class="tracker-step" data-step="3">
+          <div class="step-dot"></div>
+          <div class="step-label" data-i18n="step_done">Done</div>
+        </div>
+      </div>
+
+      <div class="tracker-items-card" id="trackerItems"></div>
+      <div class="tracker-total-row" id="trackerTotal"></div>
+    </div>
+
+    <!-- Receipt Panel -->
+    <div id="trackerReceiptPanel" style="display:none"></div>
+
+    <button class="tracker-new-btn" id="trackerNewBtn" data-i18n="place_another">+ Place Another Order</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  i18n — Hindi / English Translation System
+// ═══════════════════════════════════════════════════════
+
+const TRANSLATIONS = {
+  en: {
+    connecting: 'Connecting…',
+    live: 'Live',
+    reconnecting: 'Reconnecting…',
+    offline: 'Offline',
+    reconnect_banner: '⚡ Reconnecting…',
+    scan_table_qr: 'Scan table QR',
+    your_details: 'Your Details',
+    name: 'Name',
+    your_name: 'Your name',
+    your_name_label: 'Your Name',
+    enter_name: 'Enter your name',
+    min2: 'Min 2 characters',
+    your_order: 'Your Order',
+    add_items: 'Add items to get started',
+    service_charge: 'Service Charge (10%)',
+    discount_pct: 'Discount %',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    service_10: 'Service (10%)',
+    gst: 'GST (5%)',
+    total: 'Total',
+    add_items_to_order: 'Add items to order',
+    place_order: 'Place Order',
+    placing_order: 'Placing Order…',
+    view_cart: 'View Cart',
+    order_status: 'Order Status',
+    view_receipt: 'View Receipt',
+    order_received: 'Order Received',
+    hang_tight: "Hang tight — we'll start preparing it shortly.",
+    being_prepared: 'Being Prepared',
+    being_prepared_sub: 'Your order is being freshly made just for you!',
+    ready_collect: 'Ready to Collect!',
+    ready_collect_sub: 'Your order is ready. Please come collect it!',
+    order_complete: 'Order Complete!',
+    order_complete_sub: 'Thank you for dining with us. Enjoy your meal!',
+    all_done: 'All Done!',
+    all_done_sub: 'Payment received. Thank you, see you again!',
+    step_received: 'Received',
+    step_preparing: 'Preparing',
+    step_ready: 'Ready',
+    step_done: 'Done',
+    place_another: '+ Place Another Order',
+    connecting_menu: 'Connecting to menu…',
+    connecting_menu_sub: "Make sure you're on the same Wi-Fi as the restaurant",
+    cant_reach: "Can't reach the server",
+    cant_reach_sub: 'Make sure your phone is on the same Wi-Fi as the restaurant',
+    retry: 'Retry',
+    popular: '★ Popular',
+    reconnected: 'Reconnected!',
+    cart_empty_error: 'Cart is empty.',
+    scan_qr_error: 'Please scan the QR code at your table to order.',
+    not_connected_error: 'Not connected. Please wait…',
+    failed_order: 'Failed to place order.',
+    thank_you: 'Thank you for dining with us!',
+    please_visit: 'Please visit again ✦',
+    restaurant_bar: 'Restaurant & Bar',
+    receipt_order: 'Order',
+    receipt_date: 'Date',
+    receipt_time: 'Time',
+    receipt_name: 'Name',
+    receipt_table: 'Table',
+    table_occupied: 'Table Occupied',
+    table_occupied_sub: 'This table is currently occupied. Please ask a staff member for assistance or scan a different table\'s QR code.',
+    all_cat: 'All',
+    download_receipt: 'Download',
+    share_receipt: 'Share',
+    downloading: 'Saving…',
+    sharing: 'Sharing…',
+    download_success: 'Receipt saved!',
+    share_not_supported: 'Sharing not supported on this device',
+    receipt_filename: 'ZingPOS-Receipt',
+  },
+  hi: {
+    connecting: 'जोड़ रहे हैं…',
+    live: 'लाइव',
+    reconnecting: 'पुनः जोड़ रहे हैं…',
+    offline: 'ऑफ़लाइन',
+    reconnect_banner: '⚡ पुनः जोड़ रहे हैं…',
+    scan_table_qr: 'टेबल QR स्कैन करें',
+    your_details: 'आपकी जानकारी',
+    name: 'नाम',
+    your_name: 'आपका नाम',
+    your_name_label: 'आपका नाम',
+    enter_name: 'नाम दर्ज करें',
+    min2: 'न्यूनतम 2 अक्षर',
+    your_order: 'आपका ऑर्डर',
+    add_items: 'शुरू करने के लिए आइटम जोड़ें',
+    service_charge: 'सर्विस चार्ज (10%)',
+    discount_pct: 'छूट %',
+    subtotal: 'उप-कुल',
+    discount: 'छूट',
+    service_10: 'सर्विस (10%)',
+    gst: 'GST (5%)',
+    total: 'कुल',
+    add_items_to_order: 'ऑर्डर में आइटम जोड़ें',
+    place_order: 'ऑर्डर दें',
+    placing_order: 'ऑर्डर दे रहे हैं…',
+    view_cart: 'कार्ट देखें',
+    order_status: 'ऑर्डर स्थिति',
+    view_receipt: 'रसीद देखें',
+    order_received: 'ऑर्डर मिल गया',
+    hang_tight: 'थोड़ा रुकें — हम जल्द ही तैयार करना शुरू करेंगे।',
+    being_prepared: 'तैयार हो रहा है',
+    being_prepared_sub: 'आपका ऑर्डर खास आपके लिए बनाया जा रहा है!',
+    ready_collect: 'लेने के लिए तैयार!',
+    ready_collect_sub: 'आपका ऑर्डर तैयार है। कृपया आकर ले जाएं!',
+    order_complete: 'ऑर्डर पूरा हुआ!',
+    order_complete_sub: 'हमारे साथ खाने के लिए धन्यवाद। खाना का आनंद लें!',
+    all_done: 'सब हो गया!',
+    all_done_sub: 'भुगतान मिल गया। धन्यवाद, फिर आएं!',
+    step_received: 'मिला',
+    step_preparing: 'बन रहा है',
+    step_ready: 'तैयार',
+    step_done: 'हो गया',
+    place_another: '+ नया ऑर्डर दें',
+    connecting_menu: 'मेनू से जोड़ रहे हैं…',
+    connecting_menu_sub: 'सुनिश्चित करें कि आप रेस्टोरेंट के Wi-Fi से जुड़े हैं',
+    cant_reach: 'सर्वर तक नहीं पहुंच पा रहे',
+    cant_reach_sub: 'सुनिश्चित करें कि आपका फोन रेस्टोरेंट के Wi-Fi से जुड़ा है',
+    retry: 'पुनः प्रयास करें',
+    popular: '★ लोकप्रिय',
+    reconnected: 'पुनः जुड़ गए!',
+    cart_empty_error: 'कार्ट खाली है।',
+    scan_qr_error: 'ऑर्डर देने के लिए अपनी टेबल का QR कोड स्कैन करें।',
+    not_connected_error: 'जुड़ा नहीं है। कृपया प्रतीक्षा करें…',
+    failed_order: 'ऑर्डर देने में विफल।',
+    thank_you: 'हमारे साथ खाने के लिए धन्यवाद!',
+    please_visit: 'कृपया फिर पधारें ✦',
+    restaurant_bar: 'रेस्टोरेंट एवं बार',
+    receipt_order: 'ऑर्डर',
+    receipt_date: 'तारीख',
+    receipt_time: 'समय',
+    receipt_name: 'नाम',
+    receipt_table: 'टेबल',
+    table_occupied: 'टेबल व्यस्त है',
+    table_occupied_sub: 'यह टेबल अभी व्यस्त है। कृपया किसी स्टाफ सदस्य से सहायता लें या किसी अन्य टेबल का QR स्कैन करें।',
+    all_cat: 'सभी',
+    download_receipt: 'डाउनलोड',
+    share_receipt: 'शेयर करें',
+    downloading: 'सहेज रहे हैं…',
+    sharing: 'शेयर हो रहा है…',
+    download_success: 'रसीद सहेजी गई!',
+    share_not_supported: 'इस डिवाइस पर शेयरिंग उपलब्ध नहीं',
+    receipt_filename: 'ZingPOS-Raseed',
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'en';
+
+function t(key) {
+  return TRANSLATIONS[currentLang][key] || TRANSLATIONS['en'][key] || key;
+}
+
+function applyTranslations() {
+  // Update html lang attr
+  document.documentElement.lang = currentLang;
+
+  // Text elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+
+  // Placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+
+  // Lang toggle button states
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === currentLang);
+  });
+
+  // Reconnect banner
+  const banner = document.getElementById('reconnect-banner');
+  if (banner) banner.textContent = t('reconnect_banner');
+
+  // Occupied screen (re-translate if visible)
+  const occTitle = document.getElementById('occupiedTitle');
+  const occSub   = document.getElementById('occupiedSub');
+  if (occTitle) occTitle.textContent = t('table_occupied');
+  if (occSub)   occSub.textContent   = t('table_occupied_sub');
+
+  // Table badge "Scan table QR" text (only if no table)
+  if (!state.tableNo) {
+    const text = document.getElementById('tableBadgeText');
+    if (text) text.textContent = t('scan_table_qr');
+  }
+
+  // Status text (only if already showing a status)
+  const statusTxt = document.getElementById('statusText');
+  if (statusTxt) {
+    const cur = statusTxt.textContent;
+    if (cur) {
+      if (state.isConnected) statusTxt.textContent = t('live');
+      else statusTxt.textContent = t('connecting');
+    }
+  }
+
+  // FAB text
+  const fabText = document.getElementById('fabText');
+  if (fabText && fabText.textContent) fabText.textContent = t('view_cart');
+
+  // Place order buttons text (if not submitting)
+  if (!state.isSubmitting) {
+    const cartItems = Object.values(state.cart);
+    ['placeOrderText', 'dPlaceOrderText'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = cartItems.length === 0 ? t('add_items_to_order') : t('place_order');
+    });
+  }
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  applyTranslations();
+  // Re-render category nav (to update "All" label) and menu (to update "Popular" badge)
+  if (state.menu.length > 0) {
+    renderCategoryNav();
+    renderMenu();
+    updateBadges();
+    if (isDesktop()) renderSidebarCart();
+    else if (state.cartOpen) renderSheetCart();
+  }
+  // Re-render tracker if active
+  if (state.trackingOrder) {
+    const status = state.trackingOrder.paymentStatus === 'paid' ? 'paid' : state.trackingOrder.status;
+    updateTrackerStatus(status);
+    renderTrackerItems(state.trackingOrder);
+    renderDigitalReceipt(state.trackingOrder);
+  }
+}
+
+// Wire up toggle buttons
+document.getElementById('langToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('.lang-btn');
+  if (btn) setLang(btn.dataset.lang);
+});
+
+// ═══════════════════════════════════════════════════════
+//  ZingPOS — Customer App
+// ═══════════════════════════════════════════════════════
+
+const state = {
+  cart: {},
+  menu: [],
+  config: {},
+  sessionId: uid('sess'),
+  isSubmitting: false,
+  isConnected: false,
+  cartOpen: false,
+  trackingOrder: null,
+  tableNo: new URLSearchParams(window.location.search).get('table') || '',
+  customerName: '',
+};
+
+function uid(prefix) {
+  return (prefix || 'id') + '_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function fmt(n) { return '₹' + (parseFloat(n) || 0).toFixed(2); }
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+function isDesktop() { return window.innerWidth >= 900; }
+
+// ── Socket ──────────────────────────────────────────────
+const socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
+
+socket.on('connect', () => { state.isConnected = true; updateConnectionUI(true); });
+socket.on('disconnect', () => { state.isConnected = false; updateConnectionUI(false); });
+socket.on('connect_error', () => {
+  updateConnectionUI(false, true);
+  showConnectError();
+});
+socket.on('reconnect_attempt', () => updateConnectionUI(false, true));
+socket.on('reconnect', () => { updateConnectionUI(true); showToast(t('reconnected'), 'success'); });
+socket.on('init', (data) => {
+  state.menu = data.menu || [];
+  state.config = data.config || {};
+  document.getElementById('loadingState')?.remove();
+  renderMenu();
+  renderCategoryNav();
+  // Check occupancy on init
+  checkTableOccupancy(data.tablesStatus || []);
+});
+
+// Live table status — check if our table just became occupied or freed
+socket.on('tables:status', (data) => {
+  checkTableOccupancy(data.tables || []);
+});
+
+function checkTableOccupancy(tables) {
+  if (!state.tableNo) return; // no table in URL — nothing to check
+  const info = tables.find(t => t.tableId === state.tableNo);
+  if (!info) return;
+
+  const screen    = document.getElementById('tableOccupiedScreen');
+  const titleEl   = document.getElementById('occupiedTitle');
+  const subEl     = document.getElementById('occupiedSub');
+  const badgeEl   = document.getElementById('occupiedTableBadge');
+
+  if (info.occupied) {
+    // Block the page
+    titleEl.textContent = t('table_occupied');
+    subEl.textContent   = t('table_occupied_sub');
+    badgeEl.textContent = state.tableNo;
+    screen.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  } else {
+    // Table is free — let customer order
+    screen.classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+}
+
+// Show error state if not connected after 8 seconds
+const connectTimeout = setTimeout(showConnectError, 8000);
+socket.on('connect', () => clearTimeout(connectTimeout));
+
+function showConnectError() {
+  const el = document.getElementById('loadingState');
+  if (!el || state.menu.length > 0) return;
+  el.innerHTML = `
+    <div class="page-state-icon">⚠️</div>
+    <div class="page-state-text">${t('cant_reach')}</div>
+    <div class="page-state-sub">${t('cant_reach_sub')}</div>
+    <button class="retry-btn" onclick="location.reload()">${t('retry')}</button>
+  `;
+}
+
+function updateConnectionUI(connected, reconnecting = false) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const banner = document.getElementById('reconnect-banner');
+  dot.className = 'status-dot ' + (connected ? 'connected' : reconnecting ? 'reconnecting' : '');
+  txt.textContent = connected ? t('live') : reconnecting ? t('reconnecting') : t('offline');
+  banner.textContent = t('reconnect_banner');
+  if (connected) banner.classList.remove('visible');
+  else if (reconnecting) banner.classList.add('visible');
+}
+
+// ── Menu ────────────────────────────────────────────────
+function renderCategoryNav() {
+  const cats = [t('all_cat'), ...new Set(state.menu.map(i => i.category))];
+  const nav = document.getElementById('categoryNav');
+  nav.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (cat === t('all_cat') ? ' active' : '');
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterMenu(cat);
+    });
+    nav.appendChild(btn);
+  });
+}
+
+function filterMenu(cat) {
+  document.querySelectorAll('.menu-section').forEach(s => {
+    s.style.display = (cat === t('all_cat') || s.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
+function renderMenu() {
+  const container = document.getElementById('menuContent');
+  const cats = [...new Set(state.menu.map(i => i.category))];
+  container.innerHTML = '';
+  cats.forEach(cat => {
+    const section = document.createElement('div');
+    section.className = 'menu-section'; section.dataset.cat = cat;
+    section.innerHTML = `<div class="section-title">${cat}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'menu-grid';
+    state.menu.filter(i => i.category === cat).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'menu-item'; card.id = 'card-' + item.id;
+      card.innerHTML = `
+        <div class="item-emoji">${item.emoji}</div>
+        <div class="item-name">${item.name}</div>
+        <div class="item-price">${fmt(item.price)}</div>
+        ${item.popular ? `<div class="item-popular">${t('popular')}</div>` : ''}
+        <div class="item-badge" id="badge-${item.id}">0</div>
+      `;
+      card.addEventListener('click', () => addToCart(item));
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+// ── Cart ────────────────────────────────────────────────
+function addToCart(item) {
+  if (state.cart[item.id]) state.cart[item.id].quantity++;
+  else state.cart[item.id] = { ...item, quantity: 1 };
+  onCartChanged();
+}
+function updateQty(itemId, delta) {
+  if (!state.cart[itemId]) return;
+  state.cart[itemId].quantity = Math.max(0, state.cart[itemId].quantity + delta);
+  if (state.cart[itemId].quantity === 0) delete state.cart[itemId];
+  onCartChanged();
+}
+function getCartItems() {
+  return Object.values(state.cart).map(i => ({
+    id: i.id, name: i.name, price: i.price, emoji: i.emoji, quantity: i.quantity,
+  }));
+}
+function cartTotal() {
+  return Object.values(state.cart).reduce((s, i) => s + i.quantity, 0);
+}
+
+function onCartChanged() {
+  updateBadges();
+  updateFab();
+  if (isDesktop()) renderSidebarCart();
+  else if (state.cartOpen) renderSheetCart();
+  updateBillSummary();
+  broadcastCartDebounced();
+}
+
+// ── FAB (mobile) ────────────────────────────────────────
+function updateFab() {
+  if (isDesktop()) return;
+  const fab = document.getElementById('cartFab');
+  const count = cartTotal();
+  const fabCount = document.getElementById('fabCount');
+  const fabText = document.getElementById('fabText');
+  fabCount.textContent = count;
+  if (count > 0) {
+    fab.classList.remove('hidden');
+    fabText.textContent = t('view_cart');
+  } else {
+    fab.classList.add('hidden');
+  }
+}
+
+document.getElementById('cartFab').addEventListener('click', openCart);
+
+function openCart() {
+  state.cartOpen = true;
+  renderSheetCart();
+  document.getElementById('cartOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCart() {
+  state.cartOpen = false;
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('cartOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('cartOverlay')) closeCart();
+});
+document.getElementById('sheetClose').addEventListener('click', closeCart);
+
+// Touch drag to dismiss
+let dragStart = 0;
+document.getElementById('sheetDrag').addEventListener('touchstart', e => {
+  dragStart = e.touches[0].clientY;
+}, { passive: true });
+document.getElementById('sheetDrag').addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].clientY - dragStart;
+  if (diff > 60) closeCart();
+});
+
+// ── Render sheet cart items (mobile) ────────────────────
+function renderSheetCart() {
+  const container = document.getElementById('sheetItems');
+  const empty = document.getElementById('sheetEmpty');
+  const items = Object.values(state.cart);
+
+  const btn = document.getElementById('placeOrderBtn');
+  const txt = document.getElementById('placeOrderText');
+  if (!state.isSubmitting) {
+    btn.disabled = items.length === 0;
+    txt.textContent = items.length === 0 ? t('add_items_to_order') : t('place_order');
+  }
+
+  if (items.length === 0) {
+    container.querySelectorAll('.cart-item').forEach(el => el.remove());
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  syncCartDOM(container, items, false);
+}
+
+// ── Render sidebar cart items (desktop) ─────────────────
+function renderSidebarCart() {
+  const container = document.getElementById('sidebarItems');
+  const empty = document.getElementById('sidebarEmpty');
+  const items = Object.values(state.cart);
+  const count = cartTotal();
+
+  const countEl = document.getElementById('sidebarCount');
+  countEl.textContent = count;
+  if (count > 0) { countEl.classList.add('bump'); setTimeout(() => countEl.classList.remove('bump'), 300); }
+
+  const btn = document.getElementById('dPlaceOrderBtn');
+  const txt = document.getElementById('dPlaceOrderText');
+  if (!state.isSubmitting) {
+    btn.disabled = items.length === 0;
+    txt.textContent = items.length === 0 ? t('add_items_to_order') : t('place_order');
+  }
+
+  if (items.length === 0) {
+    container.querySelectorAll('.cart-item').forEach(el => el.remove());
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  syncCartDOM(container, items, true);
+}
+
+function syncCartDOM(container, items, isDesktop) {
+  const stateIds = new Set(items.map(i => i.id));
+  container.querySelectorAll('.cart-item').forEach(el => {
+    if (!stateIds.has(el.dataset.id)) el.remove();
+  });
+  items.forEach(item => {
+    let el = container.querySelector(`.cart-item[data-id="${item.id}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'cart-item'; el.dataset.id = item.id;
+      el.innerHTML = `
+        <div class="cart-item-emoji">${item.emoji}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-price" data-unit="${item.price}">${fmt(item.price)}</div>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn" data-action="dec">−</button>
+          <div class="qty-num" data-qty></div>
+          <button class="qty-btn" data-action="inc">+</button>
+        </div>
+      `;
+      el.querySelector('[data-action="dec"]').addEventListener('click', e => { e.stopPropagation(); updateQty(item.id, -1); });
+      el.querySelector('[data-action="inc"]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
+      container.appendChild(el);
+    }
+    el.querySelector('[data-qty]').textContent = item.quantity;
+    el.querySelector('[data-unit]').textContent = fmt(item.price * item.quantity);
+  });
+}
+
+// ── Badges on menu cards ─────────────────────────────────
+function updateBadges() {
+  state.menu.forEach(item => {
+    const badge = document.getElementById('badge-' + item.id);
+    if (!badge) return;
+    const inCart = state.cart[item.id];
+    if (inCart && inCart.quantity > 0) {
+      badge.textContent = inCart.quantity;
+      badge.classList.add('visible');
+    } else {
+      badge.classList.remove('visible');
+    }
+  });
+}
+
+// ── Billing ─────────────────────────────────────────────
+function getServiceToggle() {
+  return isDesktop()
+    ? document.getElementById('serviceToggleD').checked
+    : document.getElementById('serviceToggle').checked;
+}
+function getDiscountInput() {
+  const v = isDesktop()
+    ? parseFloat(document.getElementById('discountInputD').value)
+    : parseFloat(document.getElementById('discountInput').value);
+  return Math.min(Math.max(0, v || 0), 30);
+}
+
+function calculateBill() {
+  const items = getCartItems();
+  const applyService = getServiceToggle();
+  const discountPct = getDiscountInput();
+  const GST = state.config.gstRate || 0.05;
+  const SVC = state.config.serviceChargeRate || 0.10;
+  const subtotal = items.reduce((s, i) => s + r2(i.price * i.quantity), 0);
+  const discountAmount = r2(subtotal * discountPct / 100);
+  const discountedSubtotal = r2(subtotal - discountAmount);
+  const serviceCharge = applyService ? r2(discountedSubtotal * SVC) : 0;
+  const taxable = r2(discountedSubtotal + serviceCharge);
+  const gst = r2(taxable * GST);
+  const total = r2(taxable + gst);
+  return { subtotal, discountAmount, discountPct, serviceCharge, gst, total };
+}
+
+function r2(v) { return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+function updateBillSummary() {
+  const b = calculateBill();
+  if (isDesktop()) {
+    document.getElementById('dSubtotal').textContent = fmt(b.subtotal);
+    document.getElementById('dGst').textContent = fmt(b.gst);
+    document.getElementById('dTotal').textContent = fmt(b.total);
+    const dr = document.getElementById('dDiscountRow');
+    if (b.discountAmount > 0) { dr.style.display = ''; document.getElementById('dDiscount').textContent = '-' + fmt(b.discountAmount); }
+    else dr.style.display = 'none';
+    const sr = document.getElementById('dServiceRow');
+    if (b.serviceCharge > 0) { sr.style.display = ''; document.getElementById('dService').textContent = fmt(b.serviceCharge); }
+    else sr.style.display = 'none';
+  } else {
+    document.getElementById('bSubtotal').textContent = fmt(b.subtotal);
+    document.getElementById('bGst').textContent = fmt(b.gst);
+    document.getElementById('bTotal').textContent = fmt(b.total);
+    const dr = document.getElementById('discountRow');
+    if (b.discountAmount > 0) { dr.style.display = ''; document.getElementById('bDiscount').textContent = '-' + fmt(b.discountAmount); }
+    else dr.style.display = 'none';
+    const sr = document.getElementById('serviceRow');
+    if (b.serviceCharge > 0) { sr.style.display = ''; document.getElementById('bService').textContent = fmt(b.serviceCharge); }
+    else sr.style.display = 'none';
+  }
+}
+
+// ── Broadcast cart to server ─────────────────────────────
+const broadcastCartDebounced = debounce(broadcastCart, 400);
+function getName()  { return state.customerName; }
+function getTable() { return state.tableNo; }
+
+function broadcastCart() {
+  if (!state.isConnected) return;
+  const name  = getName();
+  const table = getTable();
+  socket.emit('cart:update', {
+    sessionId: state.sessionId,
+    items: getCartItems(),
+    customerName: name,
+    tableNo: table,
+    applyServiceCharge: getServiceToggle(),
+    discountPercent: getDiscountInput(),
+    eventId: uid('evt'),
+  });
+}
+
+// ── Place Order ─────────────────────────────────────────
+function getActiveOrderBtn() {
+  return isDesktop() ? document.getElementById('dPlaceOrderBtn') : document.getElementById('placeOrderBtn');
+}
+
+document.getElementById('placeOrderBtn').addEventListener('click', () => { if (!state.isSubmitting) submitOrder(); });
+document.getElementById('dPlaceOrderBtn').addEventListener('click', () => { if (!state.isSubmitting) submitOrder(); });
+
+function validateOrder() {
+  const name  = getName();
+  const items = getCartItems();
+
+  if (items.length === 0) { showOrderError(t('cart_empty_error')); return false; }
+  if (!state.tableNo) { showOrderError(t('scan_qr_error')); return false; }
+
+  // Clear errors on both inputs (only one is visible depending on screen size)
+  ['nameError', 'mNameError'].forEach(id => document.getElementById(id)?.classList.remove('visible'));
+  ['customerName', 'mCustomerName'].forEach(id => document.getElementById(id)?.classList.remove('error'));
+
+  if (name.length < 2) {
+    ['nameError', 'mNameError'].forEach(id => document.getElementById(id)?.classList.add('visible'));
+    ['customerName', 'mCustomerName'].forEach(id => document.getElementById(id)?.classList.add('error'));
+    // Focus whichever is currently visible
+    const focusTarget = isDesktop() ? 'customerName' : 'mCustomerName';
+    document.getElementById(focusTarget)?.focus();
+    return false;
+  }
+
+  return true;
+}
+
+function submitOrder() {
+  hideOrderError();
+  if (!validateOrder()) return;
+  if (!state.isConnected) { showOrderError(t('not_connected_error')); return; }
+
+  setSubmitting(true);
+  socket.emit('order:place', {
+    sessionId: state.sessionId,
+    items: getCartItems(),
+    customerName: getName(),
+    tableNo: getTable(),
+    applyServiceCharge: getServiceToggle(),
+    discountPercent: getDiscountInput(),
+    eventId: uid('evt'),
+  }, (res) => {
+    setSubmitting(false);
+    if (res.success) showSuccess(res.order);
+    else showOrderError(res.error || t('failed_order'));
+  });
+}
+
+function setSubmitting(val) {
+  state.isSubmitting = val;
+  ['placeOrderBtn', 'dPlaceOrderBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = val;
+  });
+  ['orderSpinner', 'dOrderSpinner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('visible', val);
+  });
+  ['placeOrderText', 'dPlaceOrderText'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val ? t('placing_order') : t('place_order');
+  });
+}
+
+// ── Order Tracker ───────────────────────────────────────
+function getTrackerStatus() {
+  return {
+    pending:   { step: 0, icon: '⏳', msgKey: 'order_received',   subKey: 'hang_tight',           pulse: false },
+    preparing: { step: 1, icon: '👨‍🍳', msgKey: 'being_prepared',  subKey: 'being_prepared_sub',    pulse: true  },
+    ready:     { step: 2, icon: '🔔', msgKey: 'ready_collect',    subKey: 'ready_collect_sub',     pulse: true  },
+    completed: { step: 3, icon: '✅', msgKey: 'order_complete',   subKey: 'order_complete_sub',    pulse: false },
+    paid:      { step: 3, icon: '🎉', msgKey: 'all_done',         subKey: 'all_done_sub',          pulse: false },
+  };
+}
+
+socket.on('order:updated', (updated) => {
+  if (!state.trackingOrder || updated.id !== state.trackingOrder.id) return;
+  state.trackingOrder = updated;
+  const status = updated.paymentStatus === 'paid' ? 'paid' : updated.status;
+  updateTrackerStatus(status);
+});
+
+socket.on('order:paid', ({ orderId }) => {
+  if (state.trackingOrder && orderId === state.trackingOrder.id) {
+    updateTrackerStatus('paid');
+  }
+});
+
+function showSuccess(order) {
+  state.cart = {};
+  state.sessionId = uid('sess');
+  state.trackingOrder = order;
+  closeCart();
+  updateBadges();
+  updateFab();
+  renderSidebarCart();
+  updateBillSummary();
+  resetForm();
+  renderTrackerItems(order);
+  renderDigitalReceipt(order);
+  switchTrackerTab('status');
+  updateTrackerStatus('pending');
+  document.getElementById('order-tracker').classList.add('visible');
+}
+
+function renderTrackerItems(order) {
+  document.getElementById('trackerOrderId').textContent = order.id;
+  document.getElementById('trackerItems').innerHTML = (order.items || []).map(item => `
+    <div class="tracker-item-row">
+      <div class="tracker-item-left">
+        <span class="tracker-item-emoji">${item.emoji}</span>
+        <span>${item.name}</span>
+        <span class="tracker-item-qty">×${item.quantity}</span>
+      </div>
+      <span class="tracker-item-price">${fmt(item.price * item.quantity)}</span>
+    </div>
+  `).join('');
+  document.getElementById('trackerTotal').innerHTML =
+    `<span>${t('total')}</span><span>${fmt(order.billing?.total)}</span>`;
+}
+
+function updateTrackerStatus(status) {
+  const TRACKER_STATUS = getTrackerStatus();
+  const cfg = TRACKER_STATUS[status] || TRACKER_STATUS.pending;
+
+  // Icon — pop animation on change
+  const iconEl = document.getElementById('trackerIcon');
+  iconEl.classList.remove('pop', 'pulse');
+  void iconEl.offsetWidth; // reflow to restart animation
+  iconEl.textContent = cfg.icon;
+  iconEl.classList.add('pop');
+  if (cfg.pulse) setTimeout(() => iconEl.classList.add('pulse'), 450);
+
+  document.getElementById('trackerMsg').textContent = t(cfg.msgKey);
+  document.getElementById('trackerSub').textContent = t(cfg.subKey);
+
+  // Step dots and connectors
+  document.querySelectorAll('#order-tracker .tracker-step').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < cfg.step) el.classList.add('done');
+    else if (i === cfg.step) el.classList.add('active');
+  });
+  document.querySelectorAll('#order-tracker .step-connector').forEach((el, i) => {
+    el.classList.toggle('filled', i < cfg.step);
+  });
+}
+
+function resetForm() {
+  state.customerName = '';
+  ['customerName', 'mCustomerName'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('discountInput').value = '';
+  document.getElementById('discountInputD').value = '';
+  document.getElementById('serviceToggle').checked = false;
+  document.getElementById('serviceToggleD').checked = false;
+}
+
+document.getElementById('trackerNewBtn').addEventListener('click', () => {
+  state.trackingOrder = null;
+  document.getElementById('order-tracker').classList.remove('visible');
+  // Reset to status tab for next order
+  switchTrackerTab('status');
+});
+
+// ─── Tracker Tabs ─────────────────────────────────────
+function switchTrackerTab(tab) {
+  document.querySelectorAll('.tracker-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('trackerStatusPanel').style.display  = tab === 'status'  ? '' : 'none';
+  document.getElementById('trackerReceiptPanel').style.display = tab === 'receipt' ? '' : 'none';
+}
+
+document.querySelectorAll('.tracker-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchTrackerTab(btn.dataset.tab));
+});
+
+// ─── Digital Receipt ───────────────────────────────────
+function renderDigitalReceipt(order) {
+  const b = order.billing || {};
+  const date = new Date(order.createdAt);
+  const dateStr = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  const itemRows = (order.items || []).map(item => `
+    <div class="receipt-item-row">
+      <span class="receipt-item-name">${item.emoji ? item.emoji + ' ' : ''}${item.name}</span>
+      <span class="receipt-item-qty">×${item.quantity}</span>
+      <span class="receipt-item-amt">${fmt(item.price * item.quantity)}</span>
+    </div>`).join('');
+
+  const discountRow = b.discountAmount > 0
+    ? `<div class="receipt-billing-row discount"><span>${t('discount')} (${b.discountPercent}%)</span><span>-${fmt(b.discountAmount)}</span></div>` : '';
+  const serviceRow = b.serviceCharge > 0
+    ? `<div class="receipt-billing-row"><span>${t('service_charge')}</span><span>${fmt(b.serviceCharge)}</span></div>` : '';
+
+  // Determine if share is available
+  const canShare = !!navigator.share;
+
+  document.getElementById('trackerReceiptPanel').innerHTML = `
+    <div id="receiptCapture" style="background:var(--surface);border-radius:var(--radius);padding:20px 18px;">
+      <div class="receipt-header">
+        <div class="receipt-shop">ZINGPOS</div>
+        <div class="receipt-sub">${t('restaurant_bar')}</div>
+        <div class="receipt-sub">GST No: XXXXXXXXXXXX</div>
+      </div>
+      <div class="receipt-meta">
+        <span class="receipt-meta-label">${t('receipt_order')}</span><span class="receipt-meta-value">${order.id}</span>
+        <span class="receipt-meta-label">${t('receipt_date')}</span><span class="receipt-meta-value">${dateStr}</span>
+        <span class="receipt-meta-label">${t('receipt_time')}</span><span class="receipt-meta-value">${timeStr}</span>
+        <span class="receipt-meta-label">${t('receipt_name')}</span><span class="receipt-meta-value">${order.customerName}</span>
+        <span class="receipt-meta-label">${t('receipt_table')}</span><span class="receipt-meta-value">${order.tableNo}</span>
+      </div>
+      <hr class="receipt-divider" />
+      ${itemRows}
+      <hr class="receipt-divider" />
+      <div class="receipt-billing-row"><span>${t('subtotal')}</span><span>${fmt(b.subtotal)}</span></div>
+      ${discountRow}
+      ${serviceRow}
+      <div class="receipt-billing-row"><span>${t('gst')}</span><span>${fmt(b.gst)}</span></div>
+      <div class="receipt-total-row"><span>${t('total')}</span><span>${fmt(b.total)}</span></div>
+      <div class="receipt-footer">${t('thank_you')}<br>${t('please_visit')}</div>
+    </div>
+    <div class="receipt-actions">
+      <button class="receipt-action-btn download" id="receiptDownloadBtn" onclick="downloadReceipt('${order.id}')">
+        <span class="btn-icon">⬇</span>
+        <span class="btn-spinner"></span>
+        <span class="btn-label" data-i18n="download_receipt">${t('download_receipt')}</span>
+      </button>
+      <button class="receipt-action-btn share" id="receiptShareBtn" onclick="shareReceipt('${order.id}')" ${canShare ? '' : 'style="display:none"'}>
+        <span class="btn-icon">↑</span>
+        <span class="btn-spinner"></span>
+        <span class="btn-label" data-i18n="share_receipt">${t('share_receipt')}</span>
+      </button>
+    </div>
+  `;
+}
+
+// ─── Receipt Capture (html2canvas) ─────────────────────
+async function captureReceiptCanvas() {
+  const el = document.getElementById('receiptCapture');
+  if (!el) throw new Error('Receipt element not found');
+  return await html2canvas(el, {
+    backgroundColor: '#161616',
+    scale: 2,
+    useCORS: true,
+    logging: false,
+  });
+}
+
+async function downloadReceipt(orderId) {
+  const btn = document.getElementById('receiptDownloadBtn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.querySelector('.btn-label').textContent = t('downloading');
+
+  try {
+    const canvas = await captureReceiptCanvas();
+    const link = document.createElement('a');
+    link.download = `${t('receipt_filename')}-${orderId}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast(t('download_success'), 'success');
+  } catch (err) {
+    showToast('Download failed', 'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-label').textContent = t('download_receipt');
+  }
+}
+
+async function shareReceipt(orderId) {
+  const btn = document.getElementById('receiptShareBtn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.querySelector('.btn-label').textContent = t('sharing');
+
+  try {
+    const canvas = await captureReceiptCanvas();
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], `${t('receipt_filename')}-${orderId}.png`, { type: 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `ZingPOS Receipt — ${orderId}`,
+      });
+    } else if (navigator.share) {
+      // Fallback: share as data URL text if files not supported
+      await navigator.share({ title: `ZingPOS Receipt — ${orderId}`, text: `Your receipt from ZingPOS: ${orderId}` });
+    } else {
+      showToast(t('share_not_supported'), 'info');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      // If files not shareable, offer download instead
+      showToast(t('download_receipt') + ' ↓', 'info');
+      downloadReceipt(orderId);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-label').textContent = t('share_receipt');
+  }
+}
+
+function showOrderError(msg) {
+  const id = isDesktop() ? 'dOrderError' : 'orderError';
+  const el = document.getElementById(id);
+  el.textContent = '⚠ ' + msg; el.classList.add('visible');
+}
+function hideOrderError() {
+  ['orderError', 'dOrderError'].forEach(id => {
+    document.getElementById(id)?.classList.remove('visible');
+  });
+}
+
+// ── Sync desktop toggles/inputs with mobile ──────────────
+['serviceToggle', 'serviceToggleD'].forEach(id => {
+  document.getElementById(id).addEventListener('change', (e) => {
+    // keep both in sync
+    document.getElementById('serviceToggle').checked = e.target.checked;
+    document.getElementById('serviceToggleD').checked = e.target.checked;
+    updateBillSummary(); broadcastCartDebounced();
+  });
+});
+['discountInput', 'discountInputD'].forEach(id => {
+  document.getElementById(id).addEventListener('input', debounce((e) => {
+    const v = Math.min(Math.max(0, parseFloat(e.target.value) || 0), 30);
+    document.getElementById('discountInput').value = v || '';
+    document.getElementById('discountInputD').value = v || '';
+    updateBillSummary(); broadcastCartDebounced();
+  }, 300));
+});
+// Sync name across both inputs — entering on first screen carries into cart and vice versa
+function onNameInput(value) {
+  state.customerName = value.trim();
+  document.getElementById('customerName').value = value;
+  document.getElementById('mCustomerName').value = value;
+  broadcastCartDebounced();
+}
+document.getElementById('customerName').addEventListener('input', function() { onNameInput(this.value); });
+document.getElementById('mCustomerName').addEventListener('input', function() { onNameInput(this.value); });
+
+// ── Toast ────────────────────────────────────────────────
+function showToast(msg, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  toast.innerHTML = `<span>${icons[type] || ''}</span> ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.classList.add('out'); setTimeout(() => toast.remove(), 300); }, duration);
+}
+
+// ── Responsive: re-render on resize ──────────────────────
+window.addEventListener('resize', debounce(() => {
+  updateFab();
+  if (isDesktop()) {
+    renderSidebarCart();
+    updateBillSummary();
+  }
+}, 200));
+
+// ── Init ────────────────────────────────────────────────
+updateBillSummary();
+(function initTableBadge() {
+  const badge = document.getElementById('tableBadge');
+  const text  = document.getElementById('tableBadgeText');
+  if (state.tableNo) {
+    text.textContent = state.tableNo;
+  } else {
+    badge.className = 'table-badge no-table';
+    text.textContent = t('scan_table_qr');
+  }
+})();
+// Apply translations on load (respects saved language preference)
+applyTranslations();
+</script>
+</body>
+</html>

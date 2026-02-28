@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0d0d0d" />
+<title>ZingPOS — Waiter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0d0d0d;
+  --surface:     #161616;
+  --surface2:    #1e1e1e;
+  --surface3:    #252525;
+  --border:      #2a2a2a;
+  --border2:     #333;
+  --gold:        #c9a84c;
+  --gold-light:  #e2c278;
+  --gold-dim:    #c9a84c22;
+  --green:       #2ecc71;
+  --green-dim:   #2ecc7122;
+  --red:         #e74c3c;
+  --orange:      #f39c12;
+  --blue:        #3b82f6;
+  --blue-dim:    #3b82f622;
+  --teal:        #16a085;
+  --teal-dim:    #16a08522;
+  --text:        #f0ede8;
+  --text-dim:    #8a8580;
+  --text-mid:    #b8b4ae;
+  --radius:      14px;
+  --radius-sm:   9px;
+  --shadow:      0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg:   0 16px 56px rgba(0,0,0,0.7);
+  --transition:  200ms cubic-bezier(0.4,0,0.2,1);
+  --header-h:    60px;
+}
+
+html { font-size: 15px; -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: var(--header-h);
+  padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--gold); letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.logo sup {
+  font-size: 9px; font-family: 'DM Sans', sans-serif;
+  font-weight: 600; letter-spacing: 0.06em;
+  color: var(--text-dim); vertical-align: super; margin-left: 3px;
+  text-transform: uppercase;
+}
+.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ── Lang Toggle ──────────────────────────────────────── */
+.lang-toggle {
+  display: flex; align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px; padding: 3px; gap: 2px;
+}
+.lang-btn {
+  padding: 4px 10px; border-radius: 16px; border: none;
+  background: transparent; color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all var(--transition); white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.lang-btn.active { background: var(--gold); color: #000; }
+
+/* ── Connection ───────────────────────────────────────── */
+.connection-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-dim);
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-dim); transition: background var(--transition);
+}
+.status-dot.connected   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.reconnecting{ background: var(--orange); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+#reconnect-banner {
+  position: fixed; top: var(--header-h); left: 0; right: 0;
+  background: var(--orange); color: #000;
+  text-align: center; padding: 7px;
+  font-size: 12px; font-weight: 600;
+  z-index: 200; display: none;
+}
+#reconnect-banner.visible { display: block; }
+
+/* ── View Tabs ────────────────────────────────────────── */
+.view-tabs {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  display: flex; gap: 0;
+}
+.view-tab {
+  flex: 1; padding: 14px 8px 12px;
+  border: none; border-bottom: 3px solid transparent;
+  background: transparent; color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.view-tab .tab-badge {
+  background: var(--surface3);
+  border-radius: 10px; padding: 1px 7px;
+  font-size: 11px; color: var(--text-dim);
+  transition: all var(--transition);
+}
+.view-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.view-tab.active .tab-badge {
+  background: var(--gold-dim);
+  color: var(--gold);
+}
+
+/* ── Panels ───────────────────────────────────────────── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ════════════════════════════════
+   NEW ORDER PANEL
+   ════════════════════════════════ */
+#panel-new-order {
+  padding: 16px 16px 120px;
+}
+
+/* ── Table Setup Card ─────────────────────────────────── */
+.setup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 18px;
+}
+.setup-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px; color: var(--gold);
+  margin-bottom: 14px;
+}
+.setup-fields {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label {
+  font-size: 11px; color: var(--text-dim);
+  font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+}
+.form-group input, .form-group select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none;
+  transition: border-color var(--transition);
+  height: 42px; -webkit-appearance: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+.form-group input.error, .form-group select.error { border-color: var(--red); }
+.form-group select {
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8580' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  cursor: pointer;
+}
+.form-group select option { background: var(--surface2); color: var(--text); }
+.form-group select option:disabled { color: var(--red); background: var(--surface2); }
+.field-error { font-size: 11px; color: var(--red); display: none; }
+.field-error.visible { display: block; }
+
+/* ── Category Nav ─────────────────────────────────────── */
+.category-nav {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding-bottom: 12px; margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.category-nav::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex-shrink: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-mid); padding: 7px 16px;
+  border-radius: 20px; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all var(--transition);
+  white-space: nowrap; -webkit-tap-highlight-color: transparent;
+}
+.cat-btn:active { transform: scale(0.96); }
+.cat-btn.active { background: var(--gold); border-color: var(--gold); color: #000; font-weight: 600; }
+
+/* ── Menu Grid ────────────────────────────────────────── */
+.menu-section { margin-bottom: 24px; }
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; color: var(--gold-light);
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 600px) {
+  .menu-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+  #panel-new-order { display: grid; grid-template-columns: 1fr 360px; gap: 0; padding: 0; }
+  .menu-col { padding: 24px 24px 24px; overflow-y: auto; max-height: calc(100dvh - var(--header-h) - 49px); }
+  .cart-col { border-left: 1px solid var(--border); overflow-y: auto; max-height: calc(100dvh - var(--header-h) - 49px); }
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .cart-fab { display: none !important; }
+}
+
+.menu-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 13px;
+  cursor: pointer; transition: all var(--transition);
+  display: flex; flex-direction: column; gap: 5px;
+  position: relative; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-item:active { transform: scale(0.97); }
+.item-emoji  { font-size: 26px; line-height: 1; }
+.item-name   { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.item-price  { font-size: 15px; font-weight: 700; color: var(--gold); margin-top: auto; }
+.item-popular {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--gold-dim); border: 1px solid var(--gold);
+  color: var(--gold); font-size: 9px; font-weight: 700;
+  padding: 2px 5px; border-radius: 7px;
+}
+.item-badge {
+  position: absolute; bottom: 8px; right: 8px;
+  background: var(--green); color: #000;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+.item-badge.visible { display: flex; }
+
+/* ── Loading / Error State ────────────────────────────── */
+.page-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 40vh; gap: 14px;
+  color: var(--text-dim); text-align: center; padding: 24px;
+}
+.page-state-icon { font-size: 36px; opacity: 0.5; }
+.page-state-text { font-size: 14px; }
+.page-state-sub  { font-size: 12px; color: var(--text-dim); margin-top: -6px; }
+.load-ring {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border2); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.retry-btn {
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text-mid); border-radius: var(--radius-sm);
+  padding: 9px 20px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+
+/* ── Cart FAB (mobile) ────────────────────────────────── */
+.cart-fab {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 60; background: var(--gold);
+  border: none; border-radius: 50px; color: #000;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 700;
+  padding: 13px 28px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 28px rgba(201,168,76,0.45);
+  cursor: pointer; transition: all var(--transition);
+  white-space: nowrap; -webkit-tap-highlight-color: transparent;
+}
+.cart-fab:active { transform: translateX(-50%) scale(0.96); }
+.cart-fab.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(80px); }
+.fab-badge {
+  background: #000; color: var(--gold);
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+
+/* ── Cart Sheet (mobile overlay) ─────────────────────── */
+.cart-overlay {
+  display: none; position: fixed; inset: 0; z-index: 70;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+}
+.cart-overlay.open { display: block; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.cart-sheet {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  max-height: 90dvh; display: flex; flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.sheet-drag {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border2); margin: 12px auto 0; flex-shrink: 0; cursor: grab;
+}
+.sheet-header {
+  padding: 12px 20px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.sheet-title {
+  font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text);
+}
+.sheet-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Cart Contents (shared by sheet + desktop sidebar) ── */
+.cart-items-wrap { flex: 1; overflow-y: auto; padding: 12px 20px; }
+.cart-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 140px; color: var(--text-dim); gap: 8px;
+}
+.cart-empty-icon { font-size: 32px; opacity: 0.3; }
+.cart-empty-text { font-size: 13px; }
+
+.cart-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  animation: slideIn 0.18s ease;
+}
+.cart-item:last-child { border-bottom: none; }
+@keyframes slideIn { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:translateX(0)} }
+
+.cart-item-emoji { font-size: 20px; flex-shrink: 0; }
+.cart-item-info  { flex: 1; min-width: 0; }
+.cart-item-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-item-price { font-size: 12px; color: var(--text-dim); }
+
+.qty-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.qty-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); font-size: 16px; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); -webkit-tap-highlight-color: transparent;
+}
+.qty-btn:active { transform: scale(0.9); }
+.qty-num { font-size: 14px; font-weight: 700; min-width: 20px; text-align: center; }
+
+/* ── Cart Footer ──────────────────────────────────────── */
+.cart-footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px 20px; flex-shrink: 0;
+}
+.cart-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: var(--text-mid);
+}
+.toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--surface3); border-radius: 11px;
+  border: 1px solid var(--border2);
+  transition: background var(--transition);
+}
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text-dim); transition: all var(--transition);
+}
+input:checked + .toggle-track { background: var(--gold); border-color: var(--gold); }
+.toggle-switch input:checked + .toggle-track + .toggle-thumb { left: 21px; background: #000; }
+
+.bill-summary {
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 10px 13px; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.bill-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-dim);
+}
+.bill-row.total {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  border-top: 1px solid var(--border); padding-top: 7px; margin-top: 3px;
+}
+.bill-row.discount { color: var(--green); }
+
+.error-banner {
+  background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.35);
+  color: var(--red); border-radius: var(--radius-sm);
+  padding: 9px 13px; font-size: 12px; display: none; margin-bottom: 10px;
+}
+.error-banner.visible { display: block; }
+
+.place-order-btn {
+  width: 100%; background: var(--gold); border: none;
+  border-radius: var(--radius); color: #000;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 700; padding: 15px;
+  cursor: pointer; transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.place-order-btn:active:not(:disabled) { transform: scale(0.98); }
+.place-order-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.spinner {
+  width: 17px; height: 17px;
+  border: 2px solid rgba(0,0,0,0.3); border-top-color: #000;
+  border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+}
+.spinner.visible { display: block; }
+
+/* ── Desktop Cart Sidebar ─────────────────────────────── */
+.cart-col {
+  display: none;
+  flex-direction: column;
+  background: var(--surface);
+}
+@media (min-width: 900px) {
+  .cart-col { display: flex; }
+  .cart-col .cart-items-wrap { flex: 1; }
+}
+.sidebar-header {
+  padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.sidebar-title { font-family: 'Playfair Display', serif; font-size: 17px; color: var(--text); }
+.sidebar-count {
+  background: var(--gold); color: #000;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; transition: transform var(--transition);
+}
+.sidebar-count.bump { animation: bump 0.3s ease; }
+@keyframes bump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+
+/* ════════════════════════════════
+   MY ORDERS PANEL
+   ════════════════════════════════ */
+#panel-my-orders { padding: 16px 16px 40px; }
+
+.my-orders-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.my-orders-title {
+  font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text);
+}
+.clear-btn {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text-dim); border-radius: var(--radius-sm);
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+  font-family: 'DM Sans', sans-serif;
+}
+.clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+.order-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  margin-bottom: 14px;
+  transition: border-color var(--transition);
+  animation: cardIn 0.25s ease;
+}
+@keyframes cardIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.order-card.new-flash { animation: cardIn 0.25s ease, flashBorder 1.5s ease; }
+@keyframes flashBorder {
+  0%,100% { border-color: var(--border); }
+  30%     { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
+}
+.order-card[data-status="pending"]   { border-top: 3px solid var(--orange); }
+.order-card[data-status="preparing"] { border-top: 3px solid var(--blue); }
+.order-card[data-status="ready"]     { border-top: 3px solid var(--green); }
+.order-card[data-status="completed"] { border-top: 3px solid var(--text-dim); }
+
+.card-header {
+  padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.card-id    { font-size: 11px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.05em; }
+.card-customer { font-size: 15px; font-weight: 600; color: var(--text); }
+.card-table { font-size: 12px; color: var(--text-mid); margin-top: 2px; }
+
+.status-badge {
+  flex-shrink: 0; padding: 3px 10px; border-radius: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.status-badge.pending   { background: rgba(243,156,18,0.15); color: var(--orange); border: 1px solid var(--orange); }
+.status-badge.preparing { background: rgba(59,130,246,0.15); color: var(--blue);   border: 1px solid var(--blue); }
+.status-badge.ready     { background: var(--green-dim);      color: var(--green);  border: 1px solid var(--green); }
+.status-badge.completed { background: #ffffff10;             color: var(--text-dim); border: 1px solid var(--border2); }
+.status-badge.paid      { background: var(--teal-dim);       color: var(--teal);   border: 1px solid var(--teal); }
+
+.card-items-list { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.order-item-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: var(--text-mid); padding: 3px 0;
+}
+.order-item-qty   { color: var(--text-dim); font-size: 12px; margin: 0 8px; }
+.order-item-price { color: var(--text); font-weight: 500; }
+
+.card-billing { padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.billing-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-dim); padding: 2px 0;
+}
+.billing-row.total {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  border-top: 1px solid var(--border); padding-top: 5px; margin-top: 3px;
+}
+.billing-row.discount { color: var(--green); }
+
+.card-time-row {
+  padding: 8px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: var(--text-dim);
+}
+.card-waiter-tag {
+  background: var(--blue-dim); border: 1px solid var(--blue);
+  color: var(--blue); border-radius: 10px;
+  padding: 2px 8px; font-size: 10px; font-weight: 700;
+}
+
+/* ── Ready Alert Pulse ────────────────────────────────── */
+.order-card[data-status="ready"] {
+  animation: cardIn 0.25s ease, readyPulse 2s ease-in-out 0.5s 3;
+}
+@keyframes readyPulse {
+  0%,100% { box-shadow: none; }
+  50%     { box-shadow: 0 0 0 4px rgba(46,204,113,0.25); }
+}
+
+/* ── Empty My Orders ──────────────────────────────────── */
+.empty-orders {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 280px; gap: 12px; color: var(--text-dim); text-align: center;
+}
+.empty-orders-icon { font-size: 44px; opacity: 0.25; }
+.empty-orders-text { font-size: 14px; }
+
+/* ── Order Submitted Success ──────────────────────────── */
+.success-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.success-overlay.visible { display: flex; animation: fadeIn 0.25s ease; }
+.success-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 36px 28px; max-width: 340px; width: 90%;
+  text-align: center; animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+.success-icon  { font-size: 54px; margin-bottom: 14px; }
+.success-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+}
+.success-sub   { font-size: 14px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.5; }
+.success-order-id {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 14px;
+  font-size: 13px; font-weight: 700; color: var(--gold);
+  margin-bottom: 20px; letter-spacing: 0.04em;
+}
+.success-btns  { display: flex; gap: 10px; }
+.success-btn {
+  flex: 1; padding: 12px; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition); border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.success-btn.primary { background: var(--gold); color: #000; }
+.success-btn.secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--text-mid); }
+.success-btn:active { transform: scale(0.97); }
+
+/* ── Toast ────────────────────────────────────────────── */
+#toast-container {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column-reverse; gap: 8px;
+  z-index: 999; pointer-events: none;
+}
+@media (min-width: 900px) {
+  #toast-container { bottom: 24px; left: auto; right: 20px; transform: none; align-items: flex-end; }
+}
+.toast {
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 11px 18px;
+  font-size: 13px; color: var(--text); box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease;
+  min-width: 240px; max-width: 320px;
+  text-align: center; pointer-events: auto;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+}
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red);   color: var(--red);   }
+.toast.info    { border-color: var(--gold);  color: var(--gold);  }
+.toast.out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateY(12px)} }
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div id="reconnect-banner">⚡ Reconnecting…</div>
+
+<header>
+  <div class="logo">ZingPOS<sup id="logoSup">Waiter</sup></div>
+  <div class="header-right">
+    <div class="lang-toggle" id="langToggle">
+      <button class="lang-btn active" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="hi">हिंदी</button>
+    </div>
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting…</span>
+    </div>
+  </div>
+</header>
+
+<!-- Tab Bar -->
+<div class="view-tabs">
+  <button class="view-tab active" data-tab="new-order" id="tabNewOrder">
+    <span>🍽</span>
+    <span id="tabNewOrderLabel">New Order</span>
+  </button>
+  <button class="view-tab" data-tab="my-orders" id="tabMyOrders">
+    <span>📋</span>
+    <span id="tabMyOrdersLabel">My Orders</span>
+    <span class="tab-badge" id="myOrdersBadge">0</span>
+  </button>
+</div>
+
+<!-- ══ NEW ORDER PANEL ══ -->
+<div class="panel active" id="panel-new-order">
+
+  <!-- Menu Column (wraps everything on mobile, left col on desktop) -->
+  <div class="menu-col" id="menuCol">
+
+    <!-- Table & Customer setup -->
+    <div class="setup-card" id="setupCard">
+      <div class="setup-card-title" id="setupCardTitle">Table & Customer</div>
+      <div class="setup-fields">
+        <div class="form-group">
+          <label id="labelCustomerName">Customer Name</label>
+          <input type="text" id="customerName" placeholder="Enter name" autocomplete="off" autocapitalize="words" />
+          <span class="field-error" id="nameError">Min 2 characters</span>
+        </div>
+        <div class="form-group">
+          <label id="labelTable">Table</label>
+          <select id="tableSelect">
+            <option value="">— Select —</option>
+            <option value="T1">T1</option><option value="T2">T2</option>
+            <option value="T3">T3</option><option value="T4">T4</option>
+            <option value="T5">T5</option><option value="T6">T6</option>
+            <option value="T7">T7</option><option value="T8">T8</option>
+            <option value="T9">T9</option><option value="T10">T10</option>
+          </select>
+          <span class="field-error" id="tableError">Select a table</span>
+          <span id="tableOccupiedHint" style="font-size:11px;color:var(--red);display:none"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Nav -->
+    <div class="category-nav" id="categoryNav">
+      <button class="cat-btn active" data-cat="All">All</button>
+    </div>
+
+    <!-- Menu Content -->
+    <div id="menuContent">
+      <div class="page-state" id="loadingState">
+        <div class="load-ring"></div>
+        <div class="page-state-text" id="loadingText">Connecting to menu…</div>
+        <div class="page-state-sub" id="loadingSubText">Make sure you're on the same Wi-Fi</div>
+      </div>
+    </div>
+
+  </div><!-- /menu-col -->
+
+  <!-- Desktop Cart Sidebar -->
+  <div class="cart-col" id="cartSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title" id="sidebarTitle">Order</div>
+      <div class="sidebar-count" id="sidebarCount">0</div>
+    </div>
+    <div class="cart-items-wrap" id="sidebarItems">
+      <div class="cart-empty" id="sidebarEmpty">
+        <div class="cart-empty-icon">🛒</div>
+        <div class="cart-empty-text" id="sidebarEmptyText">Add items to get started</div>
+      </div>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-options">
+        <div class="toggle-row">
+          <span id="serviceChargeLabel">Service Charge (10%)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="serviceToggleD" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+      <div class="bill-summary">
+        <div class="bill-row"><span id="subtotalLabelD">Subtotal</span><span id="dSubtotal">₹0.00</span></div>
+        <div class="bill-row discount" id="dDiscountRow" style="display:none"><span id="discountLabelD">Discount</span><span id="dDiscount">-₹0.00</span></div>
+        <div class="bill-row" id="dServiceRow" style="display:none"><span id="serviceLabelD">Service (10%)</span><span id="dService">₹0.00</span></div>
+        <div class="bill-row"><span id="gstLabelD">GST (5%)</span><span id="dGst">₹0.00</span></div>
+        <div class="bill-row total"><span id="totalLabelD">Total</span><span id="dTotal">₹0.00</span></div>
+      </div>
+      <div class="error-banner" id="dOrderError"></div>
+      <button class="place-order-btn" id="dPlaceOrderBtn" disabled>
+        <div class="spinner" id="dOrderSpinner"></div>
+        <span id="dPlaceOrderText">Add items to order</span>
+      </button>
+    </div>
+  </div><!-- /cart-col -->
+
+</div><!-- /panel-new-order -->
+
+<!-- Mobile Cart FAB -->
+<button class="cart-fab hidden" id="cartFab">
+  <span>🛒</span>
+  <span id="fabText">View Cart</span>
+  <span class="fab-badge" id="fabCount">0</span>
+</button>
+
+<!-- Mobile Cart Sheet -->
+<div class="cart-overlay" id="cartOverlay">
+  <div class="cart-sheet">
+    <div class="sheet-drag" id="sheetDrag"></div>
+    <div class="sheet-header">
+      <div class="sheet-title" id="sheetTitle">Order</div>
+      <button class="sheet-close" id="sheetClose">✕</button>
+    </div>
+    <div class="cart-items-wrap" id="sheetItems">
+      <div class="cart-empty" id="sheetEmpty">
+        <div class="cart-empty-icon">🛒</div>
+        <div class="cart-empty-text" id="sheetEmptyText">Add items to get started</div>
+      </div>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-options">
+        <div class="toggle-row">
+          <span id="serviceChargeLabelM">Service Charge (10%)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="serviceToggle" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+      <div class="bill-summary">
+        <div class="bill-row"><span id="subtotalLabel">Subtotal</span><span id="bSubtotal">₹0.00</span></div>
+        <div class="bill-row discount" id="discountRow" style="display:none"><span id="discountLabel">Discount</span><span id="bDiscount">-₹0.00</span></div>
+        <div class="bill-row" id="serviceRow" style="display:none"><span id="serviceLabel">Service (10%)</span><span id="bService">₹0.00</span></div>
+        <div class="bill-row"><span id="gstLabel">GST (5%)</span><span id="bGst">₹0.00</span></div>
+        <div class="bill-row total"><span id="totalLabel">Total</span><span id="bTotal">₹0.00</span></div>
+      </div>
+      <div class="error-banner" id="orderError"></div>
+      <button class="place-order-btn" id="placeOrderBtn" disabled>
+        <div class="spinner" id="orderSpinner"></div>
+        <span id="placeOrderText">Add items to order</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MY ORDERS PANEL ══ -->
+<div class="panel" id="panel-my-orders">
+  <div class="my-orders-header">
+    <div class="my-orders-title" id="myOrdersTitle">My Orders</div>
+    <button class="clear-btn" id="clearCompletedBtn">Clear Done</button>
+  </div>
+  <div id="myOrdersList">
+    <div class="empty-orders" id="emptyOrders">
+      <div class="empty-orders-icon">📋</div>
+      <div class="empty-orders-text" id="emptyOrdersText">No orders placed yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Success Overlay -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <div class="success-title" id="successTitle">Order Placed!</div>
+    <div class="success-sub" id="successSub">Your order has been sent to the kitchen.</div>
+    <div class="success-order-id" id="successOrderId"></div>
+    <div class="success-btns">
+      <button class="success-btn secondary" id="successViewBtn">View Orders</button>
+      <button class="success-btn primary" id="successNewBtn">New Order</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  i18n
+// ════════════════════════════════════════════════════════
+const TRANSLATIONS = {
+  en: {
+    waiter: 'Waiter',
+    connecting: 'Connecting…', live: 'Live', reconnecting: 'Reconnecting…', offline: 'Offline',
+    reconnect_banner: '⚡ Reconnecting…',
+    tab_new_order: 'New Order', tab_my_orders: 'My Orders',
+    setup_title: 'Table & Customer',
+    label_customer_name: 'Customer Name', label_table: 'Table',
+    enter_name: 'Enter name', select_table: '— Select —',
+    min2: 'Min 2 characters', select_table_err: 'Select a table',
+    all: 'All',
+    loading_menu: 'Connecting to menu…', loading_sub: "Make sure you're on the same Wi-Fi",
+    cant_reach: "Can't reach the server", cant_reach_sub: 'Check Wi-Fi connection',
+    retry: 'Retry',
+    sidebar_title: 'Order', add_items: 'Add items to get started',
+    service_charge: 'Service Charge (10%)',
+    subtotal: 'Subtotal', discount: 'Discount', service_10: 'Service (10%)',
+    gst: 'GST (5%)', total: 'Total',
+    add_items_to_order: 'Add items to order', place_order: 'Place Order', placing: 'Placing…',
+    view_cart: 'View Cart',
+    my_orders: 'My Orders', clear_done: 'Clear Done',
+    no_orders: 'No orders placed yet',
+    popular: '★ Popular',
+    order_placed: 'Order Placed!',
+    order_sent: 'Order has been sent to the kitchen.',
+    view_orders: 'View Orders', new_order: 'New Order',
+    table: 'Table', placed: 'Placed',
+    pending: 'PENDING', preparing: 'PREPARING', ready: 'READY',
+    completed: 'COMPLETED', paid: 'PAID',
+    waiter_tag: 'WAITER',
+    status_pending: 'Waiting for kitchen',
+    status_preparing: '👨‍🍳 Being prepared',
+    status_ready: '🔔 Ready to serve!',
+    status_completed: '✅ Served',
+    status_paid: '💰 Paid',
+    new_order_toast: 'New order confirmed',
+    reconnected: 'Reconnected!',
+    cart_empty_err: 'Add at least one item.',
+    name_err: 'Enter customer name (min 2 characters).',
+    table_err: 'Select a table.',
+    not_connected_err: 'Not connected. Please wait…',
+    table_now_occupied: 'is now occupied. Please select another table.',
+    failed_order: 'Failed to place order.',
+  },
+  hi: {
+    waiter: 'वेटर',
+    connecting: 'जोड़ रहे हैं…', live: 'लाइव', reconnecting: 'पुनः जोड़ रहे हैं…', offline: 'ऑफ़लाइन',
+    reconnect_banner: '⚡ पुनः जोड़ रहे हैं…',
+    tab_new_order: 'नया ऑर्डर', tab_my_orders: 'मेरे ऑर्डर',
+    setup_title: 'टेबल और ग्राहक',
+    label_customer_name: 'ग्राहक का नाम', label_table: 'टेबल',
+    enter_name: 'नाम दर्ज करें', select_table: '— चुनें —',
+    min2: 'न्यूनतम 2 अक्षर', select_table_err: 'टेबल चुनें',
+    all: 'सभी',
+    loading_menu: 'मेनू से जोड़ रहे हैं…', loading_sub: 'सुनिश्चित करें कि Wi-Fi से जुड़े हैं',
+    cant_reach: 'सर्वर से नहीं जुड़ पाए', cant_reach_sub: 'Wi-Fi कनेक्शन जाँचें',
+    retry: 'पुनः प्रयास करें',
+    sidebar_title: 'ऑर्डर', add_items: 'आइटम जोड़ें',
+    service_charge: 'सर्विस चार्ज (10%)',
+    subtotal: 'उप-कुल', discount: 'छूट', service_10: 'सर्विस (10%)',
+    gst: 'GST (5%)', total: 'कुल',
+    add_items_to_order: 'ऑर्डर में आइटम जोड़ें', place_order: 'ऑर्डर दें', placing: 'दे रहे हैं…',
+    view_cart: 'कार्ट देखें',
+    my_orders: 'मेरे ऑर्डर', clear_done: 'पूर्ण हटाएं',
+    no_orders: 'अभी कोई ऑर्डर नहीं',
+    popular: '★ लोकप्रिय',
+    order_placed: 'ऑर्डर दिया गया!',
+    order_sent: 'ऑर्डर रसोई में भेज दिया गया।',
+    view_orders: 'ऑर्डर देखें', new_order: 'नया ऑर्डर',
+    table: 'टेबल', placed: 'दिया गया',
+    pending: 'प्रतीक्षारत', preparing: 'बन रहा है', ready: 'तैयार',
+    completed: 'पूर्ण', paid: 'भुगतान हुआ',
+    waiter_tag: 'वेटर',
+    status_pending: 'रसोई का इंतजार',
+    status_preparing: '👨‍🍳 बन रहा है',
+    status_ready: '🔔 परोसने के लिए तैयार!',
+    status_completed: '✅ परोसा गया',
+    status_paid: '💰 भुगतान हुआ',
+    new_order_toast: 'नया ऑर्डर पुष्टि हुआ',
+    reconnected: 'पुनः जुड़ गए!',
+    cart_empty_err: 'कम से कम एक आइटम जोड़ें।',
+    name_err: 'ग्राहक का नाम दर्ज करें (न्यूनतम 2 अक्षर)।',
+    table_err: 'टेबल चुनें।',
+    not_connected_err: 'जुड़ा नहीं है। कृपया प्रतीक्षा करें…',
+    table_now_occupied: 'अभी व्यस्त है। कृपया दूसरी टेबल चुनें।',
+    failed_order: 'ऑर्डर देने में विफल।',
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'en';
+function t(key) { return TRANSLATIONS[currentLang][key] || TRANSLATIONS.en[key] || key; }
+
+function applyTranslations() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang));
+
+  document.getElementById('logoSup').textContent        = t('waiter');
+  document.getElementById('statusText').textContent     = state.isConnected ? t('live') : t('connecting');
+  document.getElementById('reconnect-banner').textContent = t('reconnect_banner');
+  document.getElementById('tabNewOrderLabel').textContent = t('tab_new_order');
+  document.getElementById('tabMyOrdersLabel').textContent = t('tab_my_orders');
+  document.getElementById('setupCardTitle').textContent  = t('setup_title');
+  document.getElementById('labelCustomerName').textContent = t('label_customer_name');
+  document.getElementById('labelTable').textContent      = t('label_table');
+  document.getElementById('customerName').placeholder    = t('enter_name');
+  document.getElementById('nameError').textContent       = t('min2');
+  document.getElementById('tableError').textContent      = t('select_table_err');
+  document.getElementById('loadingText').textContent     = t('loading_menu');
+  document.getElementById('loadingSubText').textContent  = t('loading_sub');
+  document.getElementById('sidebarTitle').textContent    = t('sidebar_title');
+  document.getElementById('sheetTitle').textContent      = t('sidebar_title');
+  document.getElementById('sidebarEmptyText').textContent = t('add_items');
+  document.getElementById('sheetEmptyText').textContent  = t('add_items');
+  document.getElementById('serviceChargeLabel').textContent = t('service_charge');
+  document.getElementById('serviceChargeLabelM').textContent = t('service_charge');
+  ['subtotalLabel','subtotalLabelD'].forEach(id => document.getElementById(id).textContent = t('subtotal'));
+  ['discountLabel','discountLabelD'].forEach(id => document.getElementById(id).textContent = t('discount'));
+  ['serviceLabel','serviceLabelD'].forEach(id => document.getElementById(id).textContent = t('service_10'));
+  ['gstLabel','gstLabelD'].forEach(id => document.getElementById(id).textContent = t('gst'));
+  ['totalLabel','totalLabelD'].forEach(id => document.getElementById(id).textContent = t('total'));
+  document.getElementById('fabText').textContent         = t('view_cart');
+  document.getElementById('myOrdersTitle').textContent   = t('my_orders');
+  document.getElementById('clearCompletedBtn').textContent = t('clear_done');
+  document.getElementById('emptyOrdersText').textContent = t('no_orders');
+  document.getElementById('successTitle').textContent    = t('order_placed');
+  document.getElementById('successSub').textContent      = t('order_sent');
+  document.getElementById('successViewBtn').textContent  = t('view_orders');
+  document.getElementById('successNewBtn').textContent   = t('new_order');
+
+  // Re-render dynamic content
+  if (!state.isSubmitting) {
+    const hasItems = Object.keys(state.cart).length > 0;
+    ['placeOrderText','dPlaceOrderText'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = hasItems ? t('place_order') : t('add_items_to_order');
+    });
+  }
+  if (state.menu.length > 0) { renderCategoryNav(); renderMenu(); updateBadges(); }
+  renderMyOrders();
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  applyTranslations();
+}
+
+document.getElementById('langToggle').addEventListener('click', e => {
+  const btn = e.target.closest('.lang-btn');
+  if (btn) setLang(btn.dataset.lang);
+});
+
+// ════════════════════════════════════════════════════════
+//  State
+// ════════════════════════════════════════════════════════
+const state = {
+  cart: {},
+  menu: [],
+  config: {},
+  sessionId: uid('w'),
+  isSubmitting: false,
+  isConnected: false,
+  cartOpen: false,
+  activeTab: 'new-order',
+  myOrders: JSON.parse(localStorage.getItem('waiterOrders') || '[]'),
+  tablesStatus: {}, // tableId → { occupied, customerName, orderId, since }
+};
+
+function uid(prefix) {
+  return (prefix||'id')+'_'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+}
+function fmt(n) { return '₹'+(parseFloat(n)||0).toFixed(2); }
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
+function isDesktop() { return window.innerWidth >= 900; }
+function r2(v) { return Math.round((v + Number.EPSILON)*100)/100; }
+
+function saveMyOrders() {
+  // Keep last 50 orders
+  const trimmed = state.myOrders.slice(0, 50);
+  localStorage.setItem('waiterOrders', JSON.stringify(trimmed));
+}
+
+// ════════════════════════════════════════════════════════
+//  Socket
+// ════════════════════════════════════════════════════════
+const socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
+
+socket.on('connect', () => { state.isConnected = true; updateConnectionUI(true); });
+socket.on('disconnect', () => { state.isConnected = false; updateConnectionUI(false); });
+socket.on('connect_error', () => updateConnectionUI(false, true));
+socket.on('reconnect_attempt', () => updateConnectionUI(false, true));
+socket.on('reconnect', () => { updateConnectionUI(true); showToast(t('reconnected'), 'success'); });
+
+const connectTimeout = setTimeout(showConnectError, 8000);
+socket.on('connect', () => clearTimeout(connectTimeout));
+
+socket.on('init', data => {
+  state.menu   = data.menu   || [];
+  state.config = data.config || {};
+  // Load initial table occupancy
+  state.tablesStatus = {};
+  (data.tablesStatus || []).forEach(ts => { state.tablesStatus[ts.tableId] = ts; });
+  document.getElementById('loadingState')?.remove();
+  renderCategoryNav();
+  renderMenu();
+  updateTableDropdown();
+});
+
+// Live table status updates
+socket.on('tables:status', (data) => {
+  state.tablesStatus = {};
+  (data.tables || []).forEach(ts => { state.tablesStatus[ts.tableId] = ts; });
+  updateTableDropdown();
+});
+
+// Listen for updates on orders the waiter placed (for live status in My Orders)
+socket.on('order:updated', updatedOrder => {
+  const idx = state.myOrders.findIndex(o => o.id === updatedOrder.id);
+  if (idx !== -1) {
+    state.myOrders[idx] = { ...state.myOrders[idx], ...updatedOrder };
+    saveMyOrders();
+    if (state.activeTab === 'my-orders') renderMyOrders();
+    updateMyOrdersBadge();
+    // Notify waiter when order is ready
+    if (updatedOrder.status === 'ready') {
+      showToast(`🔔 ${updatedOrder.id} — ${t('status_ready')}`, 'success', 6000);
+      playChime();
+    }
+  }
+});
+
+function updateConnectionUI(connected, reconnecting = false) {
+  const dot    = document.getElementById('statusDot');
+  const txt    = document.getElementById('statusText');
+  const banner = document.getElementById('reconnect-banner');
+  dot.className = 'status-dot '+(connected?'connected':reconnecting?'reconnecting':'');
+  txt.textContent = connected ? t('live') : reconnecting ? t('reconnecting') : t('offline');
+  banner.textContent = t('reconnect_banner');
+  if (connected) banner.classList.remove('visible');
+  else if (reconnecting) banner.classList.add('visible');
+}
+
+function showConnectError() {
+  const el = document.getElementById('loadingState');
+  if (!el || state.menu.length > 0) return;
+  el.innerHTML = `
+    <div class="page-state-icon">⚠️</div>
+    <div class="page-state-text">${t('cant_reach')}</div>
+    <div class="page-state-sub">${t('cant_reach_sub')}</div>
+    <button class="retry-btn" onclick="location.reload()">${t('retry')}</button>`;
+}
+
+// ════════════════════════════════════════════════════════
+//  Table Dropdown — Occupied Awareness
+// ════════════════════════════════════════════════════════
+function updateTableDropdown() {
+  const sel = document.getElementById('tableSelect');
+  const currentVal = sel.value;
+  const hint = document.getElementById('tableOccupiedHint');
+
+  // Rebuild options preserving selection
+  sel.innerHTML = `<option value="">${t('select_table')}</option>`;
+  for (let i = 1; i <= 10; i++) {
+    const tid = 'T' + i;
+    const info = state.tablesStatus[tid];
+    const occupied = info?.occupied;
+    const opt = document.createElement('option');
+    opt.value = tid;
+    if (occupied) {
+      opt.textContent = `🔴 ${tid} — ${info.customerName}`;
+      opt.disabled = true;
+    } else {
+      opt.textContent = `🟢 ${tid}`;
+    }
+    sel.appendChild(opt);
+  }
+
+  // Restore selection if it was available and is still free
+  if (currentVal) {
+    const wasOccupied = state.tablesStatus[currentVal]?.occupied;
+    if (!wasOccupied) {
+      sel.value = currentVal;
+      hint.style.display = 'none';
+    } else {
+      // Table became occupied while selected — clear and warn
+      sel.value = '';
+      hint.textContent = `⚠ ${currentVal} ${t('table_now_occupied')}`;
+      hint.style.display = 'block';
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  Menu Rendering
+// ════════════════════════════════════════════════════════
+function renderCategoryNav() {
+  const cats = [t('all'), ...new Set(state.menu.map(i => i.category))];
+  const nav = document.getElementById('categoryNav');
+  nav.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (cat === t('all') ? ' active' : '');
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterMenu(cat);
+    });
+    nav.appendChild(btn);
+  });
+}
+
+function filterMenu(cat) {
+  document.querySelectorAll('.menu-section').forEach(s => {
+    s.style.display = (cat === t('all') || s.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
+function renderMenu() {
+  const container = document.getElementById('menuContent');
+  const cats = [...new Set(state.menu.map(i => i.category))];
+  container.innerHTML = '';
+  cats.forEach(cat => {
+    const section = document.createElement('div');
+    section.className = 'menu-section'; section.dataset.cat = cat;
+    section.innerHTML = `<div class="section-title">${cat}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'menu-grid';
+    state.menu.filter(i => i.category === cat).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'menu-item'; card.id = 'card-'+item.id;
+      card.innerHTML = `
+        <div class="item-emoji">${item.emoji}</div>
+        <div class="item-name">${item.name}</div>
+        <div class="item-price">${fmt(item.price)}</div>
+        ${item.popular ? `<div class="item-popular">${t('popular')}</div>` : ''}
+        <div class="item-badge" id="badge-${item.id}">0</div>`;
+      card.addEventListener('click', () => addToCart(item));
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  Cart
+// ════════════════════════════════════════════════════════
+function addToCart(item) {
+  if (state.cart[item.id]) state.cart[item.id].quantity++;
+  else state.cart[item.id] = { ...item, quantity: 1 };
+  onCartChanged();
+}
+function updateQty(itemId, delta) {
+  if (!state.cart[itemId]) return;
+  state.cart[itemId].quantity = Math.max(0, state.cart[itemId].quantity + delta);
+  if (state.cart[itemId].quantity === 0) delete state.cart[itemId];
+  onCartChanged();
+}
+function getCartItems() {
+  return Object.values(state.cart).map(i => ({ id: i.id, name: i.name, price: i.price, emoji: i.emoji, quantity: i.quantity }));
+}
+function cartTotal() { return Object.values(state.cart).reduce((s,i) => s+i.quantity, 0); }
+
+function onCartChanged() {
+  updateBadges();
+  updateFab();
+  if (isDesktop()) renderSidebarCart();
+  else if (state.cartOpen) renderSheetCart();
+  updateBillSummary();
+  broadcastCartDebounced();
+}
+
+function updateBadges() {
+  state.menu.forEach(item => {
+    const badge = document.getElementById('badge-'+item.id);
+    if (!badge) return;
+    const inCart = state.cart[item.id];
+    if (inCart?.quantity > 0) { badge.textContent = inCart.quantity; badge.classList.add('visible'); }
+    else badge.classList.remove('visible');
+  });
+}
+
+// ── FAB ───────────────────────────────────────────────
+function updateFab() {
+  if (isDesktop()) return;
+  const fab = document.getElementById('cartFab');
+  const count = cartTotal();
+  document.getElementById('fabCount').textContent = count;
+  document.getElementById('fabText').textContent = t('view_cart');
+  if (count > 0) fab.classList.remove('hidden');
+  else fab.classList.add('hidden');
+}
+
+document.getElementById('cartFab').addEventListener('click', openCart);
+function openCart() {
+  state.cartOpen = true; renderSheetCart();
+  document.getElementById('cartOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeCart() {
+  state.cartOpen = false;
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('cartOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('cartOverlay')) closeCart();
+});
+document.getElementById('sheetClose').addEventListener('click', closeCart);
+
+let dragStart = 0;
+document.getElementById('sheetDrag').addEventListener('touchstart', e => { dragStart = e.touches[0].clientY; }, { passive: true });
+document.getElementById('sheetDrag').addEventListener('touchend', e => {
+  if (e.changedTouches[0].clientY - dragStart > 60) closeCart();
+});
+
+// ── Render cart items ──────────────────────────────────
+function syncCartDOM(container, items) {
+  const ids = new Set(items.map(i => i.id));
+  container.querySelectorAll('.cart-item').forEach(el => { if (!ids.has(el.dataset.id)) el.remove(); });
+  items.forEach(item => {
+    let el = container.querySelector(`.cart-item[data-id="${item.id}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'cart-item'; el.dataset.id = item.id;
+      el.innerHTML = `
+        <div class="cart-item-emoji">${item.emoji}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-price" data-unit="${item.price}">${fmt(item.price)}</div>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn" data-action="dec">−</button>
+          <div class="qty-num" data-qty></div>
+          <button class="qty-btn" data-action="inc">+</button>
+        </div>`;
+      el.querySelector('[data-action="dec"]').addEventListener('click', e => { e.stopPropagation(); updateQty(item.id, -1); });
+      el.querySelector('[data-action="inc"]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
+      container.appendChild(el);
+    }
+    el.querySelector('[data-qty]').textContent = item.quantity;
+    el.querySelector('[data-unit]').textContent = fmt(item.price * item.quantity);
+  });
+}
+
+function renderSheetCart() {
+  const items = Object.values(state.cart);
+  const empty = document.getElementById('sheetEmpty');
+  const container = document.getElementById('sheetItems');
+  const btn = document.getElementById('placeOrderBtn');
+  const txt = document.getElementById('placeOrderText');
+  if (!state.isSubmitting) { btn.disabled = items.length === 0; txt.textContent = items.length === 0 ? t('add_items_to_order') : t('place_order'); }
+  if (items.length === 0) { container.querySelectorAll('.cart-item').forEach(e => e.remove()); empty.style.display = ''; return; }
+  empty.style.display = 'none'; syncCartDOM(container, items);
+}
+
+function renderSidebarCart() {
+  const items = Object.values(state.cart);
+  const empty = document.getElementById('sidebarEmpty');
+  const container = document.getElementById('sidebarItems');
+  const btn = document.getElementById('dPlaceOrderBtn');
+  const txt = document.getElementById('dPlaceOrderText');
+  const countEl = document.getElementById('sidebarCount');
+  const count = cartTotal();
+  countEl.textContent = count;
+  if (count > 0) { countEl.classList.add('bump'); setTimeout(() => countEl.classList.remove('bump'), 300); }
+  if (!state.isSubmitting) { btn.disabled = items.length === 0; txt.textContent = items.length === 0 ? t('add_items_to_order') : t('place_order'); }
+  if (items.length === 0) { container.querySelectorAll('.cart-item').forEach(e => e.remove()); empty.style.display = ''; return; }
+  empty.style.display = 'none'; syncCartDOM(container, items);
+}
+
+// ── Billing ────────────────────────────────────────────
+function getServiceToggle() {
+  return isDesktop() ? document.getElementById('serviceToggleD').checked : document.getElementById('serviceToggle').checked;
+}
+function calculateBill() {
+  const items = getCartItems();
+  const GST = state.config.gstRate || 0.05;
+  const SVC = state.config.serviceChargeRate || 0.10;
+  const subtotal = items.reduce((s,i) => s + r2(i.price * i.quantity), 0);
+  const serviceCharge = getServiceToggle() ? r2(subtotal * SVC) : 0;
+  const taxable = r2(subtotal + serviceCharge);
+  const gst = r2(taxable * GST);
+  const total = r2(taxable + gst);
+  return { subtotal, serviceCharge, gst, total };
+}
+
+function updateBillSummary() {
+  const b = calculateBill();
+  const sets = [
+    { sub: 'bSubtotal', svc: 'bService', svcRow: 'serviceRow', gst: 'bGst', total: 'bTotal' },
+    { sub: 'dSubtotal', svc: 'dService', svcRow: 'dServiceRow', gst: 'dGst', total: 'dTotal' },
+  ];
+  sets.forEach(ids => {
+    document.getElementById(ids.sub).textContent = fmt(b.subtotal);
+    document.getElementById(ids.gst).textContent = fmt(b.gst);
+    document.getElementById(ids.total).textContent = fmt(b.total);
+    const sr = document.getElementById(ids.svcRow);
+    if (b.serviceCharge > 0) { sr.style.display = ''; document.getElementById(ids.svc).textContent = fmt(b.serviceCharge); }
+    else sr.style.display = 'none';
+  });
+}
+
+// ── Broadcast cart ─────────────────────────────────────
+const broadcastCartDebounced = debounce(broadcastCart, 400);
+function broadcastCart() {
+  if (!state.isConnected) return;
+  socket.emit('cart:update', {
+    sessionId: state.sessionId,
+    items: getCartItems(),
+    customerName: document.getElementById('customerName').value.trim(),
+    tableNo: document.getElementById('tableSelect').value,
+    applyServiceCharge: getServiceToggle(),
+    discountPercent: 0,
+    eventId: uid('evt'),
+  });
+}
+
+// ── Sync service toggles ───────────────────────────────
+['serviceToggle','serviceToggleD'].forEach(id => {
+  document.getElementById(id).addEventListener('change', e => {
+    document.getElementById('serviceToggle').checked = e.target.checked;
+    document.getElementById('serviceToggleD').checked = e.target.checked;
+    updateBillSummary(); broadcastCartDebounced();
+  });
+});
+
+// ── Place Order ────────────────────────────────────────
+document.getElementById('placeOrderBtn').addEventListener('click', () => { if (!state.isSubmitting) submitOrder(); });
+document.getElementById('dPlaceOrderBtn').addEventListener('click', () => { if (!state.isSubmitting) submitOrder(); });
+
+function validateOrder() {
+  const items = getCartItems();
+  const name  = document.getElementById('customerName').value.trim();
+  const table = document.getElementById('tableSelect').value;
+  let valid = true;
+
+  hideOrderError();
+  document.getElementById('nameError').classList.remove('visible');
+  document.getElementById('tableError').classList.remove('visible');
+  document.getElementById('tableOccupiedHint').style.display = 'none';
+  document.getElementById('customerName').classList.remove('error');
+  document.getElementById('tableSelect').classList.remove('error');
+
+  if (items.length === 0) { showOrderError(t('cart_empty_err')); valid = false; }
+  if (name.length < 2) {
+    document.getElementById('nameError').classList.add('visible');
+    document.getElementById('customerName').classList.add('error');
+    valid = false;
+  }
+  if (!table) {
+    document.getElementById('tableError').classList.add('visible');
+    document.getElementById('tableSelect').classList.add('error');
+    valid = false;
+  } else if (state.tablesStatus[table]?.occupied) {
+    document.getElementById('tableError').classList.add('visible');
+    document.getElementById('tableSelect').classList.add('error');
+    document.getElementById('tableOccupiedHint').textContent = `⚠ ${table} ${t('table_now_occupied')}`;
+    document.getElementById('tableOccupiedHint').style.display = 'block';
+    valid = false;
+  }
+  return valid;
+}
+
+function submitOrder() {
+  if (!validateOrder()) return;
+  if (!state.isConnected) { showOrderError(t('not_connected_err')); return; }
+
+  const name  = document.getElementById('customerName').value.trim();
+  const table = document.getElementById('tableSelect').value;
+
+  setSubmitting(true);
+  socket.emit('order:place', {
+    sessionId: state.sessionId,
+    items: getCartItems(),
+    customerName: name,
+    tableNo: table,
+    applyServiceCharge: getServiceToggle(),
+    discountPercent: 0,
+    eventId: uid('evt'),
+  }, res => {
+    setSubmitting(false);
+    if (res.success && !res.duplicate) {
+      onOrderSuccess(res.order);
+    } else if (res.duplicate) {
+      // already placed, just show success
+      showToast(t('new_order_toast'), 'success');
+    } else {
+      showOrderError(res.error || t('failed_order'));
+    }
+  });
+}
+
+function setSubmitting(val) {
+  state.isSubmitting = val;
+  ['placeOrderBtn','dPlaceOrderBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = val; });
+  ['orderSpinner','dOrderSpinner'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.toggle('visible', val); });
+  ['placeOrderText','dPlaceOrderText'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = val ? t('placing') : t('place_order'); });
+}
+
+function onOrderSuccess(order) {
+  // Save to my orders
+  state.myOrders.unshift(order);
+  saveMyOrders();
+  updateMyOrdersBadge();
+
+  // Reset cart & form
+  state.cart = {};
+  state.sessionId = uid('w');
+  document.getElementById('customerName').value = '';
+  document.getElementById('tableSelect').value = '';
+  document.getElementById('customerName').classList.remove('error');
+  document.getElementById('tableSelect').classList.remove('error');
+  document.getElementById('serviceToggle').checked = false;
+  document.getElementById('serviceToggleD').checked = false;
+
+  closeCart();
+  updateBadges(); updateFab();
+  if (isDesktop()) renderSidebarCart(); else renderSheetCart();
+  updateBillSummary();
+  broadcastCart(); // clear cart broadcast
+
+  // Show success overlay
+  document.getElementById('successOrderId').textContent = order.id;
+  document.getElementById('successTitle').textContent = t('order_placed');
+  document.getElementById('successSub').textContent = t('order_sent');
+  document.getElementById('successViewBtn').textContent = t('view_orders');
+  document.getElementById('successNewBtn').textContent = t('new_order');
+  document.getElementById('successOverlay').classList.add('visible');
+}
+
+document.getElementById('successViewBtn').addEventListener('click', () => {
+  document.getElementById('successOverlay').classList.remove('visible');
+  switchTab('my-orders');
+});
+document.getElementById('successNewBtn').addEventListener('click', () => {
+  document.getElementById('successOverlay').classList.remove('visible');
+  switchTab('new-order');
+});
+
+// ════════════════════════════════════════════════════════
+//  My Orders Panel
+// ════════════════════════════════════════════════════════
+function updateMyOrdersBadge() {
+  const active = state.myOrders.filter(o => o.status !== 'completed' && o.paymentStatus !== 'paid').length;
+  document.getElementById('myOrdersBadge').textContent = active;
+}
+
+function renderMyOrders() {
+  const list  = document.getElementById('myOrdersList');
+  const empty = document.getElementById('emptyOrders');
+
+  if (state.myOrders.length === 0) {
+    list.querySelectorAll('.order-card').forEach(e => e.remove());
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Remove cards for orders no longer in list
+  const ids = new Set(state.myOrders.map(o => o.id));
+  list.querySelectorAll('.order-card').forEach(el => { if (!ids.has(el.dataset.id)) el.remove(); });
+
+  state.myOrders.forEach(order => {
+    const existing = list.querySelector(`.order-card[data-id="${order.id}"]`);
+    if (existing) {
+      existing.dataset.status = order.status;
+      existing.innerHTML = myOrderCardHTML(order);
+    } else {
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      card.dataset.id = order.id;
+      card.dataset.status = order.status;
+      card.innerHTML = myOrderCardHTML(order);
+      list.appendChild(card);
+    }
+  });
+}
+
+function myOrderCardHTML(order) {
+  const b = order.billing || {};
+  const isPaid = order.paymentStatus === 'paid';
+  const statusKey = isPaid ? 'paid' : order.status;
+
+  const badgeClass = statusKey;
+  const badgeText  = t(statusKey);
+
+  const statusMsg = {
+    pending:   t('status_pending'),
+    preparing: t('status_preparing'),
+    ready:     t('status_ready'),
+    completed: t('status_completed'),
+    paid:      t('status_paid'),
+  }[statusKey] || '';
+
+  const itemsHTML = (order.items || []).map(item => `
+    <div class="order-item-row">
+      <span>${item.emoji||''} ${item.name}</span>
+      <span class="order-item-qty">×${item.quantity}</span>
+      <span class="order-item-price">${fmt(item.price * item.quantity)}</span>
+    </div>`).join('');
+
+  const discountRow = b.discountAmount > 0
+    ? `<div class="billing-row discount"><span>${t('discount')} (${b.discountPercent}%)</span><span>-${fmt(b.discountAmount)}</span></div>` : '';
+  const serviceRow = b.serviceCharge > 0
+    ? `<div class="billing-row"><span>${t('service_10')}</span><span>${fmt(b.serviceCharge)}</span></div>` : '';
+
+  const date = new Date(order.createdAt);
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  return `
+    <div class="card-header">
+      <div>
+        <div class="card-id">${order.id}</div>
+        <div class="card-customer">${order.customerName}</div>
+        <div class="card-table">${t('table')} ${order.tableNo}</div>
+      </div>
+      <div class="status-badge ${badgeClass}">${badgeText}</div>
+    </div>
+    <div class="card-items-list">${itemsHTML}</div>
+    <div class="card-billing">
+      <div class="billing-row"><span>${t('subtotal')}</span><span>${fmt(b.subtotal)}</span></div>
+      ${discountRow}${serviceRow}
+      <div class="billing-row"><span>${t('gst')}</span><span>${fmt(b.gst)}</span></div>
+      <div class="billing-row total"><span>${t('total')}</span><span>${fmt(b.total)}</span></div>
+    </div>
+    <div class="card-time-row">
+      <span>${t('placed')} ${timeStr}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:var(--text-mid)">${statusMsg}</span>
+        <span class="card-waiter-tag">${t('waiter_tag')}</span>
+      </div>
+    </div>`;
+}
+
+document.getElementById('clearCompletedBtn').addEventListener('click', () => {
+  state.myOrders = state.myOrders.filter(o => o.status !== 'completed' && o.paymentStatus !== 'paid');
+  saveMyOrders();
+  renderMyOrders();
+  updateMyOrdersBadge();
+});
+
+// ════════════════════════════════════════════════════════
+//  Tab Switching
+// ════════════════════════════════════════════════════════
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+tab));
+  if (tab === 'my-orders') renderMyOrders();
+}
+document.querySelectorAll('.view-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ════════════════════════════════════════════════════════
+//  Helpers
+// ════════════════════════════════════════════════════════
+function showOrderError(msg) {
+  const id = isDesktop() ? 'dOrderError' : 'orderError';
+  const el = document.getElementById(id);
+  el.textContent = '⚠ ' + msg; el.classList.add('visible');
+}
+function hideOrderError() {
+  ['orderError','dOrderError'].forEach(id => document.getElementById(id)?.classList.remove('visible'));
+}
+
+function showToast(msg, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  toast.innerHTML = `<span>${icons[type]||''}</span> ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.classList.add('out'); setTimeout(() => toast.remove(), 300); }, duration);
+}
+
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1100, 1320].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq; osc.type = 'sine';
+      const start = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0.25, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+      osc.start(start); osc.stop(start + 0.35);
+    });
+  } catch(e) {}
+}
+
+window.addEventListener('resize', debounce(() => {
+  updateFab();
+  if (isDesktop()) { renderSidebarCart(); updateBillSummary(); }
+}, 200));
+
+// ════════════════════════════════════════════════════════
+//  Init
+// ════════════════════════════════════════════════════════
+updateBillSummary();
+updateMyOrdersBadge();
+applyTranslations();
+</script>
+</body>
+</html>
