@@ -315,10 +315,12 @@ header {
   30%     { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-dim); }
 }
 
-.order-card[data-status="pending"]   { border-top: 3px solid var(--orange); }
-.order-card[data-status="preparing"] { border-top: 3px solid var(--blue); }
-.order-card[data-status="ready"]     { border-top: 3px solid var(--green); }
-.order-card[data-status="completed"] { border-top: 3px solid var(--text-dim); }
+.order-card[data-status="pending"]           { border-top: 3px solid var(--orange); }
+.order-card[data-status="preparing"]         { border-top: 3px solid var(--blue); }
+.order-card[data-status="ready"]             { border-top: 3px solid var(--green); }
+.order-card[data-status="completed"]         { border-top: 3px solid var(--text-dim); }
+.order-card[data-status="awaiting_customer"] { border-top: 3px solid #e67e22; opacity: 0.95; }
+.order-card[data-status="cancelled"]         { border-top: 3px solid var(--red); opacity: 0.6; }
 
 .card-header {
   padding: 14px 16px 10px;
@@ -338,11 +340,76 @@ header {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.status-badge.pending   { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
-.status-badge.preparing { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
-.status-badge.ready     { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
-.status-badge.completed { background: #ffffff10;         color: var(--text-dim); border: 1px solid var(--border2); }
-.status-badge.paid      { background: var(--teal-dim);   color: var(--teal);   border: 1px solid var(--teal); }
+.status-badge.pending           { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+.status-badge.preparing         { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
+.status-badge.ready             { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
+.status-badge.completed         { background: #ffffff10;         color: var(--text-dim); border: 1px solid var(--border2); }
+.status-badge.paid              { background: var(--teal-dim);   color: var(--teal);   border: 1px solid var(--teal); }
+.status-badge.awaiting_customer { background: rgba(230,126,34,0.15); color: #e67e22; border: 1px solid #e67e22; animation: pulse 1.2s infinite; }
+.status-badge.cancelled         { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); opacity: 0.8; }
+
+/* ── OOS Feature ─────────────────────────────────── */
+.btn-accept {
+  flex: 1; min-width: 80px;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--green); background: var(--green-dim);
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all var(--transition); text-align: center;
+}
+.btn-accept:hover:not(:disabled) { background: var(--green); color: #fff; }
+.btn-accept:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.flag-oos-toggle {
+  font-size: 11px; color: var(--orange); cursor: pointer;
+  text-decoration: underline; background: none; border: none;
+  font-family: 'DM Sans', sans-serif; padding: 4px 0; margin-top: 4px;
+  display: inline-block;
+}
+.flag-oos-toggle:hover { color: #f39c12; }
+
+.flag-oos-section {
+  display: none; padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.flag-oos-section.open { display: block; }
+.flag-oos-label { font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+.oos-checkbox-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; font-size: 13px; color: var(--text-mid); cursor: pointer;
+}
+.oos-checkbox-item input[type="checkbox"] { cursor: pointer; accent-color: var(--orange); width: 15px; height: 15px; }
+
+.send-ping-btn {
+  margin-top: 10px; width: 100%;
+  padding: 7px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--orange); background: rgba(230,126,34,0.12);
+  color: var(--orange);
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all var(--transition);
+}
+.send-ping-btn:hover:not(:disabled) { background: var(--orange); color: #fff; }
+.send-ping-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.awaiting-info {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  background: rgba(230,126,34,0.06);
+}
+.awaiting-info-label { font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.awaiting-oos-list { list-style: none; margin-bottom: 10px; }
+.awaiting-oos-list li { font-size: 13px; color: var(--orange); padding: 2px 0; }
+.awaiting-overrides { display: flex; gap: 6px; margin-top: 4px; }
+.override-btn {
+  flex: 1; padding: 7px 8px; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all var(--transition); text-align: center;
+}
+.override-btn.proceed { border: 1px solid var(--blue); background: var(--blue-dim); color: var(--blue); }
+.override-btn.proceed:hover { background: var(--blue); color: #fff; }
+.override-btn.cancel  { border: 1px solid var(--red);  background: var(--red-dim);  color: var(--red);  }
+.override-btn.cancel:hover  { background: var(--red);  color: #fff; }
 
 .card-items {
   padding: 12px 16px;
@@ -1029,6 +1096,17 @@ const TRANSLATIONS = {
     free_table_confirm: 'Manually free this table? Only do this if the customer has left.',
     table_freed: 'Table freed.',
     qr_hint: 'Print and place this at the table',
+    // OOS feature
+    btn_accept: 'Accept Order',
+    flag_oos_items: '⚠ Flag OOS Items',
+    send_ping: 'Send Ping to Customer',
+    awaiting_customer: 'AWAITING RESPONSE',
+    cancelled: 'CANCELLED',
+    oos_flagged_label: 'Unavailable items sent:',
+    override_proceed: 'Prepare Rest Anyway',
+    override_cancel: 'Cancel Order',
+    oos_ping_sent: 'OOS ping sent!',
+    order_cancelled_t: 'Order cancelled.',
   },
   hi: {
     owner_dashboard: 'मालिक डैशबोर्ड',
@@ -1068,6 +1146,17 @@ const TRANSLATIONS = {
     free_table_confirm: 'क्या इस टेबल को मैन्युअली खाली करें? केवल तभी करें जब ग्राहक चले गए हों।',
     table_freed: 'टेबल खाली हुई।',
     qr_hint: 'इसे प्रिंट कर टेबल पर रखें',
+    // OOS feature
+    btn_accept: 'ऑर्डर स्वीकार करें',
+    flag_oos_items: '⚠ अनुपलब्ध चिह्नित करें',
+    send_ping: 'ग्राहक को पिंग भेजें',
+    awaiting_customer: 'प्रतीक्षा में',
+    cancelled: 'रद्द',
+    oos_flagged_label: 'अनुपलब्ध आइटम:',
+    override_proceed: 'बाकी तैयार करें',
+    override_cancel: 'ऑर्डर रद्द करें',
+    oos_ping_sent: 'पिंग भेजा गया!',
+    order_cancelled_t: 'ऑर्डर रद्द हुआ।',
   }
 };
 
@@ -1226,6 +1315,11 @@ socket.on('admin:cart_update', (data) => {
 // New order from a customer
 socket.on('order:new', (order) => {
   state.orders.unshift(order);
+  // Auto-close live carts and switch to pending when an order lands
+  if (state.activeFilter === 'live-carts') {
+    state.hadActiveCarts = false;
+    switchToFilter('pending');
+  }
   renderAll(order.id);
   showToast(`${t('new_order_toast')}: ${order.id} — ${order.customerName} (${t('table')} ${order.tableNo})`, 'info', 5000);
   playBeep();
@@ -1259,6 +1353,9 @@ function getFilteredOrders() {
   return state.orders.filter(o => {
     if (state.activeFilter === 'completed') {
       return o.status === 'completed' || o.paymentStatus === 'paid';
+    }
+    if (state.activeFilter === 'pending') {
+      return o.status === 'pending' || o.status === 'awaiting_customer';
     }
     return o.status === state.activeFilter;
   });
@@ -1360,6 +1457,58 @@ function cardHTML(order) {
   const changeInfo = isPaid && order.change != null
     ? `<span class="change-info">${t('change')}: ${fmt(order.change)}</span>` : '';
 
+  // ── Cancelled: minimal view, no actions ──
+  if (order.status === 'cancelled') {
+    return `
+      <div class="card-header">
+        <div>
+          <div class="card-id">${order.id}</div>
+          <div class="card-customer">${order.customerName}</div>
+          <div class="card-table">${t('table')} ${order.tableNo}</div>
+        </div>
+        <div class="status-badge cancelled">${t('cancelled')}</div>
+      </div>
+      <div class="card-items">${itemsHTML}</div>
+      <div class="card-billing">
+        <div class="billing-row total"><span>${t('total')}</span><span>${fmt(b.total)}</span></div>
+      </div>
+      <div class="card-time">${t('placed_at')} ${formatTime(order.createdAt)}</div>
+    `;
+  }
+
+  // ── Awaiting customer response ──
+  if (order.status === 'awaiting_customer') {
+    const oosListHTML = (order.oosItems || []).map(i =>
+      `<li>• ${currentLang === 'hi' && i.nameHi ? i.nameHi : i.name}</li>`
+    ).join('');
+    return `
+      <div class="card-header">
+        <div>
+          <div class="card-id">${order.id}</div>
+          <div class="card-customer">${order.customerName}</div>
+          <div class="card-table">${t('table')} ${order.tableNo}</div>
+        </div>
+        <div class="status-badge awaiting_customer">${t('awaiting_customer')}</div>
+      </div>
+      <div class="card-items">${itemsHTML}</div>
+      <div class="awaiting-info">
+        <div class="awaiting-info-label">${t('oos_flagged_label')}</div>
+        <ul class="awaiting-oos-list">${oosListHTML}</ul>
+        <div class="awaiting-overrides">
+          <button class="override-btn proceed" data-action="override" data-choice="proceed">${t('override_proceed')}</button>
+          <button class="override-btn cancel"  data-action="override" data-choice="cancel">${t('override_cancel')}</button>
+        </div>
+      </div>
+      <div class="card-billing">
+        <div class="billing-row"><span>${t('subtotal')}</span><span>${fmt(b.subtotal)}</span></div>
+        ${discountRow}${serviceRow}
+        <div class="billing-row"><span>${t('gst')}</span><span>${fmt(b.gst)}</span></div>
+        <div class="billing-row total"><span>${t('total')}</span><span>${fmt(b.total)}</span></div>
+      </div>
+      <div class="card-time">${t('placed_at')} ${formatTime(order.createdAt)}</div>
+    `;
+  }
+
   const paySection = isPaid
     ? `<div class="paid-label">${t('paid_label')} ${changeInfo}</div>
        <button class="print-btn" data-action="print">${t('print_receipt')}</button>`
@@ -1368,6 +1517,35 @@ function cardHTML(order) {
           ${order.status !== 'ready' && order.status !== 'completed' ? `disabled title="${t('mark_ready_first')}"` : ''} />
         <button class="pay-btn" ${order.status !== 'ready' && order.status !== 'completed' ? 'disabled' : ''}>${t('collect')}</button>
       </div>`;
+
+  // ── OOS flag section (only on pending) ──
+  const flagOosSection = order.status === 'pending' ? `
+    <div class="flag-oos-section" id="oos-section-${order.id}">
+      <div class="flag-oos-label">${t('flag_oos_items')}</div>
+      ${(order.items || []).map(item => `
+        <label class="oos-checkbox-item">
+          <input type="checkbox" class="oos-check" value="${item.id}" />
+          ${item.emoji || ''} ${iName(item)}
+        </label>
+      `).join('')}
+      <button class="send-ping-btn" data-action="flag_oos" disabled>${t('send_ping')}</button>
+    </div>
+  ` : '';
+
+  // ── Pending: Accept + Flag OOS buttons ──
+  const statusActions = order.status === 'pending'
+    ? `<button class="btn-accept" data-action="accept">${t('btn_accept')}</button>
+       <button class="status-btn btn-ready" disabled>${t('btn_ready')}</button>
+       <button class="status-btn btn-completed" disabled>${t('btn_done')}</button>`
+    : `<button class="status-btn btn-preparing"
+          ${order.status === 'preparing' || order.status === 'ready' || order.status === 'completed' || isPaid ? 'disabled' : ''}
+          data-action="status" data-status="preparing">${t('btn_preparing')}</button>
+       <button class="status-btn btn-ready"
+          ${order.status === 'ready' || order.status === 'completed' || isPaid ? 'disabled' : ''}
+          data-action="status" data-status="ready">${t('btn_ready')}</button>
+       <button class="status-btn btn-completed"
+          ${order.status === 'completed' || isPaid ? 'disabled' : ''}
+          data-action="status" data-status="completed">${t('btn_done')}</button>`;
 
   return `
     <div class="card-header">
@@ -1379,6 +1557,7 @@ function cardHTML(order) {
       <div class="status-badge ${statusKey}">${t(statusKey)}</div>
     </div>
     <div class="card-items">${itemsHTML}</div>
+    ${flagOosSection}
     <div class="card-billing">
       <div class="billing-row"><span>${t('subtotal')}</span><span>${fmt(b.subtotal)}</span></div>
       ${discountRow}
@@ -1387,24 +1566,91 @@ function cardHTML(order) {
       <div class="billing-row total"><span>${t('total')}</span><span>${fmt(b.total)}</span></div>
     </div>
     <div class="card-time">${t('placed_at')} ${formatTime(order.createdAt)}</div>
+    ${order.status === 'pending' ? `<div style="padding:4px 16px 0;"><button class="flag-oos-toggle" data-action="toggle-oos">${t('flag_oos_items')}</button></div>` : ''}
     <div class="card-actions">
-      <div class="status-actions">
-        <button class="status-btn btn-preparing"
-          ${order.status === 'preparing' || order.status === 'ready' || order.status === 'completed' || isPaid ? 'disabled' : ''}
-          data-action="status" data-status="preparing">${t('btn_preparing')}</button>
-        <button class="status-btn btn-ready"
-          ${order.status === 'ready' || order.status === 'completed' || isPaid ? 'disabled' : ''}
-          data-action="status" data-status="ready">${t('btn_ready')}</button>
-        <button class="status-btn btn-completed"
-          ${order.status === 'completed' || isPaid ? 'disabled' : ''}
-          data-action="status" data-status="completed">${t('btn_done')}</button>
-      </div>
+      <div class="status-actions">${statusActions}</div>
       ${paySection}
     </div>
   `;
 }
 
 function bindCardEvents(card, order) {
+  // Accept Order (pending → preparing)
+  const acceptBtn = card.querySelector('[data-action="accept"]');
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', () => {
+      acceptBtn.disabled = true;
+      socket.emit('order:accept', {
+        orderId: order.id,
+        eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+      }, (res) => {
+        if (!res.success) {
+          showToast(res.error || t('failed_status'), 'error');
+          acceptBtn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // Toggle OOS section
+  const toggleOos = card.querySelector('[data-action="toggle-oos"]');
+  if (toggleOos) {
+    toggleOos.addEventListener('click', () => {
+      const sec = card.querySelector('.flag-oos-section');
+      if (sec) sec.classList.toggle('open');
+    });
+  }
+
+  // OOS checkboxes → enable/disable Send Ping button
+  const oosChecks = card.querySelectorAll('.oos-check');
+  const pingBtn = card.querySelector('[data-action="flag_oos"]');
+  oosChecks.forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (pingBtn) pingBtn.disabled = !card.querySelector('.oos-check:checked');
+    });
+  });
+
+  // Send OOS Ping
+  if (pingBtn) {
+    pingBtn.addEventListener('click', () => {
+      const checked = [...card.querySelectorAll('.oos-check:checked')].map(cb => cb.value);
+      if (checked.length === 0) return;
+      pingBtn.disabled = true;
+      socket.emit('order:flag_oos', {
+        orderId: order.id,
+        oosItemIds: checked,
+        eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+      }, (res) => {
+        if (res.success) {
+          showToast(t('oos_ping_sent'), 'info');
+        } else {
+          showToast(res.error || t('failed_status'), 'error');
+          pingBtn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // Override buttons (awaiting_customer → proceed/cancel)
+  card.querySelectorAll('[data-action="override"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const choice = btn.dataset.choice;
+      btn.disabled = true;
+      socket.emit('order:review_response', {
+        orderId: order.id,
+        choice,
+        eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+      }, (res) => {
+        if (res.success) {
+          if (choice === 'cancel') showToast(t('order_cancelled_t'), 'info');
+        } else {
+          showToast(res.error || t('failed_status'), 'error');
+          btn.disabled = false;
+        }
+      });
+    });
+  });
+
   // Status buttons
   card.querySelectorAll('[data-action="status"]').forEach(btn => {
     btn.addEventListener('click', () => {

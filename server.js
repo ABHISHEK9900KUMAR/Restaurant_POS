@@ -64,37 +64,62 @@ const CONFIG = {
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
   // Starters — Chinese
-  { id: 'm1',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Spring Roll',          nameHi: 'वेज स्प्रिंग रोल',          price: 180, emoji: '🌯', popular: false },
-  { id: 'm2',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Paneer (Dry)',       nameHi: 'चिली पनीर (ड्राई)',          price: 260, emoji: '🧀', popular: true  },
-  { id: 'm3',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Manchurian (Dry)',      nameHi: 'वेज मंचूरियन (ड्राई)',       price: 220, emoji: '🥦', popular: false },
-  { id: 'm4',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Chicken (Dry)',      nameHi: 'चिली चिकन (ड्राई)',          price: 280, emoji: '🌶️', popular: true  },
-  { id: 'm5',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Manchurian (Dry)',  nameHi: 'चिकन मंचूरियन (ड्राई)',      price: 300, emoji: '🍗', popular: false },
+  { id: 'm1',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Spring Roll',          nameHi: 'वेज स्प्रिंग रोल',          price: 180, emoji: '🌯', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 220, protein: 5,  carbs: 28, fat: 10, ingredients: ['Cabbage', 'Carrot', 'Bean Sprouts', 'Spring Onion', 'Flour Wrapper', 'Soy Sauce'] } },
+  { id: 'm2',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Paneer (Dry)',       nameHi: 'चिली पनीर (ड्राई)',          price: 260, emoji: '🧀', popular: true,  tags: ['high-protein'],
+    nutrition: { calories: 380, protein: 18, carbs: 22, fat: 22, ingredients: ['Paneer', 'Capsicum', 'Onion', 'Soy Sauce', 'Garlic', 'Cornstarch'] } },
+  { id: 'm3',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Manchurian (Dry)',      nameHi: 'वेज मंचूरियन (ड्राई)',       price: 220, emoji: '🥦', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 280, protein: 7,  carbs: 32, fat: 13, ingredients: ['Mixed Vegetables', 'Garlic', 'Ginger', 'Soy Sauce', 'Chilli', 'Cornstarch'] } },
+  { id: 'm4',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Chicken (Dry)',      nameHi: 'चिली चिकन (ड्राई)',          price: 280, emoji: '🌶️', popular: true,  tags: ['high-protein'],
+    nutrition: { calories: 360, protein: 28, carbs: 18, fat: 18, ingredients: ['Chicken', 'Capsicum', 'Onion', 'Soy Sauce', 'Garlic', 'Green Chilli'] } },
+  { id: 'm5',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Manchurian (Dry)',  nameHi: 'चिकन मंचूरियन (ड्राई)',      price: 300, emoji: '🍗', popular: false, tags: ['high-protein'],
+    nutrition: { calories: 340, protein: 26, carbs: 20, fat: 16, ingredients: ['Chicken', 'Garlic', 'Ginger', 'Soy Sauce', 'Spring Onion', 'Cornstarch'] } },
   // Starters — Tandoori
-  { id: 'm6',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Paneer Tikka',              nameHi: 'पनीर टिक्का',                price: 280, emoji: '🔥', popular: true  },
-  { id: 'm7',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Mushroom',         nameHi: 'तंदूरी मशरूम',               price: 250, emoji: '🍄', popular: false },
-  { id: 'm8',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Chicken (Half)',   nameHi: 'तंदूरी चिकन (हाफ)',          price: 340, emoji: '🍗', popular: true  },
-  { id: 'm9',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Tikka',             nameHi: 'चिकन टिक्का',                price: 320, emoji: '🍖', popular: false },
+  { id: 'm6',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Paneer Tikka',              nameHi: 'पनीर टिक्का',                price: 280, emoji: '🔥', popular: true,  tags: ['high-protein', 'guilt-free'],
+    nutrition: { calories: 320, protein: 20, carbs: 12, fat: 20, ingredients: ['Paneer', 'Bell Peppers', 'Onion', 'Yogurt', 'Tandoori Masala', 'Lemon'] } },
+  { id: 'm7',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Mushroom',         nameHi: 'तंदूरी मशरूम',               price: 250, emoji: '🍄', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 180, protein: 8,  carbs: 14, fat: 10, ingredients: ['Mushroom', 'Yogurt', 'Tandoori Masala', 'Ginger', 'Garlic', 'Lemon'] } },
+  { id: 'm8',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Chicken (Half)',   nameHi: 'तंदूरी चिकन (हाफ)',          price: 340, emoji: '🍗', popular: true,  tags: ['high-protein', 'guilt-free'],
+    nutrition: { calories: 420, protein: 45, carbs: 8,  fat: 20, ingredients: ['Chicken', 'Yogurt', 'Tandoori Masala', 'Ginger', 'Garlic', 'Chaat Masala'] } },
+  { id: 'm9',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Tikka',             nameHi: 'चिकन टिक्का',                price: 320, emoji: '🍖', popular: false, tags: ['high-protein', 'guilt-free'],
+    nutrition: { calories: 380, protein: 38, carbs: 10, fat: 18, ingredients: ['Chicken Breast', 'Yogurt', 'Tikka Masala', 'Ginger', 'Garlic', 'Lemon'] } },
   // Main Course — North Indian
-  { id: 'm10', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Paneer Butter Masala',      nameHi: 'पनीर बटर मसाला',             price: 300, emoji: '🧆', popular: true  },
-  { id: 'm11', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Dal Makhani',               nameHi: 'दाल मखनी',                   price: 240, emoji: '🫘', popular: true  },
-  { id: 'm12', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Butter Chicken',            nameHi: 'बटर चिकन',                   price: 360, emoji: '🍛', popular: true  },
-  { id: 'm13', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Rogan Josh',         nameHi: 'मटन रोगन जोश',               price: 420, emoji: '🥩', popular: false },
+  { id: 'm10', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Paneer Butter Masala',      nameHi: 'पनीर बटर मसाला',             price: 300, emoji: '🧆', popular: true,  tags: ['high-protein'],
+    nutrition: { calories: 420, protein: 18, carbs: 24, fat: 28, ingredients: ['Paneer', 'Tomato', 'Butter', 'Cream', 'Cashew', 'Cardamom'] } },
+  { id: 'm11', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Dal Makhani',               nameHi: 'दाल मखनी',                   price: 240, emoji: '🫘', popular: true,  tags: ['high-protein', 'guilt-free'],
+    nutrition: { calories: 340, protein: 16, carbs: 38, fat: 14, ingredients: ['Black Lentils', 'Kidney Beans', 'Butter', 'Cream', 'Tomato', 'Garlic'] } },
+  { id: 'm12', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Butter Chicken',            nameHi: 'बटर चिकन',                   price: 360, emoji: '🍛', popular: true,  tags: ['high-protein'],
+    nutrition: { calories: 460, protein: 32, carbs: 22, fat: 26, ingredients: ['Chicken', 'Tomato', 'Butter', 'Cream', 'Cashew', 'Fenugreek'] } },
+  { id: 'm13', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Rogan Josh',         nameHi: 'मटन रोगन जोश',               price: 420, emoji: '🥩', popular: false, tags: ['high-protein'],
+    nutrition: { calories: 520, protein: 40, carbs: 12, fat: 32, ingredients: ['Mutton', 'Kashmiri Chilli', 'Fennel', 'Cardamom', 'Cinnamon', 'Yogurt'] } },
   // Main Course — Biryani
-  { id: 'm14', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Veg Biryani',               nameHi: 'वेज बिरयानी',                price: 240, emoji: '🍚', popular: false },
-  { id: 'm15', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Chicken Biryani (Full)',    nameHi: 'चिकन बिरयानी (फुल)',         price: 340, emoji: '🍲', popular: true  },
-  { id: 'm16', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Biryani',            nameHi: 'मटन बिरयानी',                price: 420, emoji: '🥘', popular: false },
+  { id: 'm14', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Veg Biryani',               nameHi: 'वेज बिरयानी',                price: 240, emoji: '🍚', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 380, protein: 10, carbs: 58, fat: 12, ingredients: ['Basmati Rice', 'Mixed Vegetables', 'Saffron', 'Fried Onions', 'Whole Spices', 'Ghee'] } },
+  { id: 'm15', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Chicken Biryani (Full)',    nameHi: 'चिकन बिरयानी (फुल)',         price: 340, emoji: '🍲', popular: true,  tags: ['high-protein'],
+    nutrition: { calories: 560, protein: 38, carbs: 62, fat: 18, ingredients: ['Basmati Rice', 'Chicken', 'Saffron', 'Fried Onions', 'Yogurt', 'Whole Spices'] } },
+  { id: 'm16', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Biryani',            nameHi: 'मटन बिरयानी',                price: 420, emoji: '🥘', popular: false, tags: ['high-protein'],
+    nutrition: { calories: 620, protein: 40, carbs: 64, fat: 22, ingredients: ['Basmati Rice', 'Mutton', 'Saffron', 'Fried Onions', 'Whole Spices', 'Ghee'] } },
   // Breads
-  { id: 'm17', category: 'Breads',      categoryHi: 'रोटी',          name: 'Tandoori Roti',             nameHi: 'तंदूरी रोटी',                price: 25,  emoji: '🫓', popular: false },
-  { id: 'm18', category: 'Breads',      categoryHi: 'रोटी',          name: 'Butter Naan',               nameHi: 'बटर नान',                    price: 55,  emoji: '🫓', popular: true  },
-  { id: 'm19', category: 'Breads',      categoryHi: 'रोटी',          name: 'Garlic Naan',               nameHi: 'लहसुन नान',                  price: 70,  emoji: '🧄', popular: false },
+  { id: 'm17', category: 'Breads',      categoryHi: 'रोटी',          name: 'Tandoori Roti',             nameHi: 'तंदूरी रोटी',                price: 25,  emoji: '🫓', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 80,  protein: 3,  carbs: 16, fat: 1,  ingredients: ['Whole Wheat Flour', 'Water', 'Salt'] } },
+  { id: 'm18', category: 'Breads',      categoryHi: 'रोटी',          name: 'Butter Naan',               nameHi: 'बटर नान',                    price: 55,  emoji: '🫓', popular: true,  tags: [],
+    nutrition: { calories: 180, protein: 5,  carbs: 28, fat: 6,  ingredients: ['Refined Flour', 'Butter', 'Yogurt', 'Yeast', 'Salt'] } },
+  { id: 'm19', category: 'Breads',      categoryHi: 'रोटी',          name: 'Garlic Naan',               nameHi: 'लहसुन नान',                  price: 70,  emoji: '🧄', popular: false, tags: [],
+    nutrition: { calories: 200, protein: 5,  carbs: 30, fat: 7,  ingredients: ['Refined Flour', 'Garlic', 'Butter', 'Yogurt', 'Coriander', 'Yeast'] } },
   // Beverages
-  { id: 'm20', category: 'Beverages',   categoryHi: 'पेय',           name: 'Coke (300ml)',              nameHi: 'कोक (300मिली)',               price: 40,  emoji: '🥤', popular: false },
-  { id: 'm21', category: 'Beverages',   categoryHi: 'पेय',           name: 'Sprite (300ml)',            nameHi: 'स्प्राइट (300मिली)',          price: 40,  emoji: '🥤', popular: false },
-  { id: 'm22', category: 'Beverages',   categoryHi: 'पेय',           name: 'Mineral Water (1L)',        nameHi: 'मिनरल वाटर (1ली)',            price: 20,  emoji: '💧', popular: false },
+  { id: 'm20', category: 'Beverages',   categoryHi: 'पेय',           name: 'Coke (300ml)',              nameHi: 'कोक (300मिली)',               price: 40,  emoji: '🥤', popular: false, tags: [],
+    nutrition: { calories: 130, protein: 0,  carbs: 35, fat: 0,  ingredients: ['Carbonated Water', 'Sugar', 'Caramel Colour', 'Phosphoric Acid', 'Natural Flavours', 'Caffeine'] } },
+  { id: 'm21', category: 'Beverages',   categoryHi: 'पेय',           name: 'Sprite (300ml)',            nameHi: 'स्प्राइट (300मिली)',          price: 40,  emoji: '🥤', popular: false, tags: [],
+    nutrition: { calories: 120, protein: 0,  carbs: 33, fat: 0,  ingredients: ['Carbonated Water', 'Sugar', 'Citric Acid', 'Natural Flavour', 'Sodium Citrate'] } },
+  { id: 'm22', category: 'Beverages',   categoryHi: 'पेय',           name: 'Mineral Water (1L)',        nameHi: 'मिनरल वाटर (1ली)',            price: 20,  emoji: '💧', popular: false, tags: ['guilt-free'],
+    nutrition: { calories: 0,   protein: 0,  carbs: 0,  fat: 0,  ingredients: ['Purified Water'] } },
   // Desserts
-  { id: 'm23', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Gulab Jamun (2 pcs)',       nameHi: 'गुलाब जामुन (2 पीस)',        price: 90,  emoji: '🍮', popular: true  },
-  { id: 'm24', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Rasgulla (2 pcs)',          nameHi: 'रसगुल्ला (2 पीस)',           price: 90,  emoji: '🍡', popular: false },
-  { id: 'm25', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Brownie with Ice Cream',    nameHi: 'ब्राउनी विद आइसक्रीम',      price: 160, emoji: '🍫', popular: true  },
+  { id: 'm23', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Gulab Jamun (2 pcs)',       nameHi: 'गुलाब जामुन (2 पीस)',        price: 90,  emoji: '🍮', popular: true,  tags: [],
+    nutrition: { calories: 320, protein: 6,  carbs: 48, fat: 12, ingredients: ['Milk Solids', 'Refined Flour', 'Cardamom', 'Rose Water', 'Sugar Syrup', 'Ghee'] } },
+  { id: 'm24', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Rasgulla (2 pcs)',          nameHi: 'रसगुल्ला (2 पीस)',           price: 90,  emoji: '🍡', popular: false, tags: [],
+    nutrition: { calories: 240, protein: 8,  carbs: 38, fat: 6,  ingredients: ['Chenna', 'Sugar', 'Cardamom', 'Rose Water'] } },
+  { id: 'm25', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Brownie with Ice Cream',    nameHi: 'ब्राउनी विद आइसक्रीम',      price: 160, emoji: '🍫', popular: true,  tags: [],
+    nutrition: { calories: 480, protein: 6,  carbs: 62, fat: 22, ingredients: ['Dark Chocolate', 'Butter', 'Eggs', 'Flour', 'Sugar', 'Vanilla Ice Cream'] } },
 ];
 
 // Add dynamic fields to every menu item
@@ -407,7 +432,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const validStatuses = ['pending', 'preparing', 'ready', 'completed'];
+    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'awaiting_customer', 'cancelled'];
     if (!validStatuses.includes(status)) {
       if (typeof ack === 'function') ack({ success: false, error: 'Invalid status' });
       return;
@@ -513,6 +538,111 @@ io.on('connection', (socket) => {
     io.emit('order:updated', order);
 
     if (typeof ack === 'function') ack({ success: true, order });
+  });
+
+  // ── Accept Order (Admin) ──
+  socket.on('order:accept', (data, ack) => {
+    const { orderId, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    order.status = 'preparing';
+    order.updatedAt = getTimestamp();
+    order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
+
+    io.emit('order:updated', order);
+    if (typeof ack === 'function') ack({ success: true, order });
+    console.log(`[Order] Accepted: ${orderId} → preparing`);
+  });
+
+  // ── Flag OOS Items (Admin) ──
+  socket.on('order:flag_oos', (data, ack) => {
+    const { orderId, oosItemIds, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    order.oosItems = (oosItemIds || []).map(id => {
+      const menuItem = MENU.find(m => m.id === id);
+      return { id, name: menuItem?.name || id, nameHi: menuItem?.nameHi || menuItem?.name || id };
+    });
+    order.status = 'awaiting_customer';
+    order.updatedAt = getTimestamp();
+    order.statusHistory.push({ status: 'awaiting_customer', timestamp: getTimestamp() });
+
+    io.emit('order:updated', order);
+    if (typeof ack === 'function') ack({ success: true, order });
+    console.log(`[Order] OOS flagged: ${orderId}, items: ${(oosItemIds || []).join(', ')}`);
+  });
+
+  // ── Customer/Waiter Review Response ──
+  socket.on('order:review_response', (data, ack) => {
+    const { orderId, choice, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    if (choice === 'proceed') {
+      const oosIds = (order.oosItems || []).map(i => i.id);
+      order.items = order.items.filter(i => !oosIds.includes(i.id));
+      order.billing = calculateBill(order.items, {
+        applyServiceCharge: order.billing.serviceCharge > 0,
+        discountPercent: order.billing.discountPercent || 0,
+      });
+      order.reviewResponse = 'proceed';
+      order.status = 'preparing';
+      order.updatedAt = getTimestamp();
+      order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
+      io.emit('order:updated', order);
+      if (typeof ack === 'function') ack({ success: true, order });
+      console.log(`[Order] Review proceed: ${orderId} → preparing`);
+    } else if (choice === 'cancel') {
+      order.reviewResponse = 'cancel';
+      order.status = 'cancelled';
+      order.updatedAt = getTimestamp();
+      order.statusHistory.push({ status: 'cancelled', timestamp: getTimestamp() });
+      delete occupiedTables[order.tableNo];
+      broadcastTablesStatus();
+      io.emit('order:updated', order);
+      if (typeof ack === 'function') ack({ success: true, order });
+      console.log(`[Order] Review cancel: ${orderId} → cancelled`);
+    } else if (choice === 'modify') {
+      order.reviewResponse = 'modify';
+      order.status = 'cancelled';
+      order.updatedAt = getTimestamp();
+      order.statusHistory.push({ status: 'cancelled', timestamp: getTimestamp() });
+      // Do NOT free the table — customer is reordering at same table
+      io.emit('order:updated', order);
+      if (typeof ack === 'function') ack({ success: true, order });
+      console.log(`[Order] Review modify: ${orderId} → cancelled (table kept)`);
+    } else {
+      if (typeof ack === 'function') ack({ success: false, error: 'Invalid choice' });
+    }
   });
 
   // ── Manual Table Free (Admin) ──
