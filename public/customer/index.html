@@ -257,6 +257,32 @@ header {
 }
 .item-badge.visible { display: flex; }
 
+/* ── Out of Stock overlay ────────────────────────── */
+.menu-item.out-of-stock {
+  opacity: 0.45; pointer-events: none; cursor: default;
+}
+.item-oos-label {
+  position: absolute; inset: 0;
+  background: rgba(13,13,13,0.65); border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: var(--red);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+/* ── Offer badge ─────────────────────────────────── */
+.item-offer-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 800;
+  padding: 2px 7px; border-radius: 8px;
+  letter-spacing: 0.04em; z-index: 1;
+}
+.item-price-original {
+  font-size: 11px; color: var(--text-dim);
+  text-decoration: line-through; display: block; line-height: 1;
+  margin-bottom: 1px;
+}
+.item-price.offer { color: var(--red); }
+
 /* ── FAB Cart Button (mobile) ────────────────────────── */
 .cart-fab {
   position: fixed; bottom: 20px; left: 50%;
@@ -1479,6 +1505,19 @@ socket.on('tables:status', (data) => {
   checkTableOccupancy(data.tables || []);
 });
 
+socket.on('menu:updated', (data) => {
+  state.menu = data.menu || state.menu;
+  // Sync cart items with latest menu data (offers/stock)
+  Object.keys(state.cart).forEach(id => {
+    const m = state.menu.find(mi => mi.id === id);
+    if (m) state.cart[id] = { ...state.cart[id], inStock: m.inStock, offer: m.offer };
+    if (m && m.inStock === false) delete state.cart[id]; // remove OOS items from cart
+  });
+  renderMenu();
+  updateBillSummary();
+  broadcastCartDebounced();
+});
+
 function checkTableOccupancy(tables) {
   if (!state.tableNo) return; // no table in URL — nothing to check
   const info = tables.find(t => t.tableId === state.tableNo);
@@ -1566,31 +1605,48 @@ function renderMenu() {
     grid.className = 'menu-grid';
     state.menu.filter(i => i.category === cat).forEach(item => {
       const card = document.createElement('div');
-      card.className = 'menu-item'; card.id = 'card-' + item.id;
+      const oos = item.inStock === false;
+      const hasOffer = item.offer > 0;
+      const effPrice = hasOffer ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price;
+      card.className = 'menu-item' + (oos ? ' out-of-stock' : '');
+      card.id = 'card-' + item.id;
       card.innerHTML = `
+        ${hasOffer ? `<div class="item-offer-badge">${item.offer}% OFF</div>` : ''}
         <div class="item-emoji">${item.emoji}</div>
         <div class="item-name">${item.name}</div>
-        <div class="item-price">${fmt(item.price)}</div>
-        ${item.popular ? `<div class="item-popular">${t('popular')}</div>` : ''}
+        <div class="item-price${hasOffer ? ' offer' : ''}">
+          ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}
+        </div>
+        ${item.popular && !hasOffer ? `<div class="item-popular">${t('popular')}</div>` : ''}
+        ${oos ? `<div class="item-oos-label">Out of Stock</div>` : ''}
         <div class="item-badge" id="badge-${item.id}">0</div>
       `;
-      card.addEventListener('click', () => addToCart(item));
+      if (!oos) card.addEventListener('click', () => addToCart(item));
       grid.appendChild(card);
     });
     section.appendChild(grid);
     container.appendChild(section);
   });
+  updateBadges();
 }
 
 // ── Cart ────────────────────────────────────────────────
+function emitBrowsing(item, action) {
+  if (!state.isConnected || !state.sessionId) return;
+  socket.emit('customer:browsing', { sessionId: state.sessionId, itemId: item.id, itemName: item.name, action });
+}
 function addToCart(item) {
+  if (item.inStock === false) return;
   if (state.cart[item.id]) state.cart[item.id].quantity++;
   else state.cart[item.id] = { ...item, quantity: 1 };
+  emitBrowsing(item, 'added');
   onCartChanged();
 }
 function updateQty(itemId, delta) {
   if (!state.cart[itemId]) return;
   state.cart[itemId].quantity = Math.max(0, state.cart[itemId].quantity + delta);
+  const menuItem = state.menu.find(m => m.id === itemId);
+  if (menuItem) emitBrowsing(menuItem, delta > 0 ? 'added' : 'removed');
   if (state.cart[itemId].quantity === 0) delete state.cart[itemId];
   onCartChanged();
 }
@@ -1767,7 +1823,12 @@ function calculateBill() {
   const discountPct = getDiscountInput();
   const GST = state.config.gstRate || 0.05;
   const SVC = state.config.serviceChargeRate || 0.10;
-  const subtotal = items.reduce((s, i) => s + r2(i.price * i.quantity), 0);
+  const subtotal = items.reduce((s, i) => {
+    const menuItem = state.menu.find(m => m.id === i.id);
+    const offer = menuItem ? (menuItem.offer || 0) : 0;
+    const effPrice = offer > 0 ? r2(i.price * (1 - offer / 100)) : i.price;
+    return s + r2(effPrice * i.quantity);
+  }, 0);
   const discountAmount = r2(subtotal * discountPct / 100);
   const discountedSubtotal = r2(subtotal - discountAmount);
   const serviceCharge = applyService ? r2(discountedSubtotal * SVC) : 0;

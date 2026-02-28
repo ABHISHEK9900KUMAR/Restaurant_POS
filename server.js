@@ -97,6 +97,9 @@ const MENU = [
   { id: 'm25', category: 'Desserts',    name: 'Brownie with Ice Cream',     price: 160, emoji: '🍫', popular: true  },
 ];
 
+// Add dynamic fields to every menu item
+MENU.forEach(item => { item.inStock = true; item.offer = 0; });
+
 // ─── In-Memory State ─────────────────────────────────────────────────────────
 let orders = [];         // Confirmed orders
 let activeCarts = {};    // Temporary cart sessions
@@ -128,8 +131,11 @@ function calculateBill(items, options = {}) {
 
   const subtotal = items.reduce((sum, item) => {
     const qty = Math.max(0, Math.floor(item.quantity));
-    const price = parseFloat(item.price) || 0;
-    return sum + round2(price * qty);
+    const basePrice = parseFloat(item.price) || 0;
+    const menuItem = MENU.find(m => m.id === item.id);
+    const offer = menuItem ? (menuItem.offer || 0) : 0;
+    const effectivePrice = offer > 0 ? round2(basePrice * (1 - offer / 100)) : basePrice;
+    return sum + round2(effectivePrice * qty);
   }, 0);
 
   const discountAmount = round2(subtotal * (safeDiscount / 100));
@@ -192,6 +198,7 @@ function getPublicCarts() {
     items: cart.items,
     billing: calculateBill(cart.items, { applyServiceCharge: cart.applyServiceCharge, discountPercent: cart.discountPercent }),
     lastUpdate: cart.lastUpdate,
+    lastActivity: cart.lastActivity || null,
   }));
 }
 
@@ -519,6 +526,35 @@ io.on('connection', (socket) => {
     broadcastTablesStatus();
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Table] Manually freed: ${tableId}`);
+  });
+
+  // ── Menu Management (Admin) ──
+  socket.on('menu:toggle_stock', (data, ack) => {
+    const { itemId, inStock } = data;
+    const item = MENU.find(m => m.id === itemId);
+    if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
+    item.inStock = !!inStock;
+    io.emit('menu:updated', { menu: MENU });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log(`[Menu] ${item.name} → ${inStock ? 'In Stock' : 'Out of Stock'}`);
+  });
+
+  socket.on('menu:set_offer', (data, ack) => {
+    const { itemId, offerPercent } = data;
+    const item = MENU.find(m => m.id === itemId);
+    if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
+    item.offer = Math.min(Math.max(0, parseFloat(offerPercent) || 0), 50);
+    io.emit('menu:updated', { menu: MENU });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log(`[Menu] ${item.name} → offer: ${item.offer}%`);
+  });
+
+  // ── Customer Browsing Activity ──
+  socket.on('customer:browsing', (data) => {
+    const { sessionId, itemId, itemName, action } = data;
+    if (!sessionId || !activeCarts[sessionId]) return;
+    activeCarts[sessionId].lastActivity = { itemId, itemName, action, timestamp: getTimestamp() };
+    io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
   });
 
   socket.on('disconnect', () => {

@@ -529,6 +529,112 @@ header {
 }
 .lang-btn.active { background: var(--gold); color: #000; }
 
+/* ── Live Activity Strip ─────────────────────────── */
+.activity-strip {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 8px 16px; display: flex; align-items: center; gap: 10px;
+  overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+}
+.activity-strip::-webkit-scrollbar { display: none; }
+.activity-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-dim); white-space: nowrap; flex-shrink: 0;
+}
+.activity-empty { font-size: 12px; color: var(--text-dim); font-style: italic; }
+.activity-card {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 12px 4px 8px;
+  white-space: nowrap; flex-shrink: 0; animation: cardIn 0.2s ease;
+}
+.activity-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+  box-shadow: 0 0 6px var(--green);
+  animation: liveGlow 2s ease infinite;
+}
+@keyframes liveGlow { 0%,100%{opacity:1;box-shadow:0 0 6px var(--green)} 50%{opacity:0.5;box-shadow:0 0 2px var(--green)} }
+.activity-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.activity-table { font-size: 11px; color: var(--gold); font-weight: 700; }
+.activity-action { font-size: 11px; color: var(--text-dim); max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.activity-count {
+  font-size: 10px; font-weight: 700; color: var(--text-mid);
+  background: var(--surface3); border-radius: 10px; padding: 1px 7px;
+}
+
+/* ── Menu Management Modal ───────────────────────── */
+.menu-mgr-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.82); backdrop-filter: blur(6px);
+  align-items: flex-start; justify-content: center;
+  padding: 20px; overflow-y: auto;
+}
+.menu-mgr-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+.menu-mgr-panel {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; width: 100%; max-width: 700px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+  animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  overflow: hidden; margin: auto;
+}
+.menu-mgr-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+}
+.menu-mgr-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); font-weight: 700; }
+.menu-mgr-close {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); font-size: 16px; cursor: pointer;
+  transition: all var(--transition); font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+}
+.menu-mgr-close:hover { background: var(--surface3); }
+.menu-mgr-cats {
+  display: flex; gap: 6px; overflow-x: auto;
+  padding: 12px 24px; border-bottom: 1px solid var(--border); scrollbar-width: none;
+}
+.menu-mgr-cats::-webkit-scrollbar { display: none; }
+.menu-cat-btn {
+  flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--transition);
+  font-family: 'DM Sans', sans-serif;
+}
+.menu-cat-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+.menu-cat-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
+.menu-mgr-list { padding: 4px 0; max-height: 62vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+.menu-mgr-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 24px; border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.menu-mgr-row:last-child { border-bottom: none; }
+.menu-mgr-row:hover { background: var(--surface2); }
+.mgr-emoji { font-size: 22px; width: 30px; text-align: center; flex-shrink: 0; }
+.mgr-info { flex: 1; min-width: 0; }
+.mgr-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.mgr-price { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+.mgr-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.stock-badge {
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 10px;
+  cursor: pointer; transition: all var(--transition); border: 1px solid;
+  font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.stock-badge.in  { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+.stock-badge.out { background: var(--red-dim);   color: var(--red);   border-color: var(--red); }
+.offer-wrap { display: flex; align-items: center; gap: 5px; }
+.offer-input-mgr {
+  width: 50px; height: 30px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0 6px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; outline: none; text-align: center;
+  -webkit-appearance: none; transition: border-color var(--transition);
+}
+.offer-input-mgr:focus { border-color: var(--gold); }
+.offer-pct { font-size: 11px; color: var(--text-dim); }
+
 /* ── Mobile Responsive (≤ 639px) ────────────────── */
 @media (max-width: 639px) {
   header {
@@ -723,6 +829,7 @@ header {
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+    <button class="qr-btn" id="menuMgrBtn">🍽️ <span>Menu</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -760,6 +867,24 @@ header {
       <button class="qr-free-btn" id="qrFreeBtn">⚡ Free Table Manually</button>
     </div>
   </div>
+</div>
+
+<!-- Menu Management Modal -->
+<div class="menu-mgr-overlay" id="menuMgrOverlay">
+  <div class="menu-mgr-panel">
+    <div class="menu-mgr-header">
+      <div class="menu-mgr-title">🍽️ Menu Management</div>
+      <button class="menu-mgr-close" id="menuMgrClose">✕</button>
+    </div>
+    <div class="menu-mgr-cats" id="menuMgrCats"></div>
+    <div class="menu-mgr-list" id="menuMgrList"></div>
+  </div>
+</div>
+
+<!-- Live Activity Strip -->
+<div class="activity-strip" id="activityStrip">
+  <div class="activity-label">Live</div>
+  <div class="activity-empty" id="activityEmpty">No active customers</div>
 </div>
 
 <div class="filters-bar">
@@ -971,11 +1096,22 @@ socket.on('reconnect', () => {
 socket.on('init', (data) => {
   state.orders = data.orders || [];
   state.config = data.config || {};
-  // Load initial table status
+  state.menu   = data.menu   || [];
   tablesStatus = {};
   (data.tablesStatus || []).forEach(t => { tablesStatus[t.tableId] = t; });
   refreshQRTabs();
   renderAll();
+});
+
+// Menu updated in real-time (stock / offer change)
+socket.on('menu:updated', (data) => {
+  state.menu = data.menu || state.menu;
+  if (menuMgrOpen) renderMenuMgrList(currentMenuCat);
+});
+
+// Active carts update (live customer activity)
+socket.on('admin:cart_update', (data) => {
+  renderActivityStrip(data.activeCarts || []);
 });
 
 // New order from a customer
@@ -1503,6 +1639,126 @@ document.addEventListener('keydown', (e) => {
 
 // Apply translations on load
 applyTranslations();
+
+// ── Live Activity Strip ───────────────────────────────
+function renderActivityStrip(carts) {
+  const strip  = document.getElementById('activityStrip');
+  const empty  = document.getElementById('activityEmpty');
+  // Remove old cards
+  strip.querySelectorAll('.activity-card').forEach(el => el.remove());
+  if (!carts || carts.length === 0) {
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  carts.forEach(cart => {
+    const name  = cart.customerName || 'Guest';
+    const table = cart.tableNo ? `T${cart.tableNo.replace(/\D/g,'')||cart.tableNo}` : '—';
+    const count = cart.items ? cart.items.reduce((s,i) => s + i.quantity, 0) : 0;
+    const act   = cart.lastActivity;
+    let actionText = count > 0 ? `${count} item${count>1?'s':''} in cart` : 'browsing menu';
+    if (act) {
+      const icons = { added: '➕', removed: '➖', viewed: '👀' };
+      actionText = `${icons[act.action]||''} ${act.itemName}`.trim();
+    }
+    const card = document.createElement('div');
+    card.className = 'activity-card';
+    card.innerHTML = `
+      <div class="activity-dot"></div>
+      <span class="activity-name">${name}</span>
+      <span class="activity-table">${table}</span>
+      <span class="activity-action">${actionText}</span>
+      ${count > 0 ? `<span class="activity-count">🛒 ${count}</span>` : ''}
+    `;
+    strip.appendChild(card);
+  });
+}
+
+// ── Menu Management ───────────────────────────────────
+let menuMgrOpen = false;
+let currentMenuCat = 'All';
+
+function openMenuMgr() {
+  menuMgrOpen = true;
+  document.getElementById('menuMgrOverlay').classList.add('open');
+  renderMenuMgrCats();
+  renderMenuMgrList(currentMenuCat);
+}
+function closeMenuMgr() {
+  menuMgrOpen = false;
+  document.getElementById('menuMgrOverlay').classList.remove('open');
+}
+
+function renderMenuMgrCats() {
+  const cats = ['All', ...new Set((state.menu || []).map(i => i.category))];
+  const container = document.getElementById('menuMgrCats');
+  container.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-cat-btn' + (cat === currentMenuCat ? ' active' : '');
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      currentMenuCat = cat;
+      container.querySelectorAll('.menu-cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMenuMgrList(cat);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function renderMenuMgrList(cat) {
+  const list   = document.getElementById('menuMgrList');
+  const items  = (state.menu || []).filter(i => cat === 'All' || i.category === cat);
+  list.innerHTML = '';
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'menu-mgr-row';
+    const isIn   = item.inStock !== false;
+    const offer  = item.offer || 0;
+    row.innerHTML = `
+      <div class="mgr-emoji">${item.emoji}</div>
+      <div class="mgr-info">
+        <div class="mgr-name">${item.name}</div>
+        <div class="mgr-price">₹${item.price}${offer > 0 ? ` <span style="color:var(--red);font-weight:700">→ ₹${Math.round(item.price*(1-offer/100))}</span>` : ''}</div>
+      </div>
+      <div class="mgr-controls">
+        <button class="stock-badge ${isIn ? 'in' : 'out'}" data-id="${item.id}" data-stock="${isIn}">
+          ${isIn ? '✅ In Stock' : '❌ Out of Stock'}
+        </button>
+        <div class="offer-wrap">
+          <input class="offer-input-mgr" type="number" min="0" max="50" value="${offer}" placeholder="0" data-id="${item.id}" />
+          <span class="offer-pct">% off</span>
+        </div>
+      </div>
+    `;
+
+    // Stock toggle
+    row.querySelector('.stock-badge').addEventListener('click', function() {
+      const newStock = this.dataset.stock === 'true' ? false : true;
+      this.dataset.stock = newStock;
+      this.className = 'stock-badge ' + (newStock ? 'in' : 'out');
+      this.textContent = newStock ? '✅ In Stock' : '❌ Out of Stock';
+      socket.emit('menu:toggle_stock', { itemId: item.id, inStock: newStock });
+    });
+
+    // Offer input (debounced)
+    const offerInput = row.querySelector('.offer-input-mgr');
+    offerInput.addEventListener('input', debounce(function() {
+      const val = Math.min(Math.max(0, parseFloat(this.value) || 0), 50);
+      this.value = val || '';
+      socket.emit('menu:set_offer', { itemId: item.id, offerPercent: val });
+    }, 500));
+
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('menuMgrBtn').addEventListener('click', openMenuMgr);
+document.getElementById('menuMgrClose').addEventListener('click', closeMenuMgr);
+document.getElementById('menuMgrOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('menuMgrOverlay')) closeMenuMgr();
+});
 
 // ── PIN Authentication ────────────────────────────────
 (function() {
