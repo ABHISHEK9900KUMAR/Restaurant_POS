@@ -1057,6 +1057,9 @@ const state = {
 };
 
 // ─── Utils ───────────────────────────────────────────────
+function debounce(fn, ms) {
+  let t; return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
+}
 function fmt(n) {
   return '₹' + (parseFloat(n) || 0).toFixed(2);
 }
