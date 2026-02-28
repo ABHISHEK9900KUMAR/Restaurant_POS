@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('zingpos-theme')||'dark');</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -565,6 +566,45 @@ header {
   .qr-tabs { gap: 6px; }
   .qr-tab { padding: 5px 11px; font-size: 12px; }
 }
+
+/* ── Light Mode ──────────────────────────────────── */
+[data-theme="light"] {
+  --bg:          #f0f3fa;
+  --surface:     #ffffff;
+  --surface2:    #e6eaf5;
+  --surface3:    #dce1f0;
+  --border:      #c8cedf;
+  --border2:     #b8c0d8;
+  --gold:        #9a7a08;
+  --gold-dim:    #f5c84220;
+  --gold-border: #f5c84238;
+  --green:       #1a7a42;
+  --green-dim:   #27ae6018;
+  --blue:        #1a6898;
+  --blue-dim:    #2980b918;
+  --orange:      #b85e08;
+  --orange-dim:  #e67e2218;
+  --red:         #902018;
+  --red-dim:     #c0392b18;
+  --teal:        #0a7058;
+  --teal-dim:    #16a08518;
+  --text:        #0e1220;
+  --text-mid:    #364068;
+  --text-dim:    #606c90;
+  --shadow:      0 4px 24px rgba(0,0,0,0.08);
+  --shadow-lg:   0 12px 48px rgba(0,0,0,0.14);
+}
+
+/* ── Theme Toggle Button ─────────────────────────── */
+.theme-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border2);
+  font-size: 15px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-btn:hover { background: var(--surface3); }
 </style>
 </head>
 <body>
@@ -581,6 +621,7 @@ header {
       <button class="lang-btn active" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1361,6 +1402,21 @@ document.addEventListener('keydown', (e) => {
 
 // Apply translations on load
 applyTranslations();
+
+// ── Theme Toggle ──────────────────────────────────────
+(function() {
+  const btn = document.getElementById('themeBtn');
+  function syncIcon() {
+    btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+  }
+  syncIcon();
+  btn.addEventListener('click', function() {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('zingpos-theme', next);
+    syncIcon();
+  });
+})();
 </script>
 </body>
 </html>

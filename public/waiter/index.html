@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('zingpos-theme')||'dark');</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -646,6 +647,43 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* ── Light Mode ──────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:          #f7f3ed;
+  --surface:     #ffffff;
+  --surface2:    #ede9e2;
+  --surface3:    #e4dfd7;
+  --border:      #d4cfc8;
+  --border2:     #c4bfb8;
+  --gold:        #7a5c0a;
+  --gold-light:  #9a7420;
+  --gold-dim:    #c9a84c20;
+  --green:       #1a9648;
+  --green-dim:   #1a964820;
+  --red:         #b83228;
+  --orange:      #c47808;
+  --blue:        #1a5cb8;
+  --blue-dim:    #1a5cb820;
+  --teal:        #0a7058;
+  --teal-dim:    #0a705820;
+  --text:        #1a1714;
+  --text-dim:    #706860;
+  --text-mid:    #4e4840;
+  --shadow:      0 4px 24px rgba(0,0,0,0.10);
+  --shadow-lg:   0 16px 56px rgba(0,0,0,0.18);
+}
+
+/* ── Theme Toggle Button ─────────────────────────────── */
+.theme-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border2);
+  font-size: 15px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-btn:hover { background: var(--surface3); }
 </style>
 </head>
 <body>
@@ -659,6 +697,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <button class="lang-btn active" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">Connecting…</span>
@@ -1653,6 +1692,21 @@ window.addEventListener('resize', debounce(() => {
 updateBillSummary();
 updateMyOrdersBadge();
 applyTranslations();
+
+// ── Theme Toggle ──────────────────────────────────────
+(function() {
+  const btn = document.getElementById('themeBtn');
+  function syncIcon() {
+    btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+  }
+  syncIcon();
+  btn.addEventListener('click', function() {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('zingpos-theme', next);
+    syncIcon();
+  });
+})();
 </script>
 </body>
 </html>
