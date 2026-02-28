@@ -562,6 +562,67 @@ header {
   background: var(--surface3); border-radius: 10px; padding: 1px 7px;
 }
 
+/* ── Live Carts View ─────────────────────────────────── */
+.live-carts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.live-cart-card {
+  background: var(--surface);
+  border: 1px solid var(--orange);
+  border-top: 3px solid var(--orange);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: cardIn 0.25s ease;
+  transition: box-shadow var(--transition);
+}
+.live-cart-card:hover { box-shadow: 0 0 0 1px var(--orange), var(--shadow); }
+.live-cart-badge {
+  flex-shrink: 0;
+  padding: 3px 10px; border-radius: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange);
+  display: flex; align-items: center; gap: 5px;
+}
+.live-cart-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--orange);
+  animation: liveGlow 1.5s ease infinite;
+}
+.live-cart-items {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 160px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.live-cart-empty-items { font-size: 12px; color: var(--text-dim); font-style: italic; }
+.live-cart-billing { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.live-cart-activity {
+  padding: 8px 16px; font-size: 12px; color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
+}
+.live-cart-activity strong { color: var(--text); }
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--orange); color: #000;
+  font-size: 10px; font-weight: 800;
+  border-radius: 10px; min-width: 18px; height: 18px;
+  padding: 0 5px; margin-left: 4px; vertical-align: middle;
+}
+#liveCartsSection { display: none; }
+#liveCartsSection.visible { display: block; }
+.live-carts-heading {
+  font-size: 12px; font-weight: 700; color: var(--orange);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.live-carts-heading-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--orange); box-shadow: 0 0 8px var(--orange);
+  animation: liveGlow 1.5s ease infinite;
+}
+
 /* ── Menu Management Modal ───────────────────────── */
 .menu-mgr-overlay {
   display: none; position: fixed; inset: 0; z-index: 500;
@@ -664,6 +725,7 @@ header {
 
   .orders-container { padding: 12px; }
   .orders-grid { grid-template-columns: 1fr; gap: 12px; }
+  .live-carts-grid { grid-template-columns: 1fr; gap: 12px; }
 
   #toast-container { right: 10px; left: 10px; bottom: 10px; }
   .toast { min-width: unset; max-width: 100%; }
@@ -894,6 +956,10 @@ header {
   <button class="filter-btn" data-filter="preparing" data-i18n="filter_preparing">Preparing</button>
   <button class="filter-btn" data-filter="ready" data-i18n="filter_ready">Ready</button>
   <button class="filter-btn" data-filter="completed" data-i18n="filter_completed">Completed</button>
+  <div class="filter-sep" id="liveCartsSep" style="display:none"></div>
+  <button class="filter-btn" data-filter="live-carts" id="liveCartsBtn" style="display:none">
+    👁 Live Carts<span class="filter-badge" id="liveCartsBadge">0</span>
+  </button>
 </div>
 
 <div class="orders-container" id="ordersContainer">
@@ -902,6 +968,13 @@ header {
     <div class="empty-text" data-i18n="no_orders">No orders yet — waiting for customers</div>
   </div>
   <div class="orders-grid" id="ordersGrid"></div>
+  <div id="liveCartsSection">
+    <div class="live-carts-heading">
+      <div class="live-carts-heading-dot"></div>
+      Customers Browsing Now
+    </div>
+    <div class="live-carts-grid" id="liveCartsGrid"></div>
+  </div>
 </div>
 
 <div id="toast-container"></div>
@@ -1051,9 +1124,11 @@ document.getElementById('langToggle').addEventListener('click', (e) => {
 // ─── State ───────────────────────────────────────────────
 const state = {
   orders: [],
+  activeCarts: [],
   config: {},
   isConnected: false,
   activeFilter: 'all',
+  hadActiveCarts: false,
 };
 
 // ─── Utils ───────────────────────────────────────────────
@@ -1114,7 +1189,24 @@ socket.on('menu:updated', (data) => {
 
 // Active carts update (live customer activity)
 socket.on('admin:cart_update', (data) => {
-  renderActivityStrip(data.activeCarts || []);
+  const carts = data.activeCarts || [];
+  state.activeCarts = carts;
+  renderActivityStrip(carts);
+  renderLiveCartsBadge(carts);
+
+  const nonEmpty = carts.filter(c => c.items && c.items.length > 0);
+
+  if (nonEmpty.length > 0 && !state.hadActiveCarts) {
+    // First item added anywhere — auto-switch to Live Carts
+    state.hadActiveCarts = true;
+    switchToFilter('live-carts');
+  } else if (nonEmpty.length === 0 && state.hadActiveCarts) {
+    // All carts gone — switch back to All Orders
+    state.hadActiveCarts = false;
+    if (state.activeFilter === 'live-carts') switchToFilter('all');
+  }
+
+  if (state.activeFilter === 'live-carts') renderLiveCarts(carts);
 });
 
 // New order from a customer
@@ -1176,10 +1268,21 @@ function updateStats() {
 }
 
 function renderOrders(flashId = null) {
-  const filtered = getFilteredOrders();
+  const liveSection = document.getElementById('liveCartsSection');
   const grid = document.getElementById('ordersGrid');
   const empty = document.getElementById('emptyState');
 
+  if (state.activeFilter === 'live-carts') {
+    empty.style.display = 'none';
+    grid.style.display = 'none';
+    liveSection.classList.add('visible');
+    renderLiveCarts(state.activeCarts);
+    return;
+  }
+
+  liveSection.classList.remove('visible');
+
+  const filtered = getFilteredOrders();
   if (filtered.length === 0) {
     empty.style.display = '';
     grid.style.display = 'none';
@@ -1485,6 +1588,14 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   });
 });
 
+// Live Carts filter button (dynamically shown)
+document.getElementById('liveCartsBtn').addEventListener('click', () => {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('liveCartsBtn').classList.add('active');
+  state.activeFilter = 'live-carts';
+  renderOrders();
+});
+
 // ─── Audio beep for new orders ───────────────────────────
 function playBeep() {
   try {
@@ -1674,6 +1785,95 @@ function renderActivityStrip(carts) {
       ${count > 0 ? `<span class="activity-count">🛒 ${count}</span>` : ''}
     `;
     strip.appendChild(card);
+  });
+}
+
+// ── Live Carts Panel ──────────────────────────────────
+function renderLiveCartsBadge(carts) {
+  const nonEmpty = carts.filter(c => c.items && c.items.length > 0);
+  const btn   = document.getElementById('liveCartsBtn');
+  const sep   = document.getElementById('liveCartsSep');
+  const badge = document.getElementById('liveCartsBadge');
+  if (nonEmpty.length > 0) {
+    btn.style.display = '';
+    sep.style.display = '';
+    badge.textContent = nonEmpty.length;
+  } else {
+    btn.style.display = 'none';
+    sep.style.display = 'none';
+  }
+}
+
+function switchToFilter(filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  const target = document.querySelector(`[data-filter="${filter}"]`);
+  if (target) target.classList.add('active');
+  state.activeFilter = filter;
+  renderOrders();
+}
+
+function renderLiveCarts(carts) {
+  const grid = document.getElementById('liveCartsGrid');
+  if (!grid) return;
+  const nonEmpty = (carts || []).filter(c => c.items && c.items.length > 0);
+  grid.innerHTML = '';
+
+  if (nonEmpty.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">👀</div><div class="empty-text">No customers browsing right now</div></div>';
+    return;
+  }
+
+  nonEmpty.forEach(cart => {
+    const card  = document.createElement('div');
+    card.className = 'live-cart-card';
+    const name  = cart.customerName || 'Guest';
+    const table = cart.tableNo || '—';
+    const items = cart.items || [];
+    const b     = cart.billing || {};
+    const act   = cart.lastActivity;
+
+    const itemsHTML = items.map(item => `
+      <div class="order-item-row">
+        <span class="order-item-name">${item.emoji || ''} ${item.name}</span>
+        <span class="order-item-qty">×${item.quantity}</span>
+        <span class="order-item-price">${fmt(item.price * item.quantity)}</span>
+      </div>
+    `).join('');
+
+    const billingHTML = items.length > 0 ? `
+      <div class="live-cart-billing">
+        <div class="billing-row"><span>Subtotal</span><span>${fmt(b.subtotal || 0)}</span></div>
+        <div class="billing-row"><span>GST (5%)</span><span>${fmt(b.gst || 0)}</span></div>
+        <div class="billing-row total"><span>Est. Total</span><span>${fmt(b.total || 0)}</span></div>
+      </div>
+    ` : '';
+
+    let activityHTML = '';
+    if (act) {
+      const icons = { added: '➕', removed: '➖', viewed: '👀' };
+      const verb  = act.action === 'added' ? 'Added' : 'Removed';
+      activityHTML = `
+        <div class="live-cart-activity">
+          <span>${icons[act.action] || '•'}</span>
+          <span>${verb} <strong>${act.itemName}</strong></span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${timeAgo(act.timestamp)}</span>
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="card-customer">${name}</div>
+          <div class="card-table">Table ${table}</div>
+        </div>
+        <div class="live-cart-badge"><div class="live-cart-badge-dot"></div>BROWSING</div>
+      </div>
+      <div class="live-cart-items">${itemsHTML || '<div class="live-cart-empty-items">No items yet</div>'}</div>
+      ${billingHTML}
+      ${activityHTML}
+    `;
+    grid.appendChild(card);
   });
 }
 
