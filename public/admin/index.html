@@ -541,6 +541,15 @@ header {
 }
 .print-btn:hover { background: var(--teal); color: #fff; }
 
+.kot-print-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); border-radius: 6px;
+  padding: 3px 7px; font-size: 14px; cursor: pointer;
+  transition: all var(--transition); line-height: 1;
+  align-self: flex-start; font-family: 'DM Sans', sans-serif;
+}
+.kot-print-btn:hover { background: var(--surface3); color: var(--text); }
+
 /* ── Toast ───────────────────────────────────────── */
 #toast-container {
   position: fixed; bottom: 20px; right: 20px;
@@ -1058,8 +1067,9 @@ header {
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
-    <button class="qr-btn" id="menuMgrBtn">🍽️ <span>Menu</span></button>
-    <button class="qr-btn" id="reportsBtn">📊 <span>Reports</span></button>
+    <button class="qr-btn" id="menuMgrBtn">🍽️ <span data-i18n="menu_btn">Menu</span></button>
+    <button class="qr-btn" id="reportsBtn">📊 <span data-i18n="reports_btn_lbl">Reports</span></button>
+    <button class="qr-btn" id="kotSettingsBtn">🖨 <span>KOT</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1103,7 +1113,7 @@ header {
 <div class="menu-mgr-overlay" id="menuMgrOverlay">
   <div class="menu-mgr-panel">
     <div class="menu-mgr-header">
-      <div class="menu-mgr-title">🍽️ Menu Management</div>
+      <div class="menu-mgr-title">🍽️ <span data-i18n="menu_mgr_title">Menu Management</span></div>
       <button class="menu-mgr-close" id="menuMgrClose">✕</button>
     </div>
     <div class="menu-mgr-cats" id="menuMgrCats"></div>
@@ -1115,23 +1125,55 @@ header {
 <div class="reports-overlay" id="reportsOverlay">
   <div class="reports-panel">
     <div class="reports-header">
-      <div class="reports-title">📊 Daily Sales Report</div>
+      <div class="reports-title">📊 <span data-i18n="daily_report_title">Daily Sales Report</span></div>
       <div class="reports-date-row">
         <input type="date" class="reports-date-input" id="reportsDatePicker" />
-        <button class="reports-load-btn" id="reportsLoadBtn">Load</button>
+        <button class="reports-load-btn" id="reportsLoadBtn" data-i18n="report_load_btn">Load</button>
       </div>
       <button class="reports-close" id="reportsClose">✕</button>
     </div>
     <div class="reports-body" id="reportsBody">
-      <div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;">Select a date and click Load to view the report.</div>
+      <div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;" data-i18n="report_hint">Select a date and click Load to view the report.</div>
+    </div>
+  </div>
+</div>
+
+<!-- KOT Printer Settings -->
+<div class="reports-overlay" id="kotOverlay">
+  <div class="reports-panel" style="max-width:420px">
+    <div class="reports-header">
+      <div class="reports-title">🖨 <span data-i18n="kot_settings_title">KOT Printer Settings</span></div>
+      <button class="reports-close" id="kotClose">✕</button>
+    </div>
+    <div class="reports-body" style="gap:16px">
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="kot_restaurant_name">Restaurant Name</label>
+        <input type="text" class="reports-date-input" id="kotName" style="width:100%" placeholder="ZingPOS" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="kot_paper_width">Paper Width</label>
+        <select class="reports-date-input" id="kotWidth" style="width:100%">
+          <option value="80" data-i18n="kot_80mm">80mm (Standard)</option>
+          <option value="58" data-i18n="kot_58mm">58mm (Narrow)</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+        <label for="kotAutoprint" style="font-size:14px;color:var(--text);cursor:pointer" data-i18n="kot_autoprint_lbl">Auto-print KOT on Accept</label>
+        <input type="checkbox" id="kotAutoprint" style="width:18px;height:18px;cursor:pointer" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="kot_footer_lbl">Footer Text</label>
+        <input type="text" class="reports-date-input" id="kotFooter" style="width:100%" placeholder="Thank you!" />
+      </div>
+      <button class="reports-load-btn" id="kotSaveBtn" style="width:100%;padding:10px" data-i18n="kot_save">Save Settings</button>
     </div>
   </div>
 </div>
 
 <!-- Live Activity Strip -->
 <div class="activity-strip" id="activityStrip">
-  <div class="activity-label">Live</div>
-  <div class="activity-empty" id="activityEmpty">No active customers</div>
+  <div class="activity-label" data-i18n="live">Live</div>
+  <div class="activity-empty" id="activityEmpty" data-i18n="no_active_customers">No active customers</div>
 </div>
 
 <div class="filters-bar">
@@ -1143,7 +1185,7 @@ header {
   <button class="filter-btn" data-filter="completed" data-i18n="filter_completed">Completed</button>
   <div class="filter-sep" id="liveCartsSep" style="display:none"></div>
   <button class="filter-btn" data-filter="live-carts" id="liveCartsBtn" style="display:none">
-    👁 Live Carts<span class="filter-badge" id="liveCartsBadge">0</span>
+    <span data-i18n="live_carts_btn">👁 Live Carts</span><span class="filter-badge" id="liveCartsBadge">0</span>
   </button>
 </div>
 
@@ -1156,7 +1198,7 @@ header {
   <div id="liveCartsSection">
     <div class="live-carts-heading">
       <div class="live-carts-heading-dot"></div>
-      Customers Browsing Now
+      <span data-i18n="browsing_now">Customers Browsing Now</span>
     </div>
     <div class="live-carts-grid" id="liveCartsGrid"></div>
   </div>
@@ -1225,6 +1267,40 @@ const TRANSLATIONS = {
     override_cancel: 'Cancel Order',
     oos_ping_sent: 'OOS ping sent!',
     order_cancelled_t: 'Order cancelled.',
+    // Header buttons
+    menu_btn: 'Menu', reports_btn_lbl: 'Reports',
+    // Panel titles
+    menu_mgr_title: 'Menu Management',
+    daily_report_title: 'Daily Sales Report',
+    report_load_btn: 'Load',
+    report_hint: 'Select a date and click Load to view the report.',
+    kot_settings_title: 'KOT Printer Settings',
+    kot_restaurant_name: 'Restaurant Name', kot_paper_width: 'Paper Width',
+    kot_80mm: '80mm (Standard)', kot_58mm: '58mm (Narrow)',
+    kot_autoprint_lbl: 'Auto-print KOT on Accept',
+    kot_footer_lbl: 'Footer Text', kot_save: 'Save Settings', kot_saved: 'KOT settings saved',
+    // Activity strip & live carts
+    no_active_customers: 'No active customers',
+    live_carts_btn: '👁 Live Carts', browsing_now: 'Customers Browsing Now',
+    no_browsing: 'No customers browsing right now',
+    // Report loading states
+    report_loading: 'Loading…', report_load_fail: 'Failed to load report:',
+    // Menu manager
+    in_stock: '✅ In Stock', out_of_stock: '❌ Out of Stock', pct_off: '% off',
+    // Reports
+    report_summary: 'Summary', report_total_revenue: 'Total Revenue',
+    report_paid_orders: 'paid orders', report_orders_count: 'Orders',
+    report_paid: 'paid', report_unpaid: 'unpaid',
+    report_gst_collected: 'GST Collected', report_gst_rate: '5% GST',
+    report_avg_order: 'Avg Order Value', report_service_charge_lbl: 'Service charge:',
+    report_top_items: 'Top 5 Items',
+    report_item_col: 'Item', report_qty_col: 'Qty Sold', report_revenue_col: 'Revenue',
+    report_table_revenue: 'Table-wise Revenue',
+    report_table_col: 'Table', report_orders_col: 'Orders',
+    report_no_items: 'No items sold on this date',
+    report_no_orders: 'No paid orders on this date',
+    report_hourly: 'Hourly Order Volume',
+    report_pdf_btn: '⬇ PDF Report', report_excel_btn: '📊 Export Excel',
   },
   hi: {
     owner_dashboard: 'मालिक डैशबोर्ड',
@@ -1275,6 +1351,40 @@ const TRANSLATIONS = {
     override_cancel: 'ऑर्डर रद्द करें',
     oos_ping_sent: 'पिंग भेजा गया!',
     order_cancelled_t: 'ऑर्डर रद्द हुआ।',
+    // Header buttons
+    menu_btn: 'मेनू', reports_btn_lbl: 'रिपोर्ट',
+    // Panel titles
+    menu_mgr_title: 'मेनू प्रबंधन',
+    daily_report_title: 'दैनिक बिक्री रिपोर्ट',
+    report_load_btn: 'लोड करें',
+    report_hint: 'रिपोर्ट देखने के लिए तारीख चुनें और लोड करें।',
+    kot_settings_title: 'KOT प्रिंटर सेटिंग',
+    kot_restaurant_name: 'रेस्टोरेंट का नाम', kot_paper_width: 'पेपर चौड़ाई',
+    kot_80mm: '80mm (सामान्य)', kot_58mm: '58mm (संकरा)',
+    kot_autoprint_lbl: 'स्वीकार पर KOT प्रिंट करें',
+    kot_footer_lbl: 'फुटर टेक्स्ट', kot_save: 'सेटिंग सहेजें', kot_saved: 'KOT सेटिंग सहेजी',
+    // Activity strip & live carts
+    no_active_customers: 'कोई सक्रिय ग्राहक नहीं',
+    live_carts_btn: '👁 लाइव कार्ट', browsing_now: 'अभी ब्राउज़ कर रहे हैं',
+    no_browsing: 'अभी कोई ग्राहक नहीं',
+    // Report loading states
+    report_loading: 'लोड हो रहा है…', report_load_fail: 'रिपोर्ट लोड नहीं हुई:',
+    // Menu manager
+    in_stock: '✅ स्टॉक में', out_of_stock: '❌ स्टॉक खत्म', pct_off: '% छूट',
+    // Reports
+    report_summary: 'सारांश', report_total_revenue: 'कुल राजस्व',
+    report_paid_orders: 'भुगतान ऑर्डर', report_orders_count: 'ऑर्डर',
+    report_paid: 'भुगतान', report_unpaid: 'शेष',
+    report_gst_collected: 'GST संग्रह', report_gst_rate: '5% GST',
+    report_avg_order: 'औसत ऑर्डर', report_service_charge_lbl: 'सर्विस चार्ज:',
+    report_top_items: 'शीर्ष 5 आइटम',
+    report_item_col: 'आइटम', report_qty_col: 'बिकी मात्रा', report_revenue_col: 'राजस्व',
+    report_table_revenue: 'टेबल-वार राजस्व',
+    report_table_col: 'टेबल', report_orders_col: 'ऑर्डर',
+    report_no_items: 'इस तारीख को कोई आइटम नहीं बिका',
+    report_no_orders: 'इस तारीख को कोई भुगतान नहीं',
+    report_hourly: 'प्रति घंटे ऑर्डर',
+    report_pdf_btn: '⬇ PDF रिपोर्ट', report_excel_btn: '📊 Excel निर्यात',
   }
 };
 
@@ -1327,6 +1437,14 @@ function applyTranslations() {
     renderActivityStrip(state.activeCarts);
     if (state.activeFilter === 'live-carts') renderLiveCarts(state.activeCarts);
   }
+
+  // Re-render menu manager if open
+  if (document.getElementById('menuMgrOverlay').classList.contains('open')) {
+    renderMenuMgrList(currentMenuCat);
+  }
+
+  // Re-render reports if open
+  if (window._reportsRedraw) window._reportsRedraw();
 }
 
 function setLang(lang) {
@@ -1584,7 +1702,10 @@ function cardHTML(order) {
           <div class="card-customer">${order.customerName}</div>
           <div class="card-table">${t('table')} ${order.tableNo}</div>
         </div>
-        <div class="status-badge cancelled">${t('cancelled')}</div>
+        <div style="display:flex;align-items:flex-start;gap:6px">
+          <button class="kot-print-btn" data-action="kot-print" title="Print KOT">🖨</button>
+          <div class="status-badge cancelled">${t('cancelled')}</div>
+        </div>
       </div>
       <div class="card-items">${itemsHTML}</div>
       <div class="card-billing">
@@ -1606,7 +1727,10 @@ function cardHTML(order) {
           <div class="card-customer">${order.customerName}</div>
           <div class="card-table">${t('table')} ${order.tableNo}</div>
         </div>
-        <div class="status-badge awaiting_customer">${t('awaiting_customer')}</div>
+        <div style="display:flex;align-items:flex-start;gap:6px">
+          <button class="kot-print-btn" data-action="kot-print" title="Print KOT">🖨</button>
+          <div class="status-badge awaiting_customer">${t('awaiting_customer')}</div>
+        </div>
       </div>
       <div class="card-items">${itemsHTML}</div>
       <div class="awaiting-info">
@@ -1672,7 +1796,10 @@ function cardHTML(order) {
         <div class="card-customer">${order.customerName}</div>
         <div class="card-table">${t('table')} ${order.tableNo}</div>
       </div>
-      <div class="status-badge ${statusKey}">${t(statusKey)}</div>
+      <div style="display:flex;align-items:flex-start;gap:6px">
+        <button class="kot-print-btn" data-action="kot-print" title="Print KOT">🖨</button>
+        <div class="status-badge ${statusKey}">${t(statusKey)}</div>
+      </div>
     </div>
     <div class="card-items">${itemsHTML}</div>
     ${flagOosSection}
@@ -1702,7 +1829,9 @@ function bindCardEvents(card, order) {
         orderId: order.id,
         eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
       }, (res) => {
-        if (!res.success) {
+        if (res.success) {
+          if (localStorage.getItem('zingpos-kot-autoprint') === 'true') printKOT(order);
+        } else {
           showToast(res.error || t('failed_status'), 'error');
           acceptBtn.disabled = false;
         }
@@ -1786,6 +1915,12 @@ function bindCardEvents(card, order) {
       });
     });
   });
+
+  // Print KOT
+  const kotBtn = card.querySelector('[data-action="kot-print"]');
+  if (kotBtn) {
+    kotBtn.addEventListener('click', () => printKOT(order));
+  }
 
   // Print receipt
   const printBtn = card.querySelector('[data-action="print"]');
@@ -1953,6 +2088,65 @@ function printReceipt(order) {
     win.focus();
     win.print();
     win.onafterprint = () => win.close();
+  };
+}
+
+// ─── KOT Printing ────────────────────────────────────────
+function printKOT(order) {
+  const width  = localStorage.getItem('zingpos-kot-width')  || '80';
+  const name   = localStorage.getItem('zingpos-kot-name')   || 'ZingPOS';
+  const footer = localStorage.getItem('zingpos-kot-footer') || 'Thank you!';
+  const pxWidth = width === '58' ? '219px' : '302px';
+
+  const now = new Date(order.createdAt);
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+  const itemsLines = (order.items || []).map(item =>
+    `<div class="kot-item"><span class="kot-qty">${item.quantity}x</span><span class="kot-name">${item.name || ''}</span></div>`
+  ).join('');
+
+  const totalItems = (order.items || []).reduce((s, i) => s + i.quantity, 0);
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8" /><title>KOT — ${order.id}</title>
+<style>
+  @page { size: ${width}mm auto; margin: 3mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; width: ${pxWidth}; }
+  .center { text-align: center; }
+  .divider { border: none; border-top: 1px dashed #555; margin: 5px 0; }
+  .shop-name { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+  .meta { font-size: 11px; margin: 3px 0; display: flex; justify-content: space-between; }
+  .kot-item { display: flex; gap: 6px; padding: 2px 0; font-size: 12px; }
+  .kot-qty { font-weight: bold; min-width: 24px; }
+  .kot-name { flex: 1; }
+  .total-items { font-size: 12px; text-align: center; font-weight: bold; padding: 2px 0; }
+  .footer { font-size: 10px; color: #555; text-align: center; margin-top: 4px; }
+  @media print { body { -webkit-print-color-adjust: exact; } }
+</style></head><body>
+  <div class="center"><div class="shop-name">** ${name} **</div></div>
+  <hr class="divider" />
+  <div class="meta"><span>KOT #${order.id}</span><span>Table: ${order.tableNo}</span></div>
+  <div class="meta"><span>${timeStr}</span><span>${dateStr}</span></div>
+  <hr class="divider" />
+  ${itemsLines}
+  <hr class="divider" />
+  <div class="total-items">Total Items: ${totalItems}</div>
+  <hr class="divider" />
+  <div class="center footer">** Kitchen Copy **</div>
+  <div class="center footer">${footer}</div>
+</body></html>`;
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:-9999px;bottom:0;width:1px;height:1px;border:none';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  iframe.contentWindow.onload = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
   };
 }
 
@@ -2198,7 +2392,7 @@ function renderLiveCarts(carts) {
   grid.innerHTML = '';
 
   if (nonEmpty.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">👀</div><div class="empty-text">No customers browsing right now</div></div>';
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">👀</div><div class="empty-text">${t('no_browsing')}</div></div>`;
     return;
   }
 
@@ -2302,16 +2496,16 @@ function renderMenuMgrList(cat) {
     row.innerHTML = `
       <div class="mgr-emoji">${item.emoji}</div>
       <div class="mgr-info">
-        <div class="mgr-name">${item.name}</div>
+        <div class="mgr-name">${iName(item)}</div>
         <div class="mgr-price">₹${item.price}${offer > 0 ? ` <span style="color:var(--red);font-weight:700">→ ₹${Math.round(item.price*(1-offer/100))}</span>` : ''}</div>
       </div>
       <div class="mgr-controls">
         <button class="stock-badge ${isIn ? 'in' : 'out'}" data-id="${item.id}" data-stock="${isIn}">
-          ${isIn ? '✅ In Stock' : '❌ Out of Stock'}
+          ${isIn ? t('in_stock') : t('out_of_stock')}
         </button>
         <div class="offer-wrap">
           <input class="offer-input-mgr" type="number" min="0" max="50" value="${offer}" placeholder="0" data-id="${item.id}" />
-          <span class="offer-pct">% off</span>
+          <span class="offer-pct">${t('pct_off')}</span>
         </div>
       </div>
     `;
@@ -2321,7 +2515,7 @@ function renderMenuMgrList(cat) {
       const newStock = this.dataset.stock === 'true' ? false : true;
       this.dataset.stock = newStock;
       this.className = 'stock-badge ' + (newStock ? 'in' : 'out');
-      this.textContent = newStock ? '✅ In Stock' : '❌ Out of Stock';
+      this.textContent = newStock ? t('in_stock') : t('out_of_stock');
       socket.emit('menu:toggle_stock', { itemId: item.id, inStock: newStock });
     });
 
@@ -2351,6 +2545,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   const loadBtn   = document.getElementById('reportsLoadBtn');
   const closeBtn  = document.getElementById('reportsClose');
   const openBtn   = document.getElementById('reportsBtn');
+  let lastReportData = null;
 
   // Default date picker to today (IST)
   function todayIST() {
@@ -2369,72 +2564,73 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   }
 
   async function loadReport(date) {
-    body.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;">Loading…</div>';
+    body.innerHTML = `<div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;">${t('report_loading')}</div>`;
     try {
       const res  = await fetch('/api/reports/daily?date=' + encodeURIComponent(date));
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Unknown error');
       renderReport(json.data);
     } catch (e) {
-      body.innerHTML = `<div style="color:var(--red);text-align:center;padding:32px;font-size:14px;">Failed to load report: ${e.message}</div>`;
+      body.innerHTML = `<div style="color:var(--red);text-align:center;padding:32px;font-size:14px;">${t('report_load_fail')} ${e.message}</div>`;
     }
   }
 
   function rs(n) { return '₹' + parseFloat(n).toFixed(2); }
 
   function renderReport(data) {
+    lastReportData = data;
     const s = data.summary;
     body.innerHTML = `
       <div>
-        <div class="reports-section-title">Summary</div>
+        <div class="reports-section-title">${t('report_summary')}</div>
         <div class="reports-stat-row">
           <div class="report-stat-card">
-            <div class="report-stat-label">Total Revenue</div>
+            <div class="report-stat-label">${t('report_total_revenue')}</div>
             <div class="report-stat-value">${rs(s.totalRevenue)}</div>
-            <div class="report-stat-sub">${s.paidCount} paid order${s.paidCount !== 1 ? 's' : ''}</div>
+            <div class="report-stat-sub">${s.paidCount} ${t('report_paid_orders')}</div>
           </div>
           <div class="report-stat-card">
-            <div class="report-stat-label">Orders</div>
+            <div class="report-stat-label">${t('report_orders_count')}</div>
             <div class="report-stat-value">${s.ordersCount}</div>
-            <div class="report-stat-sub">${s.paidCount} paid · ${s.ordersCount - s.paidCount} unpaid</div>
+            <div class="report-stat-sub">${s.paidCount} ${t('report_paid')} · ${s.ordersCount - s.paidCount} ${t('report_unpaid')}</div>
           </div>
           <div class="report-stat-card">
-            <div class="report-stat-label">GST Collected</div>
+            <div class="report-stat-label">${t('report_gst_collected')}</div>
             <div class="report-stat-value">${rs(s.totalGST)}</div>
-            <div class="report-stat-sub">5% GST</div>
+            <div class="report-stat-sub">${t('report_gst_rate')}</div>
           </div>
           <div class="report-stat-card">
-            <div class="report-stat-label">Avg Order Value</div>
+            <div class="report-stat-label">${t('report_avg_order')}</div>
             <div class="report-stat-value">${rs(s.avgOrderValue)}</div>
-            <div class="report-stat-sub">Service charge: ${rs(s.totalServiceCharge)}</div>
+            <div class="report-stat-sub">${t('report_service_charge_lbl')} ${rs(s.totalServiceCharge)}</div>
           </div>
         </div>
       </div>
       <div>
-        <div class="reports-section-title">Top 5 Items</div>
+        <div class="reports-section-title">${t('report_top_items')}</div>
         <table class="report-table">
-          <thead><tr><th>Item</th><th class="num">Qty Sold</th><th class="num">Revenue</th></tr></thead>
+          <thead><tr><th>${t('report_item_col')}</th><th class="num">${t('report_qty_col')}</th><th class="num">${t('report_revenue_col')}</th></tr></thead>
           <tbody>${data.topItems.length ? data.topItems.map(it =>
             `<tr><td>${it.name}</td><td class="num">${it.qty}</td><td class="num">${rs(it.revenue)}</td></tr>`
-          ).join('') : '<tr class="report-empty-row"><td colspan="3">No items sold on this date</td></tr>'}</tbody>
+          ).join('') : `<tr class="report-empty-row"><td colspan="3">${t('report_no_items')}</td></tr>`}</tbody>
         </table>
       </div>
       <div>
-        <div class="reports-section-title">Table-wise Revenue</div>
+        <div class="reports-section-title">${t('report_table_revenue')}</div>
         <table class="report-table">
-          <thead><tr><th>Table</th><th class="num">Orders</th><th class="num">Revenue</th></tr></thead>
+          <thead><tr><th>${t('report_table_col')}</th><th class="num">${t('report_orders_col')}</th><th class="num">${t('report_revenue_col')}</th></tr></thead>
           <tbody>${data.tableRevenue.length ? data.tableRevenue.map(row =>
             `<tr><td>${row.table}</td><td class="num">${row.ordersCount}</td><td class="num">${rs(row.revenue)}</td></tr>`
-          ).join('') : '<tr class="report-empty-row"><td colspan="3">No paid orders on this date</td></tr>'}</tbody>
+          ).join('') : `<tr class="report-empty-row"><td colspan="3">${t('report_no_orders')}</td></tr>`}</tbody>
         </table>
       </div>
       <div>
-        <div class="reports-section-title">Hourly Order Volume</div>
+        <div class="reports-section-title">${t('report_hourly')}</div>
         <div class="reports-chart-wrap"><canvas id="reportsHourlyCanvas"></canvas></div>
       </div>
       <div class="reports-actions">
-        <button class="reports-pdf-btn" id="reportsPdfBtn">⬇ PDF Report</button>
-        <button class="reports-excel-btn" id="reportsExcelBtn">📊 Export Excel</button>
+        <button class="reports-pdf-btn" id="reportsPdfBtn">${t('report_pdf_btn')}</button>
+        <button class="reports-excel-btn" id="reportsExcelBtn">${t('report_excel_btn')}</button>
       </div>
     `;
 
@@ -2744,6 +2940,9 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   loadBtn.addEventListener('click', () => { if (picker.value) loadReport(picker.value); });
   overlay.addEventListener('click', e => { if (e.target === overlay) closeReports(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeReports(); });
+
+  // Allow applyTranslations() to redraw the report in the new language
+  window._reportsRedraw = () => { if (lastReportData && overlay.classList.contains('open')) renderReport(lastReportData); };
 })();
 
 // ── PIN Authentication ────────────────────────────────
@@ -2809,6 +3008,41 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
       entry = entry.slice(0, -1); errEl.textContent = ''; renderDots();
     }
   });
+})();
+
+// ── KOT Printer Settings ─────────────────────────────
+(function() {
+  const overlay     = document.getElementById('kotOverlay');
+  const openBtn     = document.getElementById('kotSettingsBtn');
+  const closeBtn    = document.getElementById('kotClose');
+  const saveBtn     = document.getElementById('kotSaveBtn');
+  const nameEl      = document.getElementById('kotName');
+  const widthEl     = document.getElementById('kotWidth');
+  const autoPrintEl = document.getElementById('kotAutoprint');
+  const footerEl    = document.getElementById('kotFooter');
+
+  function openKot() {
+    nameEl.value      = localStorage.getItem('zingpos-kot-name')   || '';
+    widthEl.value     = localStorage.getItem('zingpos-kot-width')  || '80';
+    autoPrintEl.checked = localStorage.getItem('zingpos-kot-autoprint') === 'true';
+    footerEl.value    = localStorage.getItem('zingpos-kot-footer') || '';
+    overlay.classList.add('open');
+  }
+  function closeKot() { overlay.classList.remove('open'); }
+
+  saveBtn.addEventListener('click', () => {
+    localStorage.setItem('zingpos-kot-name',      nameEl.value.trim()   || 'ZingPOS');
+    localStorage.setItem('zingpos-kot-width',     widthEl.value);
+    localStorage.setItem('zingpos-kot-autoprint', autoPrintEl.checked ? 'true' : 'false');
+    localStorage.setItem('zingpos-kot-footer',    footerEl.value.trim() || 'Thank you!');
+    showToast(t('kot_saved'), 'success');
+    closeKot();
+  });
+
+  openBtn.addEventListener('click', openKot);
+  closeBtn.addEventListener('click', closeKot);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeKot(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeKot(); });
 })();
 
 // ── Theme Toggle ──────────────────────────────────────
