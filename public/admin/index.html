@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('zingpos-theme')||'dark');</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -763,6 +764,105 @@ header {
 .offer-input-mgr:focus { border-color: var(--gold); }
 .offer-pct { font-size: 11px; color: var(--text-dim); }
 
+/* ── Reports Overlay ─────────────────────────────── */
+.reports-overlay {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.82); backdrop-filter: blur(6px);
+  align-items: flex-start; justify-content: center;
+  padding: 20px; overflow-y: auto;
+}
+.reports-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+.reports-panel {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; width: 100%; max-width: 780px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+  animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  overflow: hidden; margin: auto;
+}
+.reports-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 10px;
+}
+.reports-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); font-weight: 700; }
+.reports-close {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-mid); font-size: 16px; cursor: pointer;
+  transition: all var(--transition); font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.reports-close:hover { background: var(--surface3); }
+.reports-date-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.reports-date-input {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 7px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+  outline: none; transition: border-color var(--transition);
+}
+.reports-date-input:focus { border-color: var(--gold); }
+.reports-load-btn {
+  background: var(--gold-dim); border: 1px solid var(--gold-border);
+  color: var(--gold); border-radius: var(--radius-sm);
+  padding: 7px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition); font-family: 'DM Sans', sans-serif;
+}
+.reports-load-btn:hover { background: var(--gold); color: #000; }
+.reports-body { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.reports-stat-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.report-stat-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+}
+.report-stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.report-stat-value { font-size: 20px; font-weight: 700; color: var(--gold); }
+.report-stat-sub { font-size: 11px; color: var(--text-mid); margin-top: 3px; }
+.reports-section-title {
+  font-size: 12px; font-weight: 700; color: var(--text-mid);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;
+}
+.report-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.report-table th {
+  background: var(--surface3); color: var(--text-mid);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+  padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border);
+}
+.report-table th.num, .report-table td.num { text-align: right; }
+.report-table td {
+  padding: 9px 12px; border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.report-table tr:last-child td { border-bottom: none; }
+.report-table tr:hover td { background: var(--surface2); }
+.report-empty-row td { color: var(--text-dim); text-align: center; padding: 18px; }
+.reports-chart-wrap { position: relative; height: 140px; }
+.reports-actions { display: flex; gap: 10px; }
+.reports-pdf-btn {
+  background: var(--gold); color: #000;
+  border: none; border-radius: var(--radius-sm);
+  padding: 12px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: opacity var(--transition);
+  font-family: 'DM Sans', sans-serif; flex: 1; letter-spacing: 0.3px;
+}
+.reports-pdf-btn:hover { opacity: 0.88; }
+.reports-excel-btn {
+  background: #1d6f42; color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 12px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: opacity var(--transition);
+  font-family: 'DM Sans', sans-serif; flex: 1; letter-spacing: 0.3px;
+}
+.reports-excel-btn:hover { opacity: 0.88; }
+@media (max-width: 639px) {
+  .reports-stat-row { grid-template-columns: 1fr 1fr; }
+}
+
 /* ── Mobile Responsive (≤ 639px) ────────────────── */
 @media (max-width: 639px) {
   header {
@@ -959,6 +1059,7 @@ header {
     </div>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
     <button class="qr-btn" id="menuMgrBtn">🍽️ <span>Menu</span></button>
+    <button class="qr-btn" id="reportsBtn">📊 <span>Reports</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1007,6 +1108,23 @@ header {
     </div>
     <div class="menu-mgr-cats" id="menuMgrCats"></div>
     <div class="menu-mgr-list" id="menuMgrList"></div>
+  </div>
+</div>
+
+<!-- Daily Reports Modal -->
+<div class="reports-overlay" id="reportsOverlay">
+  <div class="reports-panel">
+    <div class="reports-header">
+      <div class="reports-title">📊 Daily Sales Report</div>
+      <div class="reports-date-row">
+        <input type="date" class="reports-date-input" id="reportsDatePicker" />
+        <button class="reports-load-btn" id="reportsLoadBtn">Load</button>
+      </div>
+      <button class="reports-close" id="reportsClose">✕</button>
+    </div>
+    <div class="reports-body" id="reportsBody">
+      <div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;">Select a date and click Load to view the report.</div>
+    </div>
   </div>
 </div>
 
@@ -2224,6 +2342,409 @@ document.getElementById('menuMgrClose').addEventListener('click', closeMenuMgr);
 document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('menuMgrOverlay')) closeMenuMgr();
 });
+
+// ── Daily Reports ─────────────────────────────────────
+(function() {
+  const overlay   = document.getElementById('reportsOverlay');
+  const body      = document.getElementById('reportsBody');
+  const picker    = document.getElementById('reportsDatePicker');
+  const loadBtn   = document.getElementById('reportsLoadBtn');
+  const closeBtn  = document.getElementById('reportsClose');
+  const openBtn   = document.getElementById('reportsBtn');
+
+  // Default date picker to today (IST)
+  function todayIST() {
+    const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function openReports() {
+    if (!picker.value) picker.value = todayIST();
+    overlay.classList.add('open');
+    loadReport(picker.value);
+  }
+
+  function closeReports() {
+    overlay.classList.remove('open');
+  }
+
+  async function loadReport(date) {
+    body.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:32px;font-size:14px;">Loading…</div>';
+    try {
+      const res  = await fetch('/api/reports/daily?date=' + encodeURIComponent(date));
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Unknown error');
+      renderReport(json.data);
+    } catch (e) {
+      body.innerHTML = `<div style="color:var(--red);text-align:center;padding:32px;font-size:14px;">Failed to load report: ${e.message}</div>`;
+    }
+  }
+
+  function rs(n) { return '₹' + parseFloat(n).toFixed(2); }
+
+  function renderReport(data) {
+    const s = data.summary;
+    body.innerHTML = `
+      <div>
+        <div class="reports-section-title">Summary</div>
+        <div class="reports-stat-row">
+          <div class="report-stat-card">
+            <div class="report-stat-label">Total Revenue</div>
+            <div class="report-stat-value">${rs(s.totalRevenue)}</div>
+            <div class="report-stat-sub">${s.paidCount} paid order${s.paidCount !== 1 ? 's' : ''}</div>
+          </div>
+          <div class="report-stat-card">
+            <div class="report-stat-label">Orders</div>
+            <div class="report-stat-value">${s.ordersCount}</div>
+            <div class="report-stat-sub">${s.paidCount} paid · ${s.ordersCount - s.paidCount} unpaid</div>
+          </div>
+          <div class="report-stat-card">
+            <div class="report-stat-label">GST Collected</div>
+            <div class="report-stat-value">${rs(s.totalGST)}</div>
+            <div class="report-stat-sub">5% GST</div>
+          </div>
+          <div class="report-stat-card">
+            <div class="report-stat-label">Avg Order Value</div>
+            <div class="report-stat-value">${rs(s.avgOrderValue)}</div>
+            <div class="report-stat-sub">Service charge: ${rs(s.totalServiceCharge)}</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="reports-section-title">Top 5 Items</div>
+        <table class="report-table">
+          <thead><tr><th>Item</th><th class="num">Qty Sold</th><th class="num">Revenue</th></tr></thead>
+          <tbody>${data.topItems.length ? data.topItems.map(it =>
+            `<tr><td>${it.name}</td><td class="num">${it.qty}</td><td class="num">${rs(it.revenue)}</td></tr>`
+          ).join('') : '<tr class="report-empty-row"><td colspan="3">No items sold on this date</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div>
+        <div class="reports-section-title">Table-wise Revenue</div>
+        <table class="report-table">
+          <thead><tr><th>Table</th><th class="num">Orders</th><th class="num">Revenue</th></tr></thead>
+          <tbody>${data.tableRevenue.length ? data.tableRevenue.map(row =>
+            `<tr><td>${row.table}</td><td class="num">${row.ordersCount}</td><td class="num">${rs(row.revenue)}</td></tr>`
+          ).join('') : '<tr class="report-empty-row"><td colspan="3">No paid orders on this date</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div>
+        <div class="reports-section-title">Hourly Order Volume</div>
+        <div class="reports-chart-wrap"><canvas id="reportsHourlyCanvas"></canvas></div>
+      </div>
+      <div class="reports-actions">
+        <button class="reports-pdf-btn" id="reportsPdfBtn">⬇ PDF Report</button>
+        <button class="reports-excel-btn" id="reportsExcelBtn">📊 Export Excel</button>
+      </div>
+    `;
+
+    renderHourlyChart(document.getElementById('reportsHourlyCanvas'), data.hourlyOrders);
+
+    document.getElementById('reportsPdfBtn').addEventListener('click', () => {
+      window.location.href = '/api/reports/daily/pdf?date=' + encodeURIComponent(data.date);
+    });
+    document.getElementById('reportsExcelBtn').addEventListener('click', function() {
+      exportToExcel(data, this);
+    });
+  }
+
+  // ── Canvas chart helper ──────────────────────────────
+  function drawChartPNG(labels, values, title, opts = {}) {
+    const C = document.createElement('canvas');
+    C.width = 640; C.height = 320;
+    const ctx = C.getContext('2d');
+    const { color = '#1d6f42', horizontal = false, currency = false } = opts;
+    const pad = horizontal
+      ? { t: 48, b: 24, l: 180, r: 40 }
+      : { t: 48, b: 56, l: 52, r: 24 };
+    const W = C.width  - pad.l - pad.r;
+    const H = C.height - pad.t - pad.b;
+    const max = Math.max(...values, 1);
+
+    // Background
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, C.width, C.height);
+
+    // Title
+    ctx.fillStyle = '#c9a84c';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, C.width / 2, 28);
+
+    // Grid lines + axis labels
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    const gridCount = 5;
+    for (let i = 0; i <= gridCount; i++) {
+      const v = (max / gridCount) * (gridCount - i);
+      const label = currency ? '₹' + v.toFixed(0) : String(Math.round(v));
+      if (horizontal) {
+        const x = pad.l + (W / gridCount) * i;
+        ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + H); ctx.stroke();
+        ctx.fillStyle = '#666'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(label, x, pad.t + H + 14);
+      } else {
+        const y = pad.t + (H / gridCount) * i;
+        ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + W, y); ctx.stroke();
+        ctx.fillStyle = '#666'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(label, pad.l - 6, y + 4);
+      }
+    }
+
+    // Bars
+    const n = labels.length;
+    values.forEach((val, i) => {
+      const ratio = val / max;
+      ctx.fillStyle = color;
+      if (horizontal) {
+        const barH = (H / n) * 0.6;
+        const y = pad.t + (H / n) * i + (H / n) * 0.2;
+        const bw = ratio * W;
+        ctx.fillRect(pad.l, y, bw, barH);
+        // Value label
+        if (val > 0) {
+          ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+          ctx.fillText(currency ? '₹' + val.toFixed(0) : val, pad.l + bw + 4, y + barH / 2 + 4);
+        }
+        // Y label
+        ctx.fillStyle = '#aaa'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(String(labels[i]).substring(0, 18), pad.l - 6, y + barH / 2 + 4);
+      } else {
+        const barW = (W / n) * 0.7;
+        const x = pad.l + (W / n) * i + (W / n) * 0.15;
+        const bh = ratio * H;
+        ctx.fillRect(x, pad.t + H - bh, barW, bh);
+        // Value label
+        if (val > 0) {
+          ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(currency ? '₹' + val.toFixed(0) : val, x + barW / 2, pad.t + H - bh - 4);
+        }
+        // X label (up to 2 lines)
+        ctx.fillStyle = '#aaa'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+        const lbl = String(labels[i]);
+        if (lbl.length > 10) {
+          ctx.fillText(lbl.substring(0, 10), x + barW / 2, pad.t + H + 14);
+          ctx.fillText(lbl.substring(10, 20), x + barW / 2, pad.t + H + 26);
+        } else {
+          ctx.fillText(lbl, x + barW / 2, pad.t + H + 14);
+        }
+      }
+    });
+
+    // Return base64 without data prefix
+    return C.toDataURL('image/png').split(',')[1];
+  }
+
+  async function exportToExcel(data, btn) {
+    const ExcelJS = window.ExcelJS;
+    if (!ExcelJS) { alert('Excel library not loaded. Check your internet connection.'); return; }
+
+    const origText = btn.textContent;
+    btn.textContent = 'Generating…'; btn.disabled = true;
+
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'ZingPOS';
+      wb.created = new Date();
+
+      const GOLD_ARGB   = 'FFC9A84C';
+      const GREEN_ARGB  = 'FF1D6F42';
+      const DARK_ARGB   = 'FF111827';
+      const LIGHT_ARGB  = 'FFF3F4F6';
+
+      const hdrFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN_ARGB } };
+      const hdrFont  = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Calibri' };
+      const hdrAlign = { vertical: 'middle', horizontal: 'center' };
+      const hdrBorder = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+
+      function styleHeaderRow(row) {
+        row.height = 20;
+        row.eachCell(cell => {
+          cell.fill = hdrFill; cell.font = hdrFont;
+          cell.alignment = hdrAlign; cell.border = hdrBorder;
+        });
+      }
+
+      function zebraRow(row, i) {
+        if (i % 2 === 0) {
+          row.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LIGHT_ARGB } }; });
+        }
+      }
+
+      const INR_FMT = '"₹"#,##0.00';
+
+      // ── Sheet 1: Summary ──────────────────────────────
+      const ws1 = wb.addWorksheet('Summary');
+      ws1.columns = [{ width: 30 }, { width: 20 }];
+
+      const t1 = ws1.addRow(['ZingPOS — Daily Sales Report']);
+      ws1.mergeCells('A1:B1');
+      t1.height = 32;
+      t1.getCell(1).font  = { bold: true, size: 16, color: { argb: GOLD_ARGB }, name: 'Calibri' };
+      t1.getCell(1).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: DARK_ARGB } };
+      t1.getCell(1).alignment = { vertical: 'middle' };
+
+      const d1 = ws1.addRow(['Date', data.date]);
+      const d2 = ws1.addRow(['Generated', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })]);
+      [d1, d2].forEach(r => { r.getCell(1).font = { bold: true, color: { argb: 'FF555555' } }; });
+      ws1.addRow([]);
+
+      const sh = styleHeaderRow(ws1.addRow(['Metric', 'Value']));
+
+      const s = data.summary;
+      const rows1 = [
+        ['Total Revenue',        s.totalRevenue,        true,  GOLD_ARGB],
+        ['Total Orders',         s.ordersCount,         false, null],
+        ['Paid Orders',          s.paidCount,           false, null],
+        ['Unpaid Orders',        s.ordersCount - s.paidCount, false, null],
+        ['Avg Order Value',      s.avgOrderValue,       true,  null],
+        ['GST Collected (5%)',   s.totalGST,            true,  null],
+        ['Service Charge (10%)', s.totalServiceCharge,  true,  null],
+        ['Total Discounts',      s.totalDiscount,       true,  null],
+      ];
+      rows1.forEach(([metric, value, currency, highlight], i) => {
+        const r = ws1.addRow([metric, value]);
+        zebraRow(r, i);
+        if (currency) r.getCell(2).numFmt = INR_FMT;
+        if (highlight) r.getCell(2).font = { bold: true, color: { argb: highlight }, size: 12 };
+        r.getCell(1).font = { name: 'Calibri', size: 10 };
+      });
+
+      // ── Sheet 2: Top Items ────────────────────────────
+      const ws2 = wb.addWorksheet('Top Items');
+      ws2.columns = [{ width: 32 }, { width: 14 }, { width: 18 }];
+      styleHeaderRow(ws2.addRow(['Item Name', 'Qty Sold', 'Revenue']));
+
+      if (data.topItems.length) {
+        data.topItems.forEach((it, i) => {
+          const r = ws2.addRow([it.name, it.qty, it.revenue]);
+          zebraRow(r, i);
+          r.getCell(2).alignment = { horizontal: 'center' };
+          r.getCell(3).numFmt = INR_FMT;
+        });
+        // Chart: horizontal bars by qty
+        const chartBase64 = drawChartPNG(
+          data.topItems.map(it => it.name),
+          data.topItems.map(it => it.qty),
+          'Top Items — Quantity Sold',
+          { color: '#1d6f42', horizontal: true }
+        );
+        const imgId2 = wb.addImage({ base64: chartBase64, extension: 'png' });
+        ws2.addImage(imgId2, { tl: { col: 0, row: data.topItems.length + 2 }, ext: { width: 620, height: 310 } });
+      } else {
+        ws2.addRow(['No items sold on this date', '', '']);
+      }
+
+      // ── Sheet 3: Table Revenue ────────────────────────
+      const ws3 = wb.addWorksheet('Table Revenue');
+      ws3.columns = [{ width: 14 }, { width: 14 }, { width: 18 }];
+      styleHeaderRow(ws3.addRow(['Table', 'Orders', 'Revenue']));
+
+      if (data.tableRevenue.length) {
+        data.tableRevenue.forEach((row, i) => {
+          const r = ws3.addRow([row.table, row.ordersCount, row.revenue]);
+          zebraRow(r, i);
+          r.getCell(2).alignment = { horizontal: 'center' };
+          r.getCell(3).numFmt = INR_FMT;
+        });
+        // Chart: bar by revenue
+        const chartBase64 = drawChartPNG(
+          data.tableRevenue.map(r => r.table),
+          data.tableRevenue.map(r => r.revenue),
+          'Revenue by Table',
+          { color: '#c9a84c', currency: true }
+        );
+        const imgId3 = wb.addImage({ base64: chartBase64, extension: 'png' });
+        ws3.addImage(imgId3, { tl: { col: 0, row: data.tableRevenue.length + 2 }, ext: { width: 620, height: 310 } });
+      } else {
+        ws3.addRow(['No paid orders on this date', '', '']);
+      }
+
+      // ── Sheet 4: Hourly Orders ────────────────────────
+      const ws4 = wb.addWorksheet('Hourly Orders');
+      ws4.columns = [{ width: 12 }, { width: 12 }];
+      styleHeaderRow(ws4.addRow(['Hour (IST)', 'Orders']));
+
+      data.hourlyOrders.forEach((count, h) => {
+        const r = ws4.addRow([String(h).padStart(2, '0') + ':00', count]);
+        zebraRow(r, h);
+        r.getCell(2).alignment = { horizontal: 'center' };
+      });
+
+      // Chart: hourly bar
+      const hourLabels = data.hourlyOrders.map((_, h) =>
+        h === 0 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p'
+      );
+      const hourChartBase64 = drawChartPNG(hourLabels, data.hourlyOrders, 'Orders by Hour (IST)', { color: '#3b82f6' });
+      const imgId4 = wb.addImage({ base64: hourChartBase64, extension: 'png' });
+      ws4.addImage(imgId4, { tl: { col: 0, row: 26 }, ext: { width: 640, height: 320 } });
+
+      // ── Download ──────────────────────────────────────
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `ZingPOS-Report-${data.date}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error('[ExcelExport]', err);
+      document.getElementById('reportsBody').insertAdjacentHTML('beforeend',
+        `<div style="color:var(--red);font-size:13px;padding:8px 0;">Excel export failed: ${err.message}</div>`);
+    } finally {
+      btn.textContent = origText; btn.disabled = false;
+    }
+  }
+
+  function renderHourlyChart(canvas, hourly) {
+    const W = canvas.parentElement.offsetWidth || 700;
+    const H = 130;
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const max = Math.max(...hourly, 1);
+    const pad = { t: 10, b: 28, l: 28, r: 8 };
+    const chartW = W - pad.l - pad.r;
+    const chartH = H - pad.t - pad.b;
+    const barW   = chartW / 24;
+    const gold   = '#c9a84c';
+    const dim    = '#3a3a3a';
+
+    // Background bars
+    ctx.fillStyle = dim;
+    for (let h = 0; h < 24; h++) {
+      ctx.fillRect(pad.l + h * barW + 1, pad.t, barW - 2, chartH);
+    }
+
+    // Value bars
+    ctx.fillStyle = gold;
+    for (let h = 0; h < 24; h++) {
+      const barH = (hourly[h] / max) * chartH;
+      ctx.fillRect(pad.l + h * barW + 1, pad.t + chartH - barH, barW - 2, barH);
+    }
+
+    // X-axis labels
+    ctx.fillStyle = '#888';
+    ctx.font = '9px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    [0, 6, 12, 18, 23].forEach(h => {
+      const label = h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? h + 'a' : (h - 12) + 'p';
+      ctx.fillText(label, pad.l + h * barW + barW / 2, H - 8);
+    });
+
+    // Y-axis (0 and max)
+    ctx.textAlign = 'right';
+    ctx.fillText('0',   pad.l - 3, pad.t + chartH);
+    ctx.fillText(max,   pad.l - 3, pad.t + 8);
+  }
+
+  openBtn.addEventListener('click', openReports);
+  closeBtn.addEventListener('click', closeReports);
+  loadBtn.addEventListener('click', () => { if (picker.value) loadReport(picker.value); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeReports(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeReports(); });
+})();
 
 // ── PIN Authentication ────────────────────────────────
 (function() {

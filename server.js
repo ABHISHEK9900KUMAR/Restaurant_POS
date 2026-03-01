@@ -202,6 +202,189 @@ function generateReceiptPDF(order) {
 
 async function emailReceipt() { /* email receipts disabled */ }
 
+// ─── IST Date Helpers ─────────────────────────────────────────────────────────
+function getISTDateStr(isoStr) {
+  const istMs = new Date(isoStr).getTime() + (5.5 * 60 * 60 * 1000);
+  return new Date(istMs).toISOString().slice(0, 10);
+}
+
+function todayIST() {
+  return getISTDateStr(new Date().toISOString());
+}
+
+// ─── Daily Report Generator ───────────────────────────────────────────────────
+function generateDailyReport(dateStr) {
+  const dayOrders = orders.filter(o => getISTDateStr(o.createdAt) === dateStr);
+  const paidOrders = dayOrders.filter(o => o.paymentStatus === 'paid');
+
+  const totalRevenue        = round2(paidOrders.reduce((s, o) => s + (o.billing?.total || 0), 0));
+  const totalGST            = round2(paidOrders.reduce((s, o) => s + (o.billing?.gst || 0), 0));
+  const totalServiceCharge  = round2(paidOrders.reduce((s, o) => s + (o.billing?.serviceCharge || 0), 0));
+  const totalDiscount       = round2(paidOrders.reduce((s, o) => s + (o.billing?.discountAmount || 0), 0));
+  const avgOrderValue       = paidOrders.length ? round2(totalRevenue / paidOrders.length) : 0;
+
+  const summary = { totalRevenue, ordersCount: dayOrders.length, paidCount: paidOrders.length, avgOrderValue, totalGST, totalServiceCharge, totalDiscount };
+
+  // Top Items — aggregate qty + revenue across ALL orders that day
+  const itemMap = {};
+  dayOrders.forEach(order => {
+    (order.items || []).forEach(item => {
+      const key = item.id || item.name;
+      if (!itemMap[key]) itemMap[key] = { name: item.name, qty: 0, revenue: 0 };
+      const qty = Math.max(0, Math.floor(item.quantity || 1));
+      itemMap[key].qty += qty;
+      itemMap[key].revenue = round2(itemMap[key].revenue + (item.price || 0) * qty);
+    });
+  });
+  const topItems = Object.values(itemMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
+
+  // Table-wise Revenue — paid orders only
+  const tableMap = {};
+  paidOrders.forEach(order => {
+    const t = order.tableNo || 'N/A';
+    if (!tableMap[t]) tableMap[t] = { table: t, ordersCount: 0, revenue: 0 };
+    tableMap[t].ordersCount++;
+    tableMap[t].revenue = round2(tableMap[t].revenue + (order.billing?.total || 0));
+  });
+  const tableRevenue = Object.values(tableMap).sort((a, b) => b.revenue - a.revenue);
+
+  // Hourly Orders (IST hour)
+  const hourlyOrders = Array(24).fill(0);
+  dayOrders.forEach(order => {
+    const istMs = new Date(order.createdAt).getTime() + (5.5 * 60 * 60 * 1000);
+    hourlyOrders[new Date(istMs).getUTCHours()]++;
+  });
+
+  return { date: dateStr, summary, topItems, tableRevenue, hourlyOrders, paymentBreakdown: { cash: totalRevenue } };
+}
+
+// ─── Report PDF Generator ─────────────────────────────────────────────────────
+function generateReportPDF(report) {
+  return new Promise((resolve, reject) => {
+    const W  = 595.28;
+    const ML = 50;
+    const MR = 50;
+    const CW = W - ML - MR;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end',  () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const GOLD  = '#C9A84C';
+    const DARK  = '#1A1A1A';
+    const GRAY  = '#666666';
+    const LIGHT = '#F5F2EC';
+    const LINE  = '#DDD8CC';
+
+    const rs = n => 'Rs. ' + parseFloat(n).toFixed(2);
+
+    // ── HEADER ───────────────────────────────────────────────────
+    doc.rect(0, 0, W, 100).fill(DARK);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(28).text('ZingPOS', ML, 20);
+    doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Daily Sales Report', ML, 54);
+    doc.fillColor('#AAAAAA').fontSize(9)
+       .text('Date: ' + report.date,                                   ML, 20, { width: CW, align: 'right' })
+       .text('Generated: ' + new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), ML, 34, { width: CW, align: 'right' });
+
+    let y = 118;
+
+    // ── SUMMARY ──────────────────────────────────────────────────
+    doc.fillColor(GRAY).font('Helvetica-Bold').fontSize(8).text('SUMMARY', ML, y);
+    y += 10;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 12;
+
+    const s = report.summary;
+    const sumRow = (label, value, bold = false, color = DARK) => {
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(label, ML, y, { width: CW * 0.65 });
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10).fillColor(color).text(value, ML + CW * 0.65, y, { width: CW * 0.35, align: 'right' });
+      y += 19;
+    };
+
+    sumRow('Total Revenue',    rs(s.totalRevenue),    true, GOLD);
+    sumRow('Total Orders',     String(s.ordersCount));
+    sumRow('Paid Orders',      String(s.paidCount));
+    sumRow('Avg Order Value',  rs(s.avgOrderValue));
+    sumRow('GST Collected',    rs(s.totalGST));
+    sumRow('Service Charge',   rs(s.totalServiceCharge));
+    if (s.totalDiscount > 0) sumRow('Total Discounts', rs(s.totalDiscount));
+
+    y += 12;
+
+    // ── TOP ITEMS ────────────────────────────────────────────────
+    doc.fillColor(GRAY).font('Helvetica-Bold').fontSize(8).text('TOP 5 ITEMS', ML, y);
+    y += 10;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 10;
+
+    doc.rect(ML, y, CW, 22).fill(DARK);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+    doc.text('ITEM',    ML + 8,   y + 7, { width: 290 });
+    doc.text('QTY',     ML + 305, y + 7, { width: 80, align: 'center' });
+    doc.text('REVENUE', ML + 390, y + 7, { width: 97, align: 'right' });
+    y += 22;
+
+    if (report.topItems.length === 0) {
+      doc.fillColor(GRAY).font('Helvetica').fontSize(9).text('No items sold on this date.', ML + 8, y + 6);
+      y += 20;
+    } else {
+      report.topItems.forEach((item, i) => {
+        if (i % 2 === 1) doc.rect(ML, y, CW, 20).fill(LIGHT);
+        const name = (item.name || '').replace(/[\u{1F300}-\u{1FFFF}]/gu, '').trim();
+        doc.fillColor(DARK).font('Helvetica').fontSize(9);
+        doc.text(name,              ML + 8,   y + 6, { width: 290, ellipsis: true });
+        doc.text(String(item.qty),  ML + 305, y + 6, { width: 80, align: 'center' });
+        doc.text(rs(item.revenue),  ML + 390, y + 6, { width: 97, align: 'right' });
+        y += 20;
+      });
+    }
+
+    y += 16;
+
+    // ── TABLE REVENUE ────────────────────────────────────────────
+    doc.fillColor(GRAY).font('Helvetica-Bold').fontSize(8).text('TABLE-WISE REVENUE', ML, y);
+    y += 10;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 10;
+
+    doc.rect(ML, y, CW, 22).fill(DARK);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+    doc.text('TABLE',   ML + 8,   y + 7, { width: 160 });
+    doc.text('ORDERS',  ML + 175, y + 7, { width: 120, align: 'center' });
+    doc.text('REVENUE', ML + 390, y + 7, { width: 97, align: 'right' });
+    y += 22;
+
+    if (report.tableRevenue.length === 0) {
+      doc.fillColor(GRAY).font('Helvetica').fontSize(9).text('No paid orders on this date.', ML + 8, y + 6);
+      y += 20;
+    } else {
+      report.tableRevenue.forEach((row, i) => {
+        if (i % 2 === 1) doc.rect(ML, y, CW, 20).fill(LIGHT);
+        doc.fillColor(DARK).font('Helvetica').fontSize(9);
+        doc.text(row.table,              ML + 8,   y + 6, { width: 160 });
+        doc.text(String(row.ordersCount),ML + 175, y + 6, { width: 120, align: 'center' });
+        doc.text(rs(row.revenue),        ML + 390, y + 6, { width: 97, align: 'right' });
+        y += 20;
+      });
+    }
+
+    y += 20;
+
+    // ── FOOTER ───────────────────────────────────────────────────
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 14;
+    doc.fillColor(GRAY).font('Helvetica').fontSize(9)
+       .text('ZingPOS — Automated Daily Sales Report', ML, y, { width: CW, align: 'center' });
+    y += 13;
+    doc.fillColor(GOLD).fontSize(8)
+       .text('Powered by ZingPOS', ML, y, { width: CW, align: 'center' });
+
+    doc.end();
+  });
+}
+
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
   // Starters — Chinese
@@ -531,6 +714,28 @@ app.post('/api/calculate', (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid items' });
   }
   res.json({ success: true, data: calculateBill(items, { applyServiceCharge, discountPercent }) });
+});
+
+// ─── Reports API ──────────────────────────────────────────────────────────────
+app.get('/api/reports/daily', (req, res) => {
+  const date = req.query.date || todayIST();
+  res.json({ success: true, data: generateDailyReport(date) });
+});
+
+app.get('/api/reports/daily/pdf', async (req, res) => {
+  const date = req.query.date || todayIST();
+  try {
+    const pdfBuffer = await generateReportPDF(generateDailyReport(date));
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${date}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
+  } catch (e) {
+    console.error('[ReportPDF]', e);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF' });
+  }
 });
 
 // ─── Socket.io Events ────────────────────────────────────────────────────────
