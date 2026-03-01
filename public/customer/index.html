@@ -2395,10 +2395,14 @@ function showOOSModal(order) {
   const proceedBtn = document.getElementById('oosBtnProceed');
   const cancelBtn  = document.getElementById('oosBtnCancel');
 
+  const oosIds = new Set((order.oosItems || []).map(i => i.id));
+  const hasRemaining = (order.items || []).some(i => !oosIds.has(i.id));
+
   title.textContent = t('oos_title');
   sub.textContent   = t('oos_sub');
   proceedBtn.textContent = t('oos_proceed');
   cancelBtn.textContent  = t('oos_modify_order');
+  proceedBtn.style.display = hasRemaining ? '' : 'none';
 
   list.innerHTML = (order.oosItems || []).map(item => {
     const name = currentLang === 'hi' && item.nameHi ? item.nameHi : item.name;
@@ -2410,6 +2414,7 @@ function showOOSModal(order) {
   const newCancel  = cancelBtn.cloneNode(true);
   proceedBtn.replaceWith(newProceed);
   cancelBtn.replaceWith(newCancel);
+  newProceed.style.display = hasRemaining ? '' : 'none';
 
   newProceed.addEventListener('click', () => {
     hideOOSModal();
