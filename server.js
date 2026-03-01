@@ -276,13 +276,17 @@ let occupiedTables = {};
 
 function getTablesStatus() {
   const ALL_TABLES = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10'];
-  return ALL_TABLES.map(tableId => ({
-    tableId,
-    occupied: !!occupiedTables[tableId],
-    customerName: occupiedTables[tableId]?.customerName || null,
-    orderId: occupiedTables[tableId]?.orderId || null,
-    since: occupiedTables[tableId]?.since || null,
-  }));
+  return ALL_TABLES.map(tableId => {
+    if (occupiedTables[tableId]) {
+      return { tableId, occupied: true, customerName: occupiedTables[tableId].customerName, orderId: occupiedTables[tableId].orderId, since: occupiedTables[tableId].since };
+    }
+    // Reserve table if an active cart has items for this table
+    const cart = Object.values(activeCarts).find(c => c.tableNo === tableId && (c.items || []).length > 0);
+    if (cart) {
+      return { tableId, occupied: true, sessionId: cart.sessionId, customerName: cart.customerName || '', orderId: null, since: cart.lastUpdate };
+    }
+    return { tableId, occupied: false, customerName: null, orderId: null, since: null };
+  });
 }
 
 function broadcastTablesStatus() {
@@ -350,6 +354,7 @@ function setCartExpiry(sessionId) {
         delete activeCarts[sessionId];
         io.emit('cart:expired', { sessionId });
         io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
+        broadcastTablesStatus();
       }
     }, CONFIG.CART_TIMEOUT_MS);
   }
@@ -501,6 +506,7 @@ io.on('connection', (socket) => {
 
     setCartExpiry(sessionId);
     io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
+    broadcastTablesStatus();
 
     if (typeof ack === 'function') ack({ success: true, billing });
   });
@@ -730,6 +736,13 @@ io.on('connection', (socket) => {
     order.status = 'awaiting_customer';
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'awaiting_customer', timestamp: getTimestamp() });
+
+    // Mark OOS items as out of stock across the whole menu
+    (oosItemIds || []).forEach(id => {
+      const menuItem = MENU.find(m => m.id === id);
+      if (menuItem) menuItem.inStock = false;
+    });
+    io.emit('menu:updated', { menu: MENU });
 
     io.emit('order:updated', order);
     if (typeof ack === 'function') ack({ success: true, order });

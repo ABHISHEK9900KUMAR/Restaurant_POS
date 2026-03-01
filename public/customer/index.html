@@ -1687,16 +1687,31 @@ document.getElementById('langToggle').addEventListener('click', (e) => {
 //  ZingPOS — Customer App
 // ═══════════════════════════════════════════════════════
 
+// Persist session across refreshes (same browser tab)
+const _tableParam = new URLSearchParams(window.location.search).get('table') || '';
+const _SESS_KEY    = 'zingpos-sid';
+const _ORD_KEY     = 'zingpos-order-' + (_tableParam || 'x');
+const _REORDER_KEY = 'zingpos-reorder-' + (_tableParam || 'x');
+
+function _loadSid()      { let id = sessionStorage.getItem(_SESS_KEY); if (!id) { id = uid('sess'); sessionStorage.setItem(_SESS_KEY, id); } return id; }
+function _saveSid(id)    { sessionStorage.setItem(_SESS_KEY, id); }
+function _loadOrder()    { try { const s = sessionStorage.getItem(_ORD_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; } }
+function _saveOrder(o)   { sessionStorage.setItem(_ORD_KEY, JSON.stringify(o)); }
+function _clearOrder()   { sessionStorage.removeItem(_ORD_KEY); }
+function _setReorder(v)  { if (v) sessionStorage.setItem(_REORDER_KEY, '1'); else sessionStorage.removeItem(_REORDER_KEY); }
+function _loadReorder()  { return sessionStorage.getItem(_REORDER_KEY) === '1'; }
+
 const state = {
   cart: {},
   menu: [],
   config: {},
-  sessionId: uid('sess'),
+  sessionId: _loadSid(),
   isSubmitting: false,
   isConnected: false,
   cartOpen: false,
-  trackingOrder: null,
-  tableNo: new URLSearchParams(window.location.search).get('table') || '',
+  reordering: _loadReorder(),
+  trackingOrder: _loadOrder(),
+  tableNo: _tableParam,
   customerName: '',
   activeQuickFilters: new Set(), // multi-select: 'bestseller' | 'on-offer' | 'high-protein' | 'guilt-free'
   activeCategory: null,          // currently selected category (null = All)
@@ -1726,12 +1741,37 @@ socket.on('init', (data) => {
   state.menu = data.menu || [];
   state.config = data.config || {};
   document.getElementById('loadingState')?.remove();
+
+  // Restore tracking order — sync with fresh server data
+  if (state.trackingOrder && data.orders) {
+    const fresh = data.orders.find(o => o.id === state.trackingOrder.id);
+    if (fresh) {
+      state.trackingOrder = fresh;
+      _saveOrder(fresh);
+      restoreTracker(fresh);
+    } else {
+      // Order gone (server restart) — clear saved order
+      state.trackingOrder = null;
+      _clearOrder();
+    }
+  }
+
   renderMenu();
   renderCategoryNav();
   renderQuickFilters();
-  // Check occupancy on init
   checkTableOccupancy(data.tablesStatus || []);
 });
+
+function restoreTracker(order) {
+  renderTrackerItems(order);
+  renderDigitalReceipt(order);
+  const status = order.paymentStatus === 'paid' ? 'paid' : order.status;
+  updateTrackerStatus(status);
+  const tracker = document.getElementById('order-tracker');
+  tracker.style.animation = 'none';
+  tracker.classList.add('visible');
+  requestAnimationFrame(() => { tracker.style.animation = ''; });
+}
 
 // Live table status — check if our table just became occupied or freed
 socket.on('tables:status', (data) => {
@@ -1763,9 +1803,10 @@ function checkTableOccupancy(tables) {
   const badgeEl   = document.getElementById('occupiedTableBadge');
 
   if (info.occupied) {
-    // Don't block if it's this customer's own order or they're reordering
+    // Don't block if it's this customer's own order, their active cart, or they're reordering
     if (state.reordering) return;
     if (state.trackingOrder && info.orderId === state.trackingOrder.id) return;
+    if (info.sessionId && info.sessionId === state.sessionId) return;
     // Someone else is at this table — block
     titleEl.textContent = t('table_occupied');
     subEl.textContent   = t('table_occupied_sub');
@@ -2360,12 +2401,14 @@ socket.on('order:updated', (updated) => {
   const status = updated.paymentStatus === 'paid' ? 'paid' : updated.status;
 
   if (status === 'awaiting_customer') {
+    _saveOrder(updated);
     showOOSModal(updated);
     return;
   }
 
   if (status === 'cancelled') {
     hideOOSModal();
+    _clearOrder(); _setReorder(false); state.reordering = false;
     updateTrackerStatus('cancelled');
     // Show "Place New Order" button
     const newOrderBtn = document.getElementById('trackerNewOrderBtn');
@@ -2377,11 +2420,13 @@ socket.on('order:updated', (updated) => {
     return;
   }
 
+  _saveOrder(updated);
   updateTrackerStatus(status);
 });
 
 socket.on('order:paid', ({ orderId }) => {
   if (state.trackingOrder && orderId === state.trackingOrder.id) {
+    _clearOrder();
     updateTrackerStatus('paid');
   }
 });
@@ -2457,9 +2502,9 @@ function modifyOrder(order) {
   });
 
   // Fresh session for new order
-  state.sessionId = uid('sess');
-  state.trackingOrder = null; // prevents order:updated from re-opening tracker
-  state.reordering = true;    // suppress occupancy block — this customer owns the table
+  state.sessionId = uid('sess'); _saveSid(state.sessionId);
+  state.trackingOrder = null; _clearOrder();
+  state.reordering = true; _setReorder(true);
 
   // Clear any stale occupied screen and close tracker
   const occScreen = document.getElementById('tableOccupiedScreen');
@@ -2477,9 +2522,9 @@ function modifyOrder(order) {
 
 function showSuccess(order) {
   state.cart = {};
-  state.sessionId = uid('sess');
-  state.trackingOrder = order;
-  state.reordering = false; // order placed — occupancy check can resume normally
+  state.sessionId = uid('sess'); _saveSid(state.sessionId);
+  state.trackingOrder = order; _saveOrder(order);
+  state.reordering = false; _setReorder(false);
   closeCart();
   updateBadges();
   updateFab();
@@ -2545,7 +2590,7 @@ function resetForm() {
 }
 
 document.getElementById('trackerNewBtn').addEventListener('click', () => {
-  state.trackingOrder = null;
+  state.trackingOrder = null; _clearOrder(); _setReorder(false); state.reordering = false;
   document.getElementById('order-tracker').classList.remove('visible');
   document.getElementById('trackerNewBtn').style.display = '';
   const newOrderBtn = document.getElementById('trackerNewOrderBtn');
@@ -2554,7 +2599,7 @@ document.getElementById('trackerNewBtn').addEventListener('click', () => {
 });
 
 document.getElementById('trackerNewOrderBtn').addEventListener('click', () => {
-  state.trackingOrder = null;
+  state.trackingOrder = null; _clearOrder(); _setReorder(false); state.reordering = false;
   document.getElementById('order-tracker').classList.remove('visible');
   document.getElementById('trackerNewBtn').style.display = '';
   document.getElementById('trackerNewOrderBtn').classList.remove('visible');
