@@ -13,8 +13,6 @@ const path       = require('path');
 const QRCode     = require('qrcode');
 const os         = require('os');
 const fs         = require('fs');
-const crypto     = require('crypto');
-const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 
 // ─── Local IP Detection ───────────────────────────────────────────────────────
@@ -66,38 +64,6 @@ const CONFIG = {
   PORT: process.env.PORT || 3000,
 };
 
-// ─── Customer Persistence ────────────────────────────────────────────────────
-const CUSTOMERS_FILE = path.join(__dirname, 'customers.json');
-function loadCustomers() {
-  try {
-    if (fs.existsSync(CUSTOMERS_FILE)) {
-      return JSON.parse(fs.readFileSync(CUSTOMERS_FILE, 'utf8'));
-    }
-  } catch (e) { console.error('[CustomerDB] Load error:', e.message); }
-  return { customers: [] };
-}
-function saveCustomers() {
-  try { fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(customerDB, null, 2), 'utf8'); }
-  catch (e) { console.error('[CustomerDB] Save error:', e.message); }
-}
-let customerDB = loadCustomers();
-
-const otpStore   = new Map(); // phone → { otp, email, expiresAt }
-const tokenStore = new Map(); // token → { customerId, createdAt }
-const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-
-const emailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-});
-
-function generateOtp()        { return String(Math.floor(100000 + Math.random() * 900000)); }
-function generateToken()      { return crypto.randomBytes(32).toString('hex'); }
-function generateCustomerId() { return 'cust_' + crypto.randomBytes(8).toString('hex'); }
-function findCustomerByPhone(phone) { return customerDB.customers.find(c => c.phone === phone) || null; }
 
 // ─── PDF Receipt Generator ────────────────────────────────────────────────────
 function generateReceiptPDF(order) {
@@ -233,43 +199,7 @@ function generateReceiptPDF(order) {
   });
 }
 
-async function emailReceipt(order) {
-  if (!order.customerEmail || !process.env.GMAIL_USER) return;
-  try {
-    const pdfBuffer = await generateReceiptPDF(order);
-    await emailTransporter.sendMail({
-      from: `"ZingPOS" <${process.env.GMAIL_USER}>`,
-      to: order.customerEmail,
-      subject: `Your Receipt from ZingPOS — Order ${order.id}`,
-      text: `Hi ${order.customerName},\n\nThank you for dining with us! Please find your receipt attached for Order ${order.id} (Table ${order.tableNo}).\n\nTotal Paid: ₹${order.billing.total.toFixed(2)}\n\nWe hope to see you again!\n\n— ZingPOS`,
-      html: `<div style="font-family:sans-serif;max-width:480px;margin:auto;color:#1a1a1a">
-        <div style="background:#1a1a1a;padding:24px 32px;border-radius:8px 8px 0 0">
-          <span style="color:#c9a84c;font-size:22px;font-weight:700">ZingPOS</span>
-        </div>
-        <div style="padding:24px 32px;border:1px solid #e0d9c8;border-top:none;border-radius:0 0 8px 8px">
-          <p>Hi <strong>${order.customerName}</strong>,</p>
-          <p>Thank you for dining with us! Your receipt for <strong>Order ${order.id}</strong> (Table ${order.tableNo}) is attached as a PDF.</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
-            <tr style="background:#f7f4ee"><td style="padding:8px 12px;color:#555">Order</td><td style="padding:8px 12px;text-align:right"><strong>${order.id}</strong></td></tr>
-            <tr><td style="padding:8px 12px;color:#555">Table</td><td style="padding:8px 12px;text-align:right">${order.tableNo}</td></tr>
-            <tr style="background:#f7f4ee"><td style="padding:8px 12px;color:#555">Items</td><td style="padding:8px 12px;text-align:right">${order.items.length}</td></tr>
-            <tr style="background:#1a1a1a"><td style="padding:10px 12px;color:#c9a84c;font-weight:700">Total Paid</td><td style="padding:10px 12px;text-align:right;color:#c9a84c;font-weight:700">₹${order.billing.total.toFixed(2)}</td></tr>
-          </table>
-          <p style="color:#888;font-size:12px">We hope to see you again soon!</p>
-          <p style="color:#c9a84c;font-size:11px">— ZingPOS</p>
-        </div>
-      </div>`,
-      attachments: [{
-        filename: `ZingPOS-Receipt-${order.id}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf',
-      }],
-    });
-    console.log(`[Receipt] PDF emailed to ${order.customerEmail} for order ${order.id}`);
-  } catch (e) {
-    console.error(`[Receipt] Failed to email receipt for ${order.id}:`, e.message);
-  }
-}
+async function emailReceipt() { /* email receipts disabled */ }
 
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
@@ -449,79 +379,6 @@ app.get('/api/auth', (req, res) => {
   return res.status(401).json({ success: false, error: 'Incorrect PIN' });
 });
 
-// ── Customer Auth Endpoints ───────────────────────────────────────────────────
-app.post('/api/customer/send-otp', async (req, res) => {
-  const { phone, email } = req.body;
-  if (!phone || !/^\d{10}$/.test(String(phone))) {
-    return res.status(400).json({ success: false, error: 'Enter a valid 10-digit phone number.' });
-  }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
-    return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
-  }
-  const otp = generateOtp();
-  otpStore.set(String(phone), { otp, email: String(email), expiresAt: Date.now() + OTP_EXPIRY_MS });
-
-  if (!process.env.GMAIL_USER) {
-    console.log(`[Auth][DEV] OTP for ${phone}: ${otp}`);
-    return res.json({ success: true, dev: true });
-  }
-  try {
-    await emailTransporter.sendMail({
-      from: `"ZingPOS" <${process.env.GMAIL_USER}>`,
-      to: String(email),
-      subject: 'Your ZingPOS OTP',
-      text: `Your OTP is: ${otp}\n\nValid for 5 minutes.`,
-      html: `<p>Your ZingPOS OTP is: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>Valid for 5 minutes.</p>`,
-    });
-    res.json({ success: true });
-  } catch (e) {
-    console.error('[Auth] Email send failed:', e.message);
-    res.status(500).json({ success: false, error: 'Failed to send OTP. Please try again.' });
-  }
-});
-
-app.post('/api/customer/verify-otp', (req, res) => {
-  const { phone, otp, name } = req.body;
-  if (!phone || !otp) return res.status(400).json({ success: false, error: 'Missing phone or OTP.' });
-  const record = otpStore.get(String(phone));
-  if (!record) return res.status(400).json({ success: false, error: 'OTP not found. Please request a new one.' });
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(String(phone));
-    return res.status(400).json({ success: false, error: 'OTP expired. Please request a new one.' });
-  }
-  if (record.otp !== String(otp)) {
-    return res.status(400).json({ success: false, error: 'Incorrect OTP. Please try again.' });
-  }
-  let customer = findCustomerByPhone(String(phone));
-  if (!customer) {
-    if (!name || String(name).trim().length < 2) {
-      return res.json({ success: false, requiresName: true });
-    }
-    customer = {
-      id: generateCustomerId(),
-      name: String(name).trim(),
-      phone: String(phone),
-      email: record.email,
-      createdAt: new Date().toISOString(),
-    };
-    customerDB.customers.push(customer);
-    saveCustomers();
-  }
-  otpStore.delete(String(phone));
-  const token = generateToken();
-  tokenStore.set(token, { customerId: customer.id, createdAt: Date.now() });
-  res.json({ success: true, token, customer });
-});
-
-app.get('/api/customer/me', (req, res) => {
-  const { token } = req.query;
-  if (!token) return res.status(401).json({ success: false, error: 'No token.' });
-  const session = tokenStore.get(String(token));
-  if (!session) return res.status(401).json({ success: false, error: 'Invalid or expired session.' });
-  const customer = customerDB.customers.find(c => c.id === session.customerId);
-  if (!customer) return res.status(401).json({ success: false, error: 'Customer not found.' });
-  res.json({ success: true, customer });
-});
 
 app.get('/api/menu', (req, res) => {
   res.json({ success: true, data: MENU });
