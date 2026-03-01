@@ -1131,9 +1131,228 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
   -webkit-tap-highlight-color: transparent;
 }
 .theme-btn:hover { background: var(--surface3); }
+
+/* ── Profile Button + Panel ──────────────────────────── */
+.profile-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--gold); border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700;
+  color: #111; flex-shrink: 0; display: none; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; transition: opacity var(--transition);
+}
+.profile-btn:active { opacity: 0.8; }
+.profile-btn.visible { display: flex; }
+
+.profile-panel {
+  position: fixed; top: calc(var(--header-h) + 6px); right: 12px;
+  width: 240px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 16px 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 500;
+  display: none; flex-direction: column; gap: 4px;
+  animation: panelIn 180ms cubic-bezier(0.4,0,0.2,1);
+}
+.profile-panel.open { display: flex; }
+@keyframes panelIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+.profile-panel-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--gold); color: #111;
+  font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+}
+.profile-panel-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.profile-panel-detail { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.profile-panel-divider { height: 1px; background: var(--border); margin: 12px 0 8px; }
+.profile-logout-btn {
+  width: 100%; height: 36px; background: rgba(231,76,60,0.12);
+  border: 1px solid var(--red); border-radius: 8px;
+  color: var(--red); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background var(--transition);
+}
+.profile-logout-btn:hover { background: rgba(231,76,60,0.22); }
+
+/* ── Welcome Toast ───────────────────────────────────── */
+#welcome-toast {
+  position: fixed; top: calc(var(--header-h) + 12px); left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--gold);
+  border-radius: 24px; padding: 9px 20px;
+  font-size: 13px; font-weight: 600; color: var(--gold);
+  z-index: 600; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  animation: toastIn 300ms cubic-bezier(0.4,0,0.2,1);
+  display: none;
+}
+#welcome-toast.visible { display: block; }
+#welcome-toast.hiding { animation: toastOut 300ms ease forwards; }
+@keyframes toastIn  { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+@keyframes toastOut { to   { opacity:0; transform:translateX(-50%) translateY(-8px); } }
+
+/* ── Auth Screen ─────────────────────────────────────── */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#auth-screen.fade-out { animation: authFadeOut 300ms ease forwards; }
+#auth-screen.hidden { display: none; }
+@keyframes authFadeOut { to { opacity: 0; pointer-events: none; } }
+@keyframes authScaleIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: none; } }
+
+.auth-box {
+  width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  animation: authScaleIn 350ms cubic-bezier(0.4,0,0.2,1);
+}
+.auth-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px; font-weight: 700;
+  color: var(--gold); letter-spacing: 0.02em;
+}
+.auth-tagline { font-size: 13px; color: var(--text-dim); margin-top: -10px; }
+.auth-card {
+  width: 100%; background: var(--surface); border-radius: 16px;
+  padding: 28px 24px; display: flex; flex-direction: column; gap: 14px;
+  border: 1px solid var(--border);
+}
+.auth-card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.auth-input-wrap {
+  display: flex; height: 46px; border-radius: var(--radius-sm);
+  overflow: hidden; border: 1px solid var(--border);
+  transition: border-color var(--transition);
+}
+.auth-input-wrap:focus-within { border-color: var(--gold); }
+.auth-input-prefix {
+  background: var(--surface2); border-right: 1px solid var(--border);
+  padding: 0 12px; display: flex; align-items: center;
+  font-size: 14px; color: var(--text-dim); white-space: nowrap; flex-shrink: 0;
+}
+.auth-input {
+  background: var(--surface2); border: none; outline: none;
+  padding: 0 13px; flex: 1; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; height: 100%;
+  -webkit-appearance: none;
+}
+.auth-input-solo {
+  width: 100%; height: 46px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0 13px; outline: none; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  transition: border-color var(--transition); -webkit-appearance: none;
+}
+.auth-input-solo:focus { border-color: var(--gold); }
+.otp-row { display: flex; gap: 8px; justify-content: center; }
+.otp-row.shake { animation: otpShake 380ms cubic-bezier(0.36,0.07,0.19,0.97); }
+@keyframes otpShake {
+  10%,90% { transform: translate(-2px); }
+  20%,80%  { transform: translate(4px); }
+  30%,50%,70% { transform: translate(-5px); }
+  40%,60%  { transform: translate(5px); }
+}
+.otp-digit {
+  width: 44px; height: 54px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  text-align: center; font-size: 20px; font-weight: 600; color: var(--text);
+  outline: none; font-family: 'DM Sans', sans-serif;
+  transition: border-color var(--transition); -webkit-appearance: none; caret-color: var(--gold);
+}
+.otp-digit:focus { border-color: var(--gold); }
+.auth-btn {
+  width: 100%; height: 48px; background: var(--gold); color: #111;
+  border: none; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: opacity var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-btn:not(:disabled):active { opacity: 0.85; }
+.auth-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(0,0,0,0.3); border-top-color: #111;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.auth-error {
+  background: rgba(231,76,60,0.1); border: 1px solid var(--red);
+  border-radius: var(--radius-sm); padding: 9px 12px;
+  font-size: 13px; color: var(--red); display: none;
+}
+.auth-error.visible { display: block; }
+.auth-resend { font-size: 13px; color: var(--text-dim); text-align: center; }
+.auth-resend button {
+  background: none; border: none; cursor: pointer;
+  color: var(--gold); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; padding: 0; text-decoration: underline;
+}
+.auth-resend button:disabled { color: var(--text-dim); cursor: default; text-decoration: none; }
+.auth-guest { width: 100%; text-align: center; }
+.auth-guest button {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-dim); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; text-decoration: underline; padding: 4px;
+}
+.auth-guest button:hover { color: var(--text-mid); }
 </style>
 </head>
 <body>
+
+<!-- ── Auth Screen ── -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">ZingPOS</div>
+    <div class="auth-tagline">Login to place your order</div>
+
+    <!-- Step 1: Phone + Email -->
+    <div class="auth-card" id="authStep1">
+      <div class="auth-card-title">Enter your details</div>
+      <div class="auth-input-wrap">
+        <span class="auth-input-prefix">+91</span>
+        <input class="auth-input" id="authPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="Phone number" autocomplete="tel" />
+      </div>
+      <input class="auth-input-solo" id="authEmail" type="email" placeholder="Email address" autocomplete="email" />
+      <div class="auth-error" id="authStep1Error"></div>
+      <button class="auth-btn" id="authSendOtpBtn">Send OTP</button>
+    </div>
+
+    <!-- Step 2: OTP + optional name -->
+    <div class="auth-card" id="authStep2" style="display:none">
+      <div class="auth-card-title">Enter OTP</div>
+      <div class="otp-row" id="otpRow">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" type="text" />
+      </div>
+      <div class="auth-resend">
+        <span id="resendCountdownText">Resend in <b id="resendCountdown">60</b>s</span>
+        <button id="resendOtpBtn" style="display:none">Resend OTP</button>
+      </div>
+      <div id="authNameField" style="display:none">
+        <input class="auth-input-solo" id="authName" type="text" placeholder="Your name" autocomplete="name" autocapitalize="words" />
+      </div>
+      <div class="auth-error" id="authStep2Error"></div>
+      <button class="auth-btn" id="authVerifyBtn">Verify &amp; Continue</button>
+    </div>
+
+    <div class="auth-guest"><button id="authGuestBtn">Continue as Guest</button></div>
+  </div>
+</div>
+
+<!-- ── Profile Panel ── -->
+<div class="profile-panel" id="profilePanel" role="dialog" aria-label="Profile">
+  <div class="profile-panel-avatar" id="profileAvatar"></div>
+  <div class="profile-panel-name"   id="profilePanelName"></div>
+  <div class="profile-panel-detail" id="profilePanelPhone"></div>
+  <div class="profile-panel-detail" id="profilePanelEmail"></div>
+  <div class="profile-panel-divider"></div>
+  <button class="profile-logout-btn" id="profileLogoutBtn">Log out</button>
+</div>
+
+<!-- ── Welcome Toast ── -->
+<div id="welcome-toast"></div>
 
 <div id="reconnect-banner">⚡ Reconnecting…</div>
 
@@ -1146,6 +1365,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+    <button class="profile-btn" id="profileBtn" title="Your profile" aria-label="Profile"></button>
     <div class="table-badge" id="tableBadge"><span id="tableBadgeText">—</span></div>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1697,6 +1917,8 @@ const state = {
   trackingOrder: null,
   tableNo: new URLSearchParams(window.location.search).get('table') || '',
   customerName: '',
+  customerEmail: '',
+  customerPhone: '',
   activeQuickFilters: new Set(), // multi-select: 'bestseller' | 'on-offer' | 'high-protein' | 'guilt-free'
   activeCategory: null,          // currently selected category (null = All)
 };
@@ -2313,6 +2535,8 @@ function submitOrder() {
     sessionId: state.sessionId,
     items: getCartItems(),
     customerName: getName(),
+    customerEmail: state.customerEmail,
+    customerPhone: state.customerPhone,
     tableNo: getTable(),
     applyServiceCharge: getServiceToggle(),
     discountPercent: getDiscountInput(),
@@ -2753,6 +2977,239 @@ window.addEventListener('resize', debounce(() => {
     updateBillSummary();
   }
 }, 200));
+
+// ── Customer Auth ────────────────────────────────────────
+(function initAuth() {
+  const TOKEN_KEY    = 'zingpos-customer-token';
+  const CUSTOMER_KEY = 'zingpos-customer-data';
+  const screen       = document.getElementById('auth-screen');
+
+  // ── Profile UI helpers ──────────────────────────────────
+  const profileBtn    = document.getElementById('profileBtn');
+  const profilePanel  = document.getElementById('profilePanel');
+
+  function showProfile(customer) {
+    const initial = (customer.name || '?')[0].toUpperCase();
+    profileBtn.textContent = initial;
+    profileBtn.classList.add('visible');
+    document.getElementById('profileAvatar').textContent    = initial;
+    document.getElementById('profilePanelName').textContent  = customer.name;
+    document.getElementById('profilePanelPhone').textContent = customer.phone ? 'Phone: ' + customer.phone : '';
+    document.getElementById('profilePanelEmail').textContent = customer.email ? 'Email: ' + customer.email : '';
+  }
+
+  profileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    profilePanel.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!profilePanel.contains(e.target) && e.target !== profileBtn) {
+      profilePanel.classList.remove('open');
+    }
+  });
+  document.getElementById('profileLogoutBtn').addEventListener('click', () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(CUSTOMER_KEY);
+    location.reload();
+  });
+
+  // ── Welcome toast ───────────────────────────────────────
+  function showWelcomeToast(name, isReturning) {
+    const toast = document.getElementById('welcome-toast');
+    toast.textContent = (isReturning ? 'Welcome back, ' : 'Welcome, ') + name + '!';
+    toast.classList.add('visible');
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      toast.addEventListener('animationend', () => {
+        toast.classList.remove('visible', 'hiding');
+      }, { once: true });
+    }, 3000);
+  }
+
+  // ── Dismiss auth screen ─────────────────────────────────
+  function dismissAuth() {
+    screen.classList.add('fade-out');
+    screen.addEventListener('animationend', () => screen.classList.add('hidden'), { once: true });
+  }
+
+  // ── Apply logged-in customer to UI ─────────────────────
+  function applyCustomer(customer, showToast = false, isReturning = false) {
+    state.customerName  = customer.name;
+    state.customerEmail = customer.email  || '';
+    state.customerPhone = customer.phone  || '';
+    ['customerName', 'mCustomerName'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = customer.name;
+    });
+    showProfile(customer);
+    dismissAuth();
+    if (showToast) showWelcomeToast(customer.name, isReturning);
+  }
+
+  // ── On page load: restore from localStorage instantly ──
+  const cachedCustomer = (() => {
+    try { return JSON.parse(localStorage.getItem(CUSTOMER_KEY)); } catch { return null; }
+  })();
+  const savedToken = localStorage.getItem(TOKEN_KEY);
+
+  if (cachedCustomer && savedToken) {
+    // Apply immediately — no auth flash on refresh
+    applyCustomer(cachedCustomer, false);
+    // Validate token silently in background
+    fetch('/api/customer/me?token=' + encodeURIComponent(savedToken))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success) {
+          // Token expired (e.g. server restarted) — clear cache, show auth on next refresh
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(CUSTOMER_KEY);
+        }
+      })
+      .catch(() => { /* offline — keep cached session, will revalidate next time */ });
+  } else {
+    setupAuthUI();
+  }
+
+  // ── Auth UI (OTP flow) ──────────────────────────────────
+  function setupAuthUI() {
+    document.getElementById('authGuestBtn').addEventListener('click', dismissAuth);
+
+    const digits = Array.from(document.querySelectorAll('.otp-digit'));
+    digits.forEach((input, i) => {
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !this.value && i > 0) digits[i - 1].focus();
+      });
+      input.addEventListener('input', function() {
+        const val = this.value.replace(/\D/g, '');
+        this.value = val ? val[0] : '';
+        if (val && i < digits.length - 1) digits[i + 1].focus();
+      });
+    });
+    digits[0].addEventListener('paste', function(e) {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      text.split('').forEach((ch, idx) => { if (digits[idx]) digits[idx].value = ch; });
+      digits[Math.min(text.length, digits.length - 1)].focus();
+    });
+
+    const step1      = document.getElementById('authStep1');
+    const step2      = document.getElementById('authStep2');
+    const step1Error = document.getElementById('authStep1Error');
+    const step2Error = document.getElementById('authStep2Error');
+    const sendBtn    = document.getElementById('authSendOtpBtn');
+    const verifyBtn  = document.getElementById('authVerifyBtn');
+    let currentPhone = '', currentEmail = '';
+
+    function setLoading(btn, loading, label) {
+      btn.disabled = loading;
+      btn.innerHTML = loading ? '<span class="auth-spinner"></span>' : label;
+    }
+
+    async function sendOtp() {
+      step1Error.classList.remove('visible');
+      const phone = document.getElementById('authPhone').value.replace(/\D/g, '');
+      const email = document.getElementById('authEmail').value.trim();
+      if (!/^\d{10}$/.test(phone)) { step1Error.textContent = 'Enter a valid 10-digit phone number.'; step1Error.classList.add('visible'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { step1Error.textContent = 'Enter a valid email address.'; step1Error.classList.add('visible'); return; }
+      setLoading(sendBtn, true, 'Send OTP');
+      try {
+        const res  = await fetch('/api/customer/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, email }) });
+        const data = await res.json();
+        if (data.success) {
+          currentPhone = phone; currentEmail = email;
+          step1.style.display = 'none';
+          step2.style.display = 'flex'; step2.style.flexDirection = 'column';
+          digits[0].focus();
+          startResendCountdown();
+        } else {
+          step1Error.textContent = data.error || 'Something went wrong.'; step1Error.classList.add('visible');
+        }
+      } catch(e) {
+        step1Error.textContent = 'Network error. Please try again.'; step1Error.classList.add('visible');
+      }
+      setLoading(sendBtn, false, 'Send OTP');
+    }
+
+    sendBtn.addEventListener('click', sendOtp);
+    document.getElementById('authPhone').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+    document.getElementById('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+
+    let resendTimer = null;
+    function startResendCountdown() {
+      const countdownEl   = document.getElementById('resendCountdown');
+      const countdownText = document.getElementById('resendCountdownText');
+      const resendBtn     = document.getElementById('resendOtpBtn');
+      resendBtn.style.display     = 'none';
+      countdownText.style.display = 'inline';
+      let secs = 60; countdownEl.textContent = secs;
+      clearInterval(resendTimer);
+      resendTimer = setInterval(() => {
+        secs--; countdownEl.textContent = secs;
+        if (secs <= 0) {
+          clearInterval(resendTimer);
+          countdownText.style.display = 'none';
+          resendBtn.style.display = 'inline';
+        }
+      }, 1000);
+    }
+
+    document.getElementById('resendOtpBtn').addEventListener('click', async function() {
+      this.disabled = true;
+      try {
+        const res  = await fetch('/api/customer/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: currentPhone, email: currentEmail }) });
+        const data = await res.json();
+        if (data.success) {
+          digits.forEach(d => d.value = ''); digits[0].focus();
+          step2Error.classList.remove('visible');
+          startResendCountdown();
+        } else { step2Error.textContent = data.error || 'Could not resend OTP.'; step2Error.classList.add('visible'); }
+      } catch(e) { step2Error.textContent = 'Network error.'; step2Error.classList.add('visible'); }
+      this.disabled = false;
+    });
+
+    let nameRequired = false;
+    verifyBtn.addEventListener('click', verifyOtp);
+    digits[digits.length - 1].addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
+    document.getElementById('authName').addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
+
+    async function verifyOtp() {
+      step2Error.classList.remove('visible');
+      const otp = digits.map(d => d.value).join('');
+      if (otp.length < 6) { step2Error.textContent = 'Enter all 6 digits.'; step2Error.classList.add('visible'); return; }
+      if (nameRequired) {
+        const name = document.getElementById('authName').value.trim();
+        if (name.length < 2) { step2Error.textContent = 'Enter your name (min 2 characters).'; step2Error.classList.add('visible'); return; }
+      }
+      setLoading(verifyBtn, true, 'Verify &amp; Continue');
+      try {
+        const body = { phone: currentPhone, otp };
+        if (nameRequired) body.name = document.getElementById('authName').value.trim();
+        const res  = await fetch('/api/customer/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          localStorage.setItem(CUSTOMER_KEY, JSON.stringify(data.customer));
+          applyCustomer(data.customer, true, !!data.customer.createdAt && Date.now() - new Date(data.customer.createdAt).getTime() > 60000);
+        } else if (data.requiresName) {
+          nameRequired = true;
+          document.getElementById('authNameField').style.display = 'block';
+          document.getElementById('authName').focus();
+          setLoading(verifyBtn, false, 'Verify &amp; Continue');
+        } else {
+          const row = document.getElementById('otpRow');
+          row.classList.add('shake');
+          row.addEventListener('animationend', () => row.classList.remove('shake'), { once: true });
+          digits.forEach(d => d.value = ''); digits[0].focus();
+          step2Error.textContent = data.error || 'Incorrect OTP.'; step2Error.classList.add('visible');
+          setLoading(verifyBtn, false, 'Verify &amp; Continue');
+        }
+      } catch(e) {
+        step2Error.textContent = 'Network error. Please try again.'; step2Error.classList.add('visible');
+        setLoading(verifyBtn, false, 'Verify &amp; Continue');
+      }
+    }
+  }
+})();
 
 // ── Init ────────────────────────────────────────────────
 updateBillSummary();

@@ -4,13 +4,18 @@
  * Version: 2.0.0
  */
 
-const express = require('express');
-const http = require('http');
+require('dotenv').config();
+const express    = require('express');
+const http       = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
-const path = require('path');
-const QRCode = require('qrcode');
-const os = require('os');
+const cors       = require('cors');
+const path       = require('path');
+const QRCode     = require('qrcode');
+const os         = require('os');
+const fs         = require('fs');
+const crypto     = require('crypto');
+const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit');
 
 // ─── Local IP Detection ───────────────────────────────────────────────────────
 function getLocalIP() {
@@ -60,6 +65,208 @@ const CONFIG = {
   CART_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
   PORT: process.env.PORT || 3000,
 };
+
+// ─── Customer Persistence ────────────────────────────────────────────────────
+const CUSTOMERS_FILE = path.join(__dirname, 'customers.json');
+function loadCustomers() {
+  try {
+    if (fs.existsSync(CUSTOMERS_FILE)) {
+      return JSON.parse(fs.readFileSync(CUSTOMERS_FILE, 'utf8'));
+    }
+  } catch (e) { console.error('[CustomerDB] Load error:', e.message); }
+  return { customers: [] };
+}
+function saveCustomers() {
+  try { fs.writeFileSync(CUSTOMERS_FILE, JSON.stringify(customerDB, null, 2), 'utf8'); }
+  catch (e) { console.error('[CustomerDB] Save error:', e.message); }
+}
+let customerDB = loadCustomers();
+
+const otpStore   = new Map(); // phone → { otp, email, expiresAt }
+const tokenStore = new Map(); // token → { customerId, createdAt }
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+const emailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+});
+
+function generateOtp()        { return String(Math.floor(100000 + Math.random() * 900000)); }
+function generateToken()      { return crypto.randomBytes(32).toString('hex'); }
+function generateCustomerId() { return 'cust_' + crypto.randomBytes(8).toString('hex'); }
+function findCustomerByPhone(phone) { return customerDB.customers.find(c => c.phone === phone) || null; }
+
+// ─── PDF Receipt Generator ────────────────────────────────────────────────────
+function generateReceiptPDF(order) {
+  return new Promise((resolve, reject) => {
+    const W   = 595.28; // A4 width pt
+    const ML  = 50;     // margin left
+    const MR  = 50;     // margin right
+    const CW  = W - ML - MR; // content width = 495
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end',  () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const GOLD  = '#C9A84C';
+    const DARK  = '#1A1A1A';
+    const GRAY  = '#666666';
+    const LIGHT = '#F5F2EC';
+    const LINE  = '#DDD8CC';
+    const GREEN = '#2ECC71';
+
+    const rs = n => 'Rs. ' + parseFloat(n).toFixed(2);
+
+    // ── HEADER BAND ──────────────────────────────────────────────
+    doc.rect(0, 0, W, 100).fill(DARK);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(30).text('ZingPOS', ML, 22);
+    doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Restaurant Receipt', ML, 58);
+    // Right side: order meta
+    doc.fillColor('#AAAAAA').fontSize(9)
+       .text(order.id,              ML, 22, { width: CW, align: 'right' })
+       .text('Table ' + order.tableNo, ML, 36, { width: CW, align: 'right' })
+       .text(order.paidAt || order.createdAt, ML, 50, { width: CW, align: 'right' });
+
+    // ── BILLED TO ────────────────────────────────────────────────
+    let y = 115;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 14;
+    doc.fillColor(GRAY).font('Helvetica-Bold').fontSize(8)
+       .text('BILLED TO', ML, y);
+    y += 14;
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(12)
+       .text(order.customerName, ML, y);
+    y += 16;
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    if (order.customerPhone) {
+      doc.text('Phone: ' + order.customerPhone, ML, y);
+      y += 13;
+    }
+    if (order.customerEmail) {
+      doc.text('Email: ' + order.customerEmail, ML, y);
+      y += 13;
+    }
+
+    // ── ITEMS TABLE ──────────────────────────────────────────────
+    y += 10;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 10;
+
+    // Table header
+    doc.rect(ML, y, CW, 24).fill(DARK);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+    doc.text('ITEM',       ML + 8,       y + 8, { width: 230 });
+    doc.text('QTY',        ML + 245,     y + 8, { width: 50,  align: 'center' });
+    doc.text('UNIT PRICE', ML + 305,     y + 8, { width: 90,  align: 'right' });
+    doc.text('AMOUNT',     ML + 400,     y + 8, { width: 87,  align: 'right' });
+    y += 24;
+
+    // Item rows
+    const { billing, items } = order;
+    items.forEach((item, i) => {
+      const rowH = 22;
+      if (i % 2 === 1) doc.rect(ML, y, CW, rowH).fill(LIGHT);
+      doc.fillColor(DARK).font('Helvetica').fontSize(9);
+      // Strip emoji from item names for PDF compatibility
+      const name = (item.name || '').replace(/[\u{1F300}-\u{1FFFF}]/gu, '').trim();
+      doc.text(name,                              ML + 8,   y + 7, { width: 230, ellipsis: true });
+      doc.text(String(item.quantity),             ML + 245, y + 7, { width: 50,  align: 'center' });
+      doc.text(rs(item.price),                    ML + 305, y + 7, { width: 90,  align: 'right' });
+      doc.text(rs(item.quantity * item.price),    ML + 400, y + 7, { width: 87,  align: 'right' });
+      y += rowH;
+    });
+
+    // ── BILLING SUMMARY ──────────────────────────────────────────
+    y += 14;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 14;
+
+    const summaryX     = ML + 260; // label start
+    const summaryLabelW = 130;
+    const summaryValX  = ML + 395; // value start
+    const summaryValW  = 92;
+
+    const sumRow = (label, value, color = GRAY, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10);
+      doc.fillColor(GRAY).text(label, summaryX, y, { width: summaryLabelW });
+      doc.fillColor(color).text(value, summaryValX, y, { width: summaryValW, align: 'right' });
+      y += 18;
+    };
+
+    sumRow('Subtotal',                      rs(billing.subtotal));
+    if (billing.discount > 0)
+      sumRow(`Discount (${billing.discountPercent}%)`, '- ' + rs(billing.discount), GREEN);
+    if (billing.serviceCharge > 0)
+      sumRow('Service Charge (10%)',        rs(billing.serviceCharge));
+    sumRow(`GST (${(billing.gstRate || 0.05) * 100}%)`, rs(billing.gst));
+
+    // Total bar
+    y += 4;
+    doc.rect(ML + 255, y, CW - 255, 32).fill(DARK);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(13);
+    doc.text('TOTAL',          summaryX,  y + 10, { width: summaryLabelW });
+    doc.text(rs(billing.total), summaryValX, y + 10, { width: summaryValW, align: 'right' });
+    y += 44;
+
+    if (order.cashTendered != null) {
+      sumRow('Cash Paid',  rs(order.cashTendered));
+      sumRow('Change',     rs(order.change), GREEN);
+      y += 4;
+    }
+
+    // ── FOOTER ───────────────────────────────────────────────────
+    y += 14;
+    doc.rect(ML, y, CW, 1).fill(LINE);
+    y += 18;
+    doc.fillColor(GRAY).font('Helvetica').fontSize(9)
+       .text('Thank you for dining with us! We hope to see you again.', ML, y, { width: CW, align: 'center' });
+    y += 14;
+    doc.fillColor(GOLD).fontSize(8)
+       .text('Powered by ZingPOS', ML, y, { width: CW, align: 'center' });
+
+    doc.end();
+  });
+}
+
+async function emailReceipt(order) {
+  if (!order.customerEmail || !process.env.GMAIL_USER) return;
+  try {
+    const pdfBuffer = await generateReceiptPDF(order);
+    await emailTransporter.sendMail({
+      from: `"ZingPOS" <${process.env.GMAIL_USER}>`,
+      to: order.customerEmail,
+      subject: `Your Receipt from ZingPOS — Order ${order.id}`,
+      text: `Hi ${order.customerName},\n\nThank you for dining with us! Please find your receipt attached for Order ${order.id} (Table ${order.tableNo}).\n\nTotal Paid: ₹${order.billing.total.toFixed(2)}\n\nWe hope to see you again!\n\n— ZingPOS`,
+      html: `<div style="font-family:sans-serif;max-width:480px;margin:auto;color:#1a1a1a">
+        <div style="background:#1a1a1a;padding:24px 32px;border-radius:8px 8px 0 0">
+          <span style="color:#c9a84c;font-size:22px;font-weight:700">ZingPOS</span>
+        </div>
+        <div style="padding:24px 32px;border:1px solid #e0d9c8;border-top:none;border-radius:0 0 8px 8px">
+          <p>Hi <strong>${order.customerName}</strong>,</p>
+          <p>Thank you for dining with us! Your receipt for <strong>Order ${order.id}</strong> (Table ${order.tableNo}) is attached as a PDF.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+            <tr style="background:#f7f4ee"><td style="padding:8px 12px;color:#555">Order</td><td style="padding:8px 12px;text-align:right"><strong>${order.id}</strong></td></tr>
+            <tr><td style="padding:8px 12px;color:#555">Table</td><td style="padding:8px 12px;text-align:right">${order.tableNo}</td></tr>
+            <tr style="background:#f7f4ee"><td style="padding:8px 12px;color:#555">Items</td><td style="padding:8px 12px;text-align:right">${order.items.length}</td></tr>
+            <tr style="background:#1a1a1a"><td style="padding:10px 12px;color:#c9a84c;font-weight:700">Total Paid</td><td style="padding:10px 12px;text-align:right;color:#c9a84c;font-weight:700">₹${order.billing.total.toFixed(2)}</td></tr>
+          </table>
+          <p style="color:#888;font-size:12px">We hope to see you again soon!</p>
+          <p style="color:#c9a84c;font-size:11px">— ZingPOS</p>
+        </div>
+      </div>`,
+      attachments: [{
+        filename: `ZingPOS-Receipt-${order.id}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      }],
+    });
+    console.log(`[Receipt] PDF emailed to ${order.customerEmail} for order ${order.id}`);
+  } catch (e) {
+    console.error(`[Receipt] Failed to email receipt for ${order.id}:`, e.message);
+  }
+}
 
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
@@ -239,6 +446,80 @@ app.get('/api/auth', (req, res) => {
   return res.status(401).json({ success: false, error: 'Incorrect PIN' });
 });
 
+// ── Customer Auth Endpoints ───────────────────────────────────────────────────
+app.post('/api/customer/send-otp', async (req, res) => {
+  const { phone, email } = req.body;
+  if (!phone || !/^\d{10}$/.test(String(phone))) {
+    return res.status(400).json({ success: false, error: 'Enter a valid 10-digit phone number.' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+    return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
+  }
+  const otp = generateOtp();
+  otpStore.set(String(phone), { otp, email: String(email), expiresAt: Date.now() + OTP_EXPIRY_MS });
+
+  if (!process.env.GMAIL_USER) {
+    console.log(`[Auth][DEV] OTP for ${phone}: ${otp}`);
+    return res.json({ success: true, dev: true });
+  }
+  try {
+    await emailTransporter.sendMail({
+      from: `"ZingPOS" <${process.env.GMAIL_USER}>`,
+      to: String(email),
+      subject: 'Your ZingPOS OTP',
+      text: `Your OTP is: ${otp}\n\nValid for 5 minutes.`,
+      html: `<p>Your ZingPOS OTP is: <b style="font-size:24px;letter-spacing:4px">${otp}</b></p><p>Valid for 5 minutes.</p>`,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Auth] Email send failed:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to send OTP. Please try again.' });
+  }
+});
+
+app.post('/api/customer/verify-otp', (req, res) => {
+  const { phone, otp, name } = req.body;
+  if (!phone || !otp) return res.status(400).json({ success: false, error: 'Missing phone or OTP.' });
+  const record = otpStore.get(String(phone));
+  if (!record) return res.status(400).json({ success: false, error: 'OTP not found. Please request a new one.' });
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(String(phone));
+    return res.status(400).json({ success: false, error: 'OTP expired. Please request a new one.' });
+  }
+  if (record.otp !== String(otp)) {
+    return res.status(400).json({ success: false, error: 'Incorrect OTP. Please try again.' });
+  }
+  let customer = findCustomerByPhone(String(phone));
+  if (!customer) {
+    if (!name || String(name).trim().length < 2) {
+      return res.json({ success: false, requiresName: true });
+    }
+    customer = {
+      id: generateCustomerId(),
+      name: String(name).trim(),
+      phone: String(phone),
+      email: record.email,
+      createdAt: new Date().toISOString(),
+    };
+    customerDB.customers.push(customer);
+    saveCustomers();
+  }
+  otpStore.delete(String(phone));
+  const token = generateToken();
+  tokenStore.set(token, { customerId: customer.id, createdAt: Date.now() });
+  res.json({ success: true, token, customer });
+});
+
+app.get('/api/customer/me', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(401).json({ success: false, error: 'No token.' });
+  const session = tokenStore.get(String(token));
+  if (!session) return res.status(401).json({ success: false, error: 'Invalid or expired session.' });
+  const customer = customerDB.customers.find(c => c.id === session.customerId);
+  if (!customer) return res.status(401).json({ success: false, error: 'Customer not found.' });
+  res.json({ success: true, customer });
+});
+
 app.get('/api/menu', (req, res) => {
   res.json({ success: true, data: MENU });
 });
@@ -366,7 +647,7 @@ io.on('connection', (socket) => {
 
   // ── Place Order (Customer) ──
   socket.on('order:place', (data, ack) => {
-    const { sessionId, items, customerName, tableNo, applyServiceCharge, discountPercent, eventId } = data;
+    const { sessionId, items, customerName, customerEmail, customerPhone, tableNo, applyServiceCharge, discountPercent, eventId } = data;
 
     if (isDuplicate(eventId)) {
       if (typeof ack === 'function') ack({ success: true, duplicate: true, message: 'Order already placed' });
@@ -392,6 +673,8 @@ io.on('connection', (socket) => {
       id: generateOrderId(),
       sessionId,
       customerName: customerName.trim(),
+      customerEmail: (customerEmail || '').trim(),
+      customerPhone: (customerPhone || '').trim(),
       tableNo: tableNo.trim(),
       items,
       billing,
@@ -506,6 +789,7 @@ io.on('connection', (socket) => {
     if (typeof ack === 'function') ack({ success: true, order, change });
 
     console.log(`[Payment] Order paid: ${orderId}, Change: ₹${change}`);
+    emailReceipt(order);
   });
 
   // ── Apply Discount (Admin) ──
