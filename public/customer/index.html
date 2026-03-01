@@ -3113,7 +3113,10 @@ window.addEventListener('resize', debounce(() => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { step1Error.textContent = 'Enter a valid email address.'; step1Error.classList.add('visible'); return; }
       setLoading(sendBtn, true, 'Send OTP');
       try {
-        const res  = await fetch('/api/customer/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, email }) });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const res  = await fetch('/api/customer/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, email }), signal: controller.signal });
+        clearTimeout(timeout);
         const data = await res.json();
         if (data.success) {
           currentPhone = phone; currentEmail = email;
@@ -3125,7 +3128,8 @@ window.addEventListener('resize', debounce(() => {
           step1Error.textContent = data.error || 'Something went wrong.'; step1Error.classList.add('visible');
         }
       } catch(e) {
-        step1Error.textContent = 'Network error. Please try again.'; step1Error.classList.add('visible');
+        step1Error.textContent = e.name === 'AbortError' ? 'Request timed out. Please try again.' : 'Network error. Please try again.';
+        step1Error.classList.add('visible');
       }
       setLoading(sendBtn, false, 'Send OTP');
     }

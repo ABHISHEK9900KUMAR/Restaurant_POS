@@ -89,6 +89,9 @@ const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const emailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 });
 
 function generateOtp()        { return String(Math.floor(100000 + Math.random() * 900000)); }
