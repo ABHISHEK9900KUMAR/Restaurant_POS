@@ -14,6 +14,7 @@ const QRCode     = require('qrcode');
 const os         = require('os');
 const fs         = require('fs');
 const PDFDocument = require('pdfkit');
+const Database   = require('better-sqlite3');
 
 // ─── Local IP Detection ───────────────────────────────────────────────────────
 function getLocalIP() {
@@ -274,6 +275,87 @@ let orderCounter = 1000; // Starting order ID
 // occupiedTables: { 'T1': { customerName, orderId, since } }
 let occupiedTables = {};
 
+// ─── SQLite Persistence ───────────────────────────────────────────────────────
+const DB_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+const db = new Database(path.join(DB_DIR, 'restaurantos.db'));
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS orders (
+    id TEXT PRIMARY KEY,
+    tableNo TEXT NOT NULL,
+    status TEXT NOT NULL,
+    paymentStatus TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    paidAt TEXT,
+    data TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS menu_state (
+    id TEXT PRIMARY KEY,
+    inStock INTEGER NOT NULL DEFAULT 1,
+    offer REAL NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS app_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+`);
+
+// Load persisted orderCounter
+const counterRow = db.prepare("SELECT value FROM app_config WHERE key='orderCounter'").get();
+if (counterRow) orderCounter = parseInt(counterRow.value, 10);
+else db.prepare("INSERT INTO app_config (key, value) VALUES ('orderCounter', ?)").run(String(orderCounter));
+
+// Load persisted orders
+orders = db.prepare('SELECT data FROM orders').all().map(row => JSON.parse(row.data));
+
+// Apply persisted menu state
+db.prepare('SELECT id, inStock, offer FROM menu_state').all().forEach(row => {
+  const item = MENU.find(m => m.id === row.id);
+  if (item) { item.inStock = !!row.inStock; item.offer = row.offer; }
+});
+
+// Rebuild occupiedTables from active (non-completed/paid/cancelled) orders
+const INACTIVE_STATUSES = new Set(['completed', 'paid', 'cancelled']);
+orders.forEach(order => {
+  if (!INACTIVE_STATUSES.has(order.status) && order.tableNo && !occupiedTables[order.tableNo]) {
+    occupiedTables[order.tableNo] = { customerName: order.customerName, orderId: order.id, since: order.createdAt };
+  }
+});
+
+// ─── DB Write Helpers ─────────────────────────────────────────────────────────
+const _insertOrder = db.prepare(
+  'INSERT OR REPLACE INTO orders (id, tableNo, status, paymentStatus, createdAt, updatedAt, paidAt, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+);
+const _updateOrder = db.prepare(
+  'UPDATE orders SET status=?, paymentStatus=?, updatedAt=?, paidAt=?, data=? WHERE id=?'
+);
+const _upsertMenuState = db.prepare(
+  'INSERT OR REPLACE INTO menu_state (id, inStock, offer) VALUES (?, ?, ?)'
+);
+const _upsertCounter = db.prepare(
+  "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
+);
+
+function dbSaveOrder(order) {
+  _insertOrder.run(order.id, order.tableNo, order.status, order.paymentStatus,
+    order.createdAt, order.updatedAt, order.paidAt || null, JSON.stringify(order));
+}
+
+function dbUpdateOrder(order) {
+  _updateOrder.run(order.status, order.paymentStatus, order.updatedAt,
+    order.paidAt || null, JSON.stringify(order), order.id);
+}
+
+function dbSaveMenuState(itemId, inStock, offer) {
+  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer);
+}
+
+function dbSaveCounter() {
+  _upsertCounter.run(String(orderCounter));
+}
+
 function getTablesStatus() {
   const ALL_TABLES = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10'];
   return ALL_TABLES.map(tableId => {
@@ -332,6 +414,7 @@ function round2(val) {
 
 function generateOrderId() {
   orderCounter++;
+  dbSaveCounter();
   return `ORD-${orderCounter}`;
 }
 
@@ -552,6 +635,7 @@ io.on('connection', (socket) => {
     };
 
     orders.push(order);
+    dbSaveOrder(order);
 
     // Mark table as occupied
     occupiedTables[order.tableNo] = {
@@ -596,6 +680,7 @@ io.on('connection', (socket) => {
     order.status = status;
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status, timestamp: getTimestamp() });
+    dbUpdateOrder(order);
 
     io.emit('order:updated', order);
 
@@ -644,6 +729,7 @@ io.on('connection', (socket) => {
     order.change = change;
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'paid', timestamp: getTimestamp() });
+    dbUpdateOrder(order);
 
     // Free the table
     delete occupiedTables[order.tableNo];
@@ -684,6 +770,7 @@ io.on('connection', (socket) => {
       discountPercent: discount,
     });
     order.updatedAt = getTimestamp();
+    dbUpdateOrder(order);
 
     io.emit('order:updated', order);
 
@@ -708,6 +795,7 @@ io.on('connection', (socket) => {
     order.status = 'preparing';
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
+    dbUpdateOrder(order);
 
     io.emit('order:updated', order);
     if (typeof ack === 'function') ack({ success: true, order });
@@ -740,8 +828,9 @@ io.on('connection', (socket) => {
     // Mark OOS items as out of stock across the whole menu
     (oosItemIds || []).forEach(id => {
       const menuItem = MENU.find(m => m.id === id);
-      if (menuItem) menuItem.inStock = false;
+      if (menuItem) { menuItem.inStock = false; dbSaveMenuState(id, false, menuItem.offer); }
     });
+    dbUpdateOrder(order);
     io.emit('menu:updated', { menu: MENU });
 
     io.emit('order:updated', order);
@@ -775,6 +864,7 @@ io.on('connection', (socket) => {
       order.status = 'preparing';
       order.updatedAt = getTimestamp();
       order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
+      dbUpdateOrder(order);
       io.emit('order:updated', order);
       if (typeof ack === 'function') ack({ success: true, order });
       console.log(`[Order] Review proceed: ${orderId} → preparing`);
@@ -783,6 +873,7 @@ io.on('connection', (socket) => {
       order.status = 'cancelled';
       order.updatedAt = getTimestamp();
       order.statusHistory.push({ status: 'cancelled', timestamp: getTimestamp() });
+      dbUpdateOrder(order);
       delete occupiedTables[order.tableNo];
       broadcastTablesStatus();
       io.emit('order:updated', order);
@@ -793,6 +884,7 @@ io.on('connection', (socket) => {
       order.status = 'cancelled';
       order.updatedAt = getTimestamp();
       order.statusHistory.push({ status: 'cancelled', timestamp: getTimestamp() });
+      dbUpdateOrder(order);
       // Do NOT free the table — customer is reordering at same table
       io.emit('order:updated', order);
       if (typeof ack === 'function') ack({ success: true, order });
@@ -821,6 +913,7 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.inStock = !!inStock;
+    dbSaveMenuState(item.id, item.inStock, item.offer);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → ${inStock ? 'In Stock' : 'Out of Stock'}`);
@@ -831,6 +924,7 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.offer = Math.min(Math.max(0, parseFloat(offerPercent) || 0), 50);
+    dbSaveMenuState(item.id, item.inStock, item.offer);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → offer: ${item.offer}%`);
