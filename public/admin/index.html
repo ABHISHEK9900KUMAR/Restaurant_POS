@@ -517,6 +517,25 @@ header {
 .pay-btn:hover:not(:disabled) { background: #f7d46a; }
 .pay-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.pay-cash-btn, .pay-upi-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  min-height: 34px;
+}
+.pay-cash-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.pay-cash-btn:hover:not(:disabled) { border-color: var(--text-mid); }
+.pay-upi-btn { background: var(--gold); color: #0b0e14; border: none; }
+.pay-upi-btn:hover:not(:disabled) { background: #f7d46a; }
+.pay-cash-btn:disabled, .pay-upi-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cash-section { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+
 .paid-label {
   display: flex; align-items: center; gap: 6px;
   font-size: 12px; font-weight: 600;
@@ -750,6 +769,29 @@ header {
 .menu-mgr-row:last-child { border-bottom: none; }
 .menu-mgr-row:hover { background: var(--surface2); }
 .mgr-emoji { font-size: 22px; width: 30px; text-align: center; flex-shrink: 0; }
+.mgr-img-wrap {
+  position: relative; width: 48px; height: 48px;
+  border-radius: 8px; overflow: hidden; cursor: pointer; flex-shrink: 0;
+}
+.mgr-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mgr-emoji-fb {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; background: var(--surface2);
+}
+.mgr-img-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s; font-size: 16px; pointer-events: none;
+}
+.mgr-img-wrap:hover .mgr-img-overlay { opacity: 1; }
+.mgr-img-del {
+  position: absolute; top: 2px; right: 2px;
+  background: rgba(0,0,0,0.7); color: #fff; border: none;
+  border-radius: 4px; font-size: 10px; padding: 1px 4px;
+  cursor: pointer; line-height: 1.4; display: none;
+}
+.mgr-img-wrap:hover .mgr-img-del { display: block; }
 .mgr-info { flex: 1; min-width: 0; }
 .mgr-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .mgr-price { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
@@ -1070,6 +1112,7 @@ header {
     <button class="qr-btn" id="menuMgrBtn">🍽️ <span data-i18n="menu_btn">Menu</span></button>
     <button class="qr-btn" id="reportsBtn">📊 <span data-i18n="reports_btn_lbl">Reports</span></button>
     <button class="qr-btn" id="kotSettingsBtn">🖨 <span>KOT</span></button>
+    <button class="qr-btn" id="upiSettingsBtn">💳 <span data-i18n="upi_settings_title">UPI Settings</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1166,6 +1209,48 @@ header {
         <input type="text" class="reports-date-input" id="kotFooter" style="width:100%" placeholder="Thank you!" />
       </div>
       <button class="reports-load-btn" id="kotSaveBtn" style="width:100%;padding:10px" data-i18n="kot_save">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPI Settings -->
+<div class="reports-overlay" id="upiSettingsOverlay">
+  <div class="reports-panel" style="max-width:420px">
+    <div class="reports-header">
+      <div class="reports-title">💳 <span data-i18n="upi_settings_title">UPI Settings</span></div>
+      <button class="reports-close" id="upiSettingsClose">✕</button>
+    </div>
+    <div class="reports-body" style="gap:16px">
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="upi_vpa_label">UPI ID (VPA)</label>
+        <input type="text" class="reports-date-input" id="upiVpaInput" style="width:100%" placeholder="merchant@okaxis" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="upi_name_label">Display Name</label>
+        <input type="text" class="reports-date-input" id="upiNameInput" style="width:100%" placeholder="My Restaurant" />
+      </div>
+      <button class="reports-load-btn" id="upiSettingsSaveBtn" style="width:100%;padding:10px" data-i18n="kot_save">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPI Payment Modal -->
+<div class="reports-overlay" id="upiPayModal">
+  <div class="reports-panel" style="max-width:380px">
+    <div class="reports-header">
+      <div class="reports-title">📱 <span data-i18n="upi_modal_title">UPI Payment</span></div>
+      <button class="reports-close" id="upiPayClose">✕</button>
+    </div>
+    <div class="reports-body" style="gap:16px;align-items:center;text-align:center">
+      <div id="upiPayAmount" style="font-size:28px;font-weight:700;color:var(--gold)"></div>
+      <div id="upiPayWarning" style="display:none;background:var(--surface2);border:1px solid var(--gold);border-radius:8px;padding:12px;color:var(--gold);font-size:14px"></div>
+      <div id="upiQrWrap" style="display:none">
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:10px" data-i18n="upi_scan_prompt">Ask customer to scan</div>
+        <img id="upiQrImg" src="" style="width:220px;height:220px;border-radius:8px;border:2px solid var(--border)" />
+        <div id="upiVpaText" style="font-size:13px;color:var(--text-mid);margin-top:8px;word-break:break-all"></div>
+      </div>
+      <button class="reports-load-btn" id="upiConfirmBtn" style="width:100%;padding:10px;display:none" data-i18n="upi_confirm_btn">Payment Received ✓</button>
+      <button style="width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-mid);cursor:pointer;font-size:14px" id="upiPayCancel" data-i18n="upi_cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -1279,6 +1364,17 @@ const TRANSLATIONS = {
     kot_80mm: '80mm (Standard)', kot_58mm: '58mm (Narrow)',
     kot_autoprint_lbl: 'Auto-print KOT on Accept',
     kot_footer_lbl: 'Footer Text', kot_save: 'Save Settings', kot_saved: 'KOT settings saved',
+    // UPI Payment
+    pay_cash: 'Cash', pay_upi: 'UPI',
+    upi_settings_title: 'UPI Settings',
+    upi_vpa_label: 'UPI ID (VPA)', upi_name_label: 'Display Name',
+    upi_settings_saved: 'UPI settings saved',
+    upi_modal_title: 'UPI Payment',
+    upi_scan_prompt: 'Ask customer to scan',
+    upi_confirm_btn: 'Payment Received ✓',
+    upi_payment_received: 'UPI payment confirmed!',
+    upi_not_configured: 'UPI ID not set. Open UPI Settings first.',
+    upi_cancel: 'Cancel',
     // Activity strip & live carts
     no_active_customers: 'No active customers',
     live_carts_btn: '👁 Live Carts', browsing_now: 'Customers Browsing Now',
@@ -1287,6 +1383,7 @@ const TRANSLATIONS = {
     report_loading: 'Loading…', report_load_fail: 'Failed to load report:',
     // Menu manager
     in_stock: '✅ In Stock', out_of_stock: '❌ Out of Stock', pct_off: '% off',
+    img_uploaded: 'Photo uploaded', img_upload_fail: 'Upload failed', img_removed: 'Photo removed',
     // Reports
     report_summary: 'Summary', report_total_revenue: 'Total Revenue',
     report_paid_orders: 'paid orders', report_orders_count: 'Orders',
@@ -1363,6 +1460,17 @@ const TRANSLATIONS = {
     kot_80mm: '80mm (सामान्य)', kot_58mm: '58mm (संकरा)',
     kot_autoprint_lbl: 'स्वीकार पर KOT प्रिंट करें',
     kot_footer_lbl: 'फुटर टेक्स्ट', kot_save: 'सेटिंग सहेजें', kot_saved: 'KOT सेटिंग सहेजी',
+    // UPI Payment
+    pay_cash: 'नकद', pay_upi: 'UPI',
+    upi_settings_title: 'UPI सेटिंग',
+    upi_vpa_label: 'UPI ID (VPA)', upi_name_label: 'प्रदर्शन नाम',
+    upi_settings_saved: 'UPI सेटिंग सहेजी',
+    upi_modal_title: 'UPI भुगतान',
+    upi_scan_prompt: 'ग्राहक से स्कैन करवाएं',
+    upi_confirm_btn: 'भुगतान मिला ✓',
+    upi_payment_received: 'UPI भुगतान पुष्ट!',
+    upi_not_configured: 'UPI ID सेट नहीं। पहले UPI सेटिंग खोलें।',
+    upi_cancel: 'रद्द करें',
     // Activity strip & live carts
     no_active_customers: 'कोई सक्रिय ग्राहक नहीं',
     live_carts_btn: '👁 लाइव कार्ट', browsing_now: 'अभी ब्राउज़ कर रहे हैं',
@@ -1371,6 +1479,7 @@ const TRANSLATIONS = {
     report_loading: 'लोड हो रहा है…', report_load_fail: 'रिपोर्ट लोड नहीं हुई:',
     // Menu manager
     in_stock: '✅ स्टॉक में', out_of_stock: '❌ स्टॉक खत्म', pct_off: '% छूट',
+    img_uploaded: 'फोटो अपलोड हुई', img_upload_fail: 'अपलोड विफल', img_removed: 'फोटो हटाई',
     // Reports
     report_summary: 'सारांश', report_total_revenue: 'कुल राजस्व',
     report_paid_orders: 'भुगतान ऑर्डर', report_orders_count: 'ऑर्डर',
@@ -1755,9 +1864,12 @@ function cardHTML(order) {
     ? `<div class="paid-label">${t('paid_label')} ${changeInfo}</div>
        <button class="print-btn" data-action="print">${t('print_receipt')}</button>`
     : `<div class="payment-section">
-        <input type="number" class="cash-input" placeholder="${t('cash_placeholder')}" min="${b.total || 0}" step="0.01"
-          ${order.status !== 'ready' && order.status !== 'completed' ? `disabled title="${t('mark_ready_first')}"` : ''} />
-        <button class="pay-btn" ${order.status !== 'ready' && order.status !== 'completed' ? 'disabled' : ''}>${t('collect')}</button>
+        <button class="pay-cash-btn" ${order.status !== 'ready' && order.status !== 'completed' ? `disabled title="${t('mark_ready_first')}"` : ''}>💵 ${t('pay_cash')}</button>
+        <button class="pay-upi-btn"  ${order.status !== 'ready' && order.status !== 'completed' ? `disabled title="${t('mark_ready_first')}"` : ''}>📱 ${t('pay_upi')}</button>
+      </div>
+      <div class="cash-section" style="display:none">
+        <input type="number" class="cash-input" placeholder="${t('cash_placeholder')}" min="${b.total || 0}" step="0.01" />
+        <button class="pay-btn">${t('collect')}</button>
       </div>`;
 
   // ── OOS flag section (only on pending) ──
@@ -1928,7 +2040,22 @@ function bindCardEvents(card, order) {
     printBtn.addEventListener('click', () => printReceipt(order));
   }
 
-  // Payment
+  // Cash toggle button
+  const payCashBtn = card.querySelector('.pay-cash-btn');
+  const cashSection = card.querySelector('.cash-section');
+  if (payCashBtn && cashSection) {
+    payCashBtn.addEventListener('click', () => {
+      cashSection.style.display = cashSection.style.display === 'none' ? 'flex' : 'none';
+    });
+  }
+
+  // UPI button
+  const payUpiBtn = card.querySelector('.pay-upi-btn');
+  if (payUpiBtn) {
+    payUpiBtn.addEventListener('click', () => openUpiModal(order));
+  }
+
+  // Cash pay button
   const payBtn = card.querySelector('.pay-btn');
   const cashInput = card.querySelector('.cash-input');
   if (payBtn && cashInput) {
@@ -2494,7 +2621,14 @@ function renderMenuMgrList(cat) {
     const isIn   = item.inStock !== false;
     const offer  = item.offer || 0;
     row.innerHTML = `
-      <div class="mgr-emoji">${item.emoji}</div>
+      <div class="mgr-img-wrap" data-id="${item.id}">
+        ${item.image
+          ? `<img src="${item.image}" alt="" />`
+          : `<div class="mgr-emoji-fb">${item.emoji}</div>`}
+        <div class="mgr-img-overlay">📷</div>
+        ${item.image ? `<button class="mgr-img-del" data-del="${item.id}">✕</button>` : ''}
+        <input type="file" class="mgr-img-input" accept="image/*" style="display:none" data-id="${item.id}" />
+      </div>
       <div class="mgr-info">
         <div class="mgr-name">${iName(item)}</div>
         <div class="mgr-price">₹${item.price}${offer > 0 ? ` <span style="color:var(--red);font-weight:700">→ ₹${Math.round(item.price*(1-offer/100))}</span>` : ''}</div>
@@ -2536,6 +2670,68 @@ document.getElementById('menuMgrClose').addEventListener('click', closeMenuMgr);
 document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('menuMgrOverlay')) closeMenuMgr();
 });
+
+// ── Menu image upload/delete (delegated once on the persistent list container) ──
+(function() {
+  const list = document.getElementById('menuMgrList');
+
+  // Click on wrap → trigger file input (ignore clicks on delete button)
+  list.addEventListener('click', e => {
+    const wrap = e.target.closest('.mgr-img-wrap');
+    if (!wrap || e.target.closest('.mgr-img-del')) return;
+    wrap.querySelector('.mgr-img-input').click();
+  });
+
+  // Compress image client-side before upload (max 1200px wide, JPEG 0.82)
+  function compressImage(file) {
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.82);
+      };
+      img.src = url;
+    });
+  }
+
+  // File selected → compress → upload
+  list.addEventListener('change', e => {
+    const input = e.target.closest('.mgr-img-input');
+    if (!input || !input.files[0]) return;
+    compressImage(input.files[0]).then(blob => {
+      const fd = new FormData();
+      fd.append('image', blob, 'photo.jpg');
+      fetch(`/api/admin/menu/${input.dataset.id}/image`, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) showToast(t('img_uploaded'), 'success');
+          else showToast(res.error || t('img_upload_fail'), 'error');
+        })
+        .catch(() => showToast(t('img_upload_fail'), 'error'));
+    });
+  });
+
+  // Delete button → remove image
+  list.addEventListener('click', e => {
+    const del = e.target.closest('.mgr-img-del');
+    if (!del) return;
+    e.stopPropagation();
+    fetch(`/api/admin/menu/${del.dataset.del}/image`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) showToast(t('img_removed'), 'success');
+        else showToast(res.error, 'error');
+      })
+      .catch(() => showToast('Delete failed', 'error'));
+  });
+}());
 
 // ── Daily Reports ─────────────────────────────────────
 (function() {
@@ -3043,6 +3239,108 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   closeBtn.addEventListener('click', closeKot);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeKot(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeKot(); });
+})();
+
+// ── UPI Settings ─────────────────────────────────────
+(function() {
+  const overlay = document.getElementById('upiSettingsOverlay');
+  const openBtn = document.getElementById('upiSettingsBtn');
+  const closeBtn = document.getElementById('upiSettingsClose');
+  const saveBtn = document.getElementById('upiSettingsSaveBtn');
+  const vpaEl   = document.getElementById('upiVpaInput');
+  const nameEl  = document.getElementById('upiNameInput');
+
+  function openUpiSettings() {
+    vpaEl.value  = localStorage.getItem('zingpos-upi-vpa')  || '';
+    nameEl.value = localStorage.getItem('zingpos-upi-name') || '';
+    overlay.classList.add('open');
+  }
+  function closeUpiSettings() { overlay.classList.remove('open'); }
+
+  saveBtn.addEventListener('click', () => {
+    const vpa  = vpaEl.value.trim();
+    const name = nameEl.value.trim() || 'Restaurant';
+    localStorage.setItem('zingpos-upi-vpa',  vpa);
+    localStorage.setItem('zingpos-upi-name', name);
+    socket.emit('config:update_upi', { upiVpa: vpa, upiName: name }, () => {
+      showToast(t('upi_settings_saved'), 'success');
+    });
+    closeUpiSettings();
+  });
+
+  openBtn.addEventListener('click', openUpiSettings);
+  closeBtn.addEventListener('click', closeUpiSettings);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeUpiSettings(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeUpiSettings(); });
+})();
+
+// ── UPI Payment Modal ─────────────────────────────────
+let _upiActiveOrder = null;
+
+function openUpiModal(order) {
+  _upiActiveOrder = order;
+  const vpa    = localStorage.getItem('zingpos-upi-vpa')  || '';
+  const name   = localStorage.getItem('zingpos-upi-name') || 'Restaurant';
+  const amount = (order.billing && order.billing.total) ? order.billing.total.toFixed(2) : '0.00';
+
+  document.getElementById('upiPayAmount').textContent = '₹' + amount;
+
+  const warning    = document.getElementById('upiPayWarning');
+  const qrWrap     = document.getElementById('upiQrWrap');
+  const confirmBtn = document.getElementById('upiConfirmBtn');
+  const vpaText    = document.getElementById('upiVpaText');
+  const qrImg      = document.getElementById('upiQrImg');
+
+  if (!vpa) {
+    warning.textContent    = t('upi_not_configured');
+    warning.style.display  = 'block';
+    qrWrap.style.display   = 'none';
+    confirmBtn.style.display = 'none';
+  } else {
+    warning.style.display  = 'none';
+    qrWrap.style.display   = 'block';
+    confirmBtn.style.display = 'block';
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}&am=${amount}&tn=${encodeURIComponent('Order ' + order.id)}&cu=INR`;
+    qrImg.src     = '/api/qr?url=' + encodeURIComponent(upiUrl);
+    vpaText.textContent = vpa;
+  }
+
+  document.getElementById('upiPayModal').classList.add('open');
+}
+
+(function() {
+  const modal      = document.getElementById('upiPayModal');
+  const closeBtn   = document.getElementById('upiPayClose');
+  const cancelBtn  = document.getElementById('upiPayCancel');
+  const confirmBtn = document.getElementById('upiConfirmBtn');
+
+  function closeModal() {
+    modal.classList.remove('open');
+    _upiActiveOrder = null;
+    confirmBtn.disabled = false;
+  }
+
+  confirmBtn.addEventListener('click', () => {
+    if (!_upiActiveOrder) return;
+    confirmBtn.disabled = true;
+    socket.emit('order:payment-upi', {
+      orderId: _upiActiveOrder.id,
+      eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+    }, (res) => {
+      if (res.success) {
+        showToast(t('upi_payment_received'), 'success');
+        closeModal();
+      } else {
+        showToast(res.error || t('payment_failed'), 'error');
+        confirmBtn.disabled = false;
+      }
+    });
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 })();
 
 // ── Theme Toggle ──────────────────────────────────────

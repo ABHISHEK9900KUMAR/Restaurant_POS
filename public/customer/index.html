@@ -233,6 +233,7 @@ header {
   position: relative; user-select: none;
   -webkit-tap-highlight-color: transparent;
   active-scale: 0.97;
+  overflow: hidden;
 }
 .menu-item:active { transform: scale(0.97); }
 @media (hover: hover) {
@@ -244,6 +245,25 @@ header {
 }
 .menu-item.flash { animation: cartFlash 0.4s ease-out; }
 .item-emoji  { font-size: 32px; line-height: 1; }
+.item-img-wrap {
+  width: calc(100% + 32px);
+  height: 160px;
+  margin: -16px -16px 12px -16px;
+  overflow: hidden;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.item-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform 0.35s ease;
+  pointer-events: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+@media (hover: hover) {
+  .menu-item:hover .item-img-wrap img { transform: scale(1.05); }
+}
 .item-name   { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; }
 .item-price  { font-size: 16px; font-weight: 700; color: var(--gold); margin-top: auto; }
 .item-tag-icons {
@@ -887,7 +907,22 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 .tracker-total-row {
   width: 100%; display: flex; justify-content: space-between;
   font-size: 14px; font-weight: 700; color: var(--text);
-  padding: 0 4px; margin-bottom: 32px;
+  padding: 0 4px; margin-bottom: 16px;
+}
+#trackerPaySection { width: 100%; margin-bottom: 24px; }
+.tracker-upi-btn {
+  display: block; width: 100%; padding: 15px;
+  background: var(--gold); color: #0d0d0d;
+  border-radius: var(--radius); text-align: center;
+  font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 700;
+  text-decoration: none; letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition);
+}
+.tracker-upi-btn:active { background: #f7d46a; }
+.tracker-upi-hint {
+  text-align: center; font-size: 12px; color: var(--text-dim);
+  margin-top: 8px;
 }
 
 /* new order button */
@@ -1398,6 +1433,10 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 
       <div class="tracker-items-card" id="trackerItems"></div>
       <div class="tracker-total-row" id="trackerTotal"></div>
+      <div id="trackerPaySection" style="display:none">
+        <a id="trackerUpiBtn" class="tracker-upi-btn" href="#"></a>
+        <div class="tracker-upi-hint" id="trackerUpiHint"></div>
+      </div>
     </div>
 
     <!-- Receipt Panel -->
@@ -1460,7 +1499,9 @@ const TRANSLATIONS = {
     being_prepared: 'Being Prepared',
     being_prepared_sub: 'Your order is being freshly made just for you!',
     ready_collect: 'Ready to Collect!',
-    ready_collect_sub: 'Your order is ready. Please come collect it!',
+    ready_collect_sub: 'Your order is ready — pay below and come collect it!',
+    pay_via_upi: 'Pay via UPI',
+    upi_hint: 'Opens GPay / PhonePe / Paytm',
     order_complete: 'Order Complete!',
     order_complete_sub: 'Thank you for dining with us. Enjoy your meal!',
     all_done: 'All Done!',
@@ -1557,7 +1598,9 @@ const TRANSLATIONS = {
     being_prepared: 'तैयार हो रहा है',
     being_prepared_sub: 'आपका ऑर्डर खास आपके लिए बनाया जा रहा है!',
     ready_collect: 'लेने के लिए तैयार!',
-    ready_collect_sub: 'आपका ऑर्डर तैयार है। कृपया आकर ले जाएं!',
+    ready_collect_sub: 'आपका ऑर्डर तैयार है — नीचे भुगतान करें और ले जाएं!',
+    pay_via_upi: 'UPI से भुगतान करें',
+    upi_hint: 'GPay / PhonePe / Paytm खुलेगा',
     order_complete: 'ऑर्डर पूरा हुआ!',
     order_complete_sub: 'हमारे साथ खाने के लिए धन्यवाद। खाना का आनंद लें!',
     all_done: 'सब हो गया!',
@@ -1708,6 +1751,7 @@ function setLang(lang) {
     updateTrackerStatus(status);
     renderTrackerItems(state.trackingOrder);
     renderDigitalReceipt(state.trackingOrder);
+    updatePaySection();
   }
 }
 
@@ -1801,6 +1845,7 @@ function restoreTracker(order) {
   renderDigitalReceipt(order);
   const status = order.paymentStatus === 'paid' ? 'paid' : order.status;
   updateTrackerStatus(status);
+  updatePaySection();
   const tracker = document.getElementById('order-tracker');
   tracker.style.animation = 'none';
   tracker.classList.add('visible');
@@ -1937,7 +1982,9 @@ function renderMenu() {
       card.id = 'card-' + item.id;
       card.innerHTML = `
         ${hasOffer ? `<div class="item-offer-badge">${item.offer}% ${t('offer_off')}</div>` : ''}
-        <div class="item-emoji">${item.emoji}</div>
+        ${item.image
+          ? `<div class="item-img-wrap"><img src="${item.image}" alt="${item.name}" loading="lazy"></div>`
+          : `<div class="item-emoji">${item.emoji}</div>`}
         <div class="item-name">${iName(item)}</div>
         <div class="item-price${hasOffer ? ' offer' : ''}">
           ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}
@@ -2064,8 +2111,8 @@ function initLongPress(card, item) {
   card.addEventListener('pointercancel', end);
   card.addEventListener('pointerleave', end);
 
-  // Prevent context menu on long press (mobile)
-  card.addEventListener('contextmenu', e => { if (_lpActive) e.preventDefault(); });
+  // Prevent context menu on long press (mobile) — always block on cards with nutrition
+  card.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 function showNutritionPopup(item) {
@@ -2470,12 +2517,20 @@ socket.on('order:updated', (updated) => {
 
   _saveOrder(updated);
   updateTrackerStatus(status);
+  updatePaySection();
+});
+
+socket.on('config:updated', (cfg) => {
+  if (cfg.upiVpa  !== undefined) state.config.upiVpa  = cfg.upiVpa;
+  if (cfg.upiName !== undefined) state.config.upiName = cfg.upiName;
+  updatePaySection();
 });
 
 socket.on('order:paid', ({ orderId }) => {
   if (state.trackingOrder && orderId === state.trackingOrder.id) {
     _clearOrder();
     updateTrackerStatus('paid');
+    updatePaySection();
   }
 });
 
@@ -2600,6 +2655,31 @@ function renderTrackerItems(order) {
   `).join('');
   document.getElementById('trackerTotal').innerHTML =
     `<span>${t('total')}</span><span>${fmt(order.billing?.total)}</span>`;
+}
+
+function updatePaySection() {
+  const section = document.getElementById('trackerPaySection');
+  const btn     = document.getElementById('trackerUpiBtn');
+  const hint    = document.getElementById('trackerUpiHint');
+  if (!section || !btn) return;
+
+  const order = state.trackingOrder;
+  const vpa   = state.config && state.config.upiVpa;
+  const show  = order && vpa
+    && (order.status === 'ready' || order.status === 'completed')
+    && order.paymentStatus !== 'paid';
+
+  if (show) {
+    const amount = order.billing && order.billing.total ? order.billing.total.toFixed(2) : '0.00';
+    const name   = (state.config && state.config.upiName) || 'Restaurant';
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}&am=${amount}&tn=${encodeURIComponent('Order ' + order.id)}&cu=INR`;
+    btn.href        = upiUrl;
+    btn.textContent = t('pay_via_upi') + ' · ₹' + amount;
+    if (hint) hint.textContent = t('upi_hint');
+    section.style.display = 'block';
+  } else {
+    section.style.display = 'none';
+  }
 }
 
 function updateTrackerStatus(status) {

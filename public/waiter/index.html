@@ -250,9 +250,25 @@ header {
   display: flex; flex-direction: column; gap: 5px;
   position: relative; user-select: none;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
 .menu-item:active { transform: scale(0.97); }
 .item-emoji  { font-size: 26px; line-height: 1; }
+.item-img-wrap {
+  width: calc(100% + 26px);
+  height: 150px;
+  margin: -13px -13px 10px -13px;
+  overflow: hidden;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.item-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  pointer-events: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
 .item-name   { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.3; }
 .item-price  { font-size: 15px; font-weight: 700; color: var(--gold); margin-top: auto; }
 .item-popular {
@@ -1407,7 +1423,9 @@ function renderMenu() {
       card.id = 'card-' + item.id;
       card.innerHTML = `
         ${hasOffer ? `<div class="item-offer-badge">${item.offer}% ${t('offer_off')}</div>` : ''}
-        <div class="item-emoji">${item.emoji}</div>
+        ${item.image
+          ? `<div class="item-img-wrap"><img src="${item.image}" alt="${item.name}" loading="lazy"></div>`
+          : `<div class="item-emoji">${item.emoji}</div>`}
         <div class="item-name">${iName(item)}</div>
         <div class="item-price${hasOffer ? ' offer' : ''}">
           ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}

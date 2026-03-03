@@ -15,6 +15,8 @@ const os         = require('os');
 const fs         = require('fs');
 const PDFDocument = require('pdfkit');
 const Database   = require('better-sqlite3');
+const multer     = require('multer');
+const sharp      = require('sharp');
 
 // ─── Local IP Detection ───────────────────────────────────────────────────────
 function getLocalIP() {
@@ -55,6 +57,7 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 const CONFIG = {
@@ -63,7 +66,12 @@ const CONFIG = {
   MAX_DISCOUNT_PERCENT: 30,  // Max 30% discount
   CART_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
   PORT: process.env.PORT || 3000,
+  UPI_VPA: process.env.UPI_VPA || '',        // e.g. "merchant@okaxis"
+  UPI_NAME: process.env.UPI_NAME || 'Restaurant',
 };
+
+const UPLOADS_DIR = path.join(__dirname, 'public/uploads/menu');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 
 // ─── PDF Receipt Generator ────────────────────────────────────────────────────
@@ -477,13 +485,16 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS menu_state (
     id TEXT PRIMARY KEY,
     inStock INTEGER NOT NULL DEFAULT 1,
-    offer REAL NOT NULL DEFAULT 0
+    offer REAL NOT NULL DEFAULT 0,
+    image TEXT
   );
   CREATE TABLE IF NOT EXISTS app_config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
 `);
+
+try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
 
 // Load persisted orderCounter
 const counterRow = db.prepare("SELECT value FROM app_config WHERE key='orderCounter'").get();
@@ -494,9 +505,9 @@ else db.prepare("INSERT INTO app_config (key, value) VALUES ('orderCounter', ?)"
 orders = db.prepare('SELECT data FROM orders').all().map(row => JSON.parse(row.data));
 
 // Apply persisted menu state
-db.prepare('SELECT id, inStock, offer FROM menu_state').all().forEach(row => {
+db.prepare('SELECT id, inStock, offer, image FROM menu_state').all().forEach(row => {
   const item = MENU.find(m => m.id === row.id);
-  if (item) { item.inStock = !!row.inStock; item.offer = row.offer; }
+  if (item) { item.inStock = !!row.inStock; item.offer = row.offer; item.image = row.image || null; }
 });
 
 // Rebuild occupiedTables from active (non-completed/paid/cancelled) orders
@@ -515,7 +526,7 @@ const _updateOrder = db.prepare(
   'UPDATE orders SET status=?, paymentStatus=?, updatedAt=?, paidAt=?, data=? WHERE id=?'
 );
 const _upsertMenuState = db.prepare(
-  'INSERT OR REPLACE INTO menu_state (id, inStock, offer) VALUES (?, ?, ?)'
+  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image) VALUES (?, ?, ?, ?)'
 );
 const _upsertCounter = db.prepare(
   "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
@@ -531,8 +542,8 @@ function dbUpdateOrder(order) {
     order.paidAt || null, JSON.stringify(order), order.id);
 }
 
-function dbSaveMenuState(itemId, inStock, offer) {
-  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer);
+function dbSaveMenuState(itemId, inStock, offer, image) {
+  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer, image || null);
 }
 
 function dbSaveCounter() {
@@ -666,6 +677,8 @@ app.get('/api/config', (req, res) => {
       gstRate: CONFIG.GST_RATE,
       serviceChargeRate: CONFIG.SERVICE_CHARGE_RATE,
       maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
+      upiVpa: CONFIG.UPI_VPA,
+      upiName: CONFIG.UPI_NAME,
     },
   });
 });
@@ -761,6 +774,8 @@ io.on('connection', (socket) => {
       gstRate: CONFIG.GST_RATE,
       serviceChargeRate: CONFIG.SERVICE_CHARGE_RATE,
       maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
+      upiVpa: CONFIG.UPI_VPA,
+      upiName: CONFIG.UPI_NAME,
     },
   });
 
@@ -949,6 +964,61 @@ io.on('connection', (socket) => {
     emailReceipt(order);
   });
 
+  // ── Update UPI Config (Admin) ──
+  socket.on('config:update_upi', (data, ack) => {
+    CONFIG.UPI_VPA  = (data.upiVpa  || '').trim();
+    CONFIG.UPI_NAME = (data.upiName || 'Restaurant').trim();
+    io.emit('config:updated', { upiVpa: CONFIG.UPI_VPA, upiName: CONFIG.UPI_NAME });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log(`[Config] UPI updated: ${CONFIG.UPI_VPA}`);
+  });
+
+  // ── Process UPI Payment (Admin) ──
+  socket.on('order:payment-upi', (data, ack) => {
+    const { orderId, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    if (order.paymentStatus === 'paid') {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order already paid' });
+      return;
+    }
+
+    if (order.status !== 'completed' && order.status !== 'ready') {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order must be Ready or Completed before payment' });
+      return;
+    }
+
+    order.paymentStatus = 'paid';
+    order.status = 'completed';
+    order.paidAt = getTimestamp();
+    order.paymentMethod = 'upi';
+    order.updatedAt = getTimestamp();
+    order.statusHistory.push({ status: 'paid', timestamp: getTimestamp() });
+    dbUpdateOrder(order);
+
+    // Free the table
+    delete occupiedTables[order.tableNo];
+    broadcastTablesStatus();
+
+    io.emit('order:updated', order);
+    io.emit('order:paid', { orderId, change: 0, total: order.billing.total });
+
+    if (typeof ack === 'function') ack({ success: true, order });
+
+    console.log(`[Payment] UPI Order paid: ${orderId}`);
+    emailReceipt(order);
+  });
+
   // ── Apply Discount (Admin) ──
   socket.on('order:apply_discount', (data, ack) => {
     const { orderId, discountPercent, eventId } = data;
@@ -1033,7 +1103,7 @@ io.on('connection', (socket) => {
     // Mark OOS items as out of stock across the whole menu
     (oosItemIds || []).forEach(id => {
       const menuItem = MENU.find(m => m.id === id);
-      if (menuItem) { menuItem.inStock = false; dbSaveMenuState(id, false, menuItem.offer); }
+      if (menuItem) { menuItem.inStock = false; dbSaveMenuState(id, false, menuItem.offer, menuItem.image); }
     });
     dbUpdateOrder(order);
     io.emit('menu:updated', { menu: MENU });
@@ -1118,7 +1188,7 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.inStock = !!inStock;
-    dbSaveMenuState(item.id, item.inStock, item.offer);
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → ${inStock ? 'In Stock' : 'Out of Stock'}`);
@@ -1129,7 +1199,7 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.offer = Math.min(Math.max(0, parseFloat(offerPercent) || 0), 50);
-    dbSaveMenuState(item.id, item.inStock, item.offer);
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → offer: ${item.offer}%`);
@@ -1148,6 +1218,45 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`[Socket] Disconnected: ${socket.id}`);
   });
+});
+
+// ─── Menu Image Upload ────────────────────────────────────────────────────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Images only'));
+  },
+});
+
+app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) => {
+  const item = MENU.find(m => m.id === req.params.id);
+  if (!item) return res.json({ success: false, error: 'Item not found' });
+  if (!req.file) return res.json({ success: false, error: 'No file uploaded' });
+
+  const filename = `${req.params.id}.jpg`;
+  await sharp(req.file.buffer)
+    .resize(600, 400, { fit: 'cover' })
+    .jpeg({ quality: 82 })
+    .toFile(path.join(UPLOADS_DIR, filename));
+
+  item.image = `/uploads/menu/${filename}`;
+  dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+  io.emit('menu:updated', { menu: MENU });
+  res.json({ success: true, imageUrl: item.image });
+});
+
+app.delete('/api/admin/menu/:id/image', (req, res) => {
+  const item = MENU.find(m => m.id === req.params.id);
+  if (!item) return res.json({ success: false, error: 'Item not found' });
+
+  try { fs.unlinkSync(path.join(UPLOADS_DIR, `${req.params.id}.jpg`)); } catch (_) {}
+
+  item.image = null;
+  dbSaveMenuState(item.id, item.inStock, item.offer, null);
+  io.emit('menu:updated', { menu: MENU });
+  res.json({ success: true });
 });
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
