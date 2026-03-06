@@ -1660,6 +1660,8 @@ socket.on('admin:cart_update', (data) => {
 // New order from a customer
 socket.on('order:new', (order) => {
   state.orders.unshift(order);
+  // Remove the cart for this table immediately (admin:cart_update arrives async)
+  state.activeCarts = state.activeCarts.filter(c => c.tableNo !== order.tableNo);
   // Auto-close live carts and switch to pending when an order lands
   if (state.activeFilter === 'live-carts') {
     state.hadActiveCarts = false;
@@ -2006,6 +2008,7 @@ function bindCardEvents(card, order) {
       }, (res) => {
         if (res.success) {
           if (choice === 'cancel') showToast(t('order_cancelled_t'), 'info');
+          if (choice === 'proceed' && localStorage.getItem('zingpos-kot-autoprint') === 'true') printKOT(res.order);
         } else {
           showToast(res.error || t('failed_status'), 'error');
           btn.disabled = false;
