@@ -19,6 +19,12 @@ const multer     = require('multer');
 const sharp      = require('sharp');
 const cloudinary = require('cloudinary').v2;
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 // ─── Local IP Detection ───────────────────────────────────────────────────────
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -1238,12 +1244,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── Cloudinary Config ────────────────────────────────────────────────────────
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 // ─── Menu Image Upload ────────────────────────────────────────────────────────
 const upload = multer({
