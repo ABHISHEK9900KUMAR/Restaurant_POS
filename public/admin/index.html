@@ -2277,11 +2277,12 @@ function printKOT(order) {
   document.body.appendChild(iframe);
   const doc = iframe.contentDocument || iframe.contentWindow.document;
   doc.open(); doc.write(html); doc.close();
-  iframe.contentWindow.onload = () => {
+  // Use setTimeout instead of onload — onload often fires before handler is attached
+  setTimeout(() => {
     iframe.contentWindow.focus();
     iframe.contentWindow.print();
-    setTimeout(() => iframe.remove(), 1000);
-  };
+    setTimeout(() => iframe.remove(), 1500);
+  }, 300);
 }
 
 // ─── Filters ─────────────────────────────────────────────
