@@ -926,6 +926,12 @@ io.on('connection', (socket) => {
     order.statusHistory.push({ status, timestamp: getTimestamp() });
     dbUpdateOrder(order);
 
+    // Auto-free table when order is completed or cancelled
+    if (status === 'completed' || status === 'cancelled') {
+      delete occupiedTables[order.tableNo];
+      broadcastTablesStatus();
+    }
+
     io.emit('order:updated', order);
 
     if (typeof ack === 'function') ack({ success: true, order });
@@ -1201,6 +1207,14 @@ io.on('connection', (socket) => {
       return;
     }
     delete occupiedTables[tableId];
+    // Also clear any active carts for this table
+    Object.keys(activeCarts).forEach(sid => {
+      if (activeCarts[sid].tableNo === tableId) {
+        clearCartTimeout(sid);
+        delete activeCarts[sid];
+      }
+    });
+    io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
     broadcastTablesStatus();
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Table] Manually freed: ${tableId}`);
