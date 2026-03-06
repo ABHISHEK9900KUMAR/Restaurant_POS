@@ -17,6 +17,7 @@ const PDFDocument = require('pdfkit');
 const Database   = require('better-sqlite3');
 const multer     = require('multer');
 const sharp      = require('sharp');
+const cloudinary = require('cloudinary').v2;
 
 // ─── Local IP Detection ───────────────────────────────────────────────────────
 function getLocalIP() {
@@ -1220,6 +1221,13 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── Cloudinary Config ────────────────────────────────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 // ─── Menu Image Upload ────────────────────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -1235,23 +1243,34 @@ app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) =
   if (!item) return res.json({ success: false, error: 'Item not found' });
   if (!req.file) return res.json({ success: false, error: 'No file uploaded' });
 
-  const filename = `${req.params.id}.jpg`;
-  await sharp(req.file.buffer)
-    .resize(600, 400, { fit: 'cover' })
-    .jpeg({ quality: 82 })
-    .toFile(path.join(UPLOADS_DIR, filename));
+  try {
+    const resizedBuffer = await sharp(req.file.buffer)
+      .resize(600, 400, { fit: 'cover' })
+      .jpeg({ quality: 82 })
+      .toBuffer();
 
-  item.image = `/uploads/menu/${filename}`;
-  dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
-  io.emit('menu:updated', { menu: MENU });
-  res.json({ success: true, imageUrl: item.image });
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { public_id: `zingpos-menu/${req.params.id}`, overwrite: true, resource_type: 'image' },
+        (err, result) => err ? reject(err) : resolve(result)
+      ).end(resizedBuffer);
+    });
+
+    item.image = result.secure_url;
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+    io.emit('menu:updated', { menu: MENU });
+    res.json({ success: true, imageUrl: item.image });
+  } catch (e) {
+    console.error('Image upload error:', e);
+    res.json({ success: false, error: 'Upload failed' });
+  }
 });
 
-app.delete('/api/admin/menu/:id/image', (req, res) => {
+app.delete('/api/admin/menu/:id/image', async (req, res) => {
   const item = MENU.find(m => m.id === req.params.id);
   if (!item) return res.json({ success: false, error: 'Item not found' });
 
-  try { fs.unlinkSync(path.join(UPLOADS_DIR, `${req.params.id}.jpg`)); } catch (_) {}
+  try { await cloudinary.uploader.destroy(`zingpos-menu/${req.params.id}`); } catch (_) {}
 
   item.image = null;
   dbSaveMenuState(item.id, item.inStock, item.offer, null);
