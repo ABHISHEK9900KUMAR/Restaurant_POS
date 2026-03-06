@@ -1679,6 +1679,10 @@ socket.on('order:updated', (updatedOrder) => {
     state.orders.unshift(updatedOrder);
   }
   renderAll();
+  // Auto-print KOT when customer responds "prepare the rest" to an OOS ping
+  if (updatedOrder.reviewResponse === 'proceed' && localStorage.getItem('zingpos-kot-autoprint') === 'true') {
+    printKOT(updatedOrder);
+  }
 });
 
 function updateConnectionUI(connected, reconnecting = false) {
