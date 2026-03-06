@@ -511,6 +511,23 @@ db.prepare('SELECT id, inStock, offer, image FROM menu_state').all().forEach(row
   if (item) { item.inStock = !!row.inStock; item.offer = row.offer; item.image = row.image || null; }
 });
 
+// Restore menu images from Cloudinary (handles ephemeral filesystem on Render)
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.api.resources({ type: 'upload', prefix: 'zingpos-menu/', max_results: 100 })
+    .then(result => {
+      result.resources.forEach(resource => {
+        const itemId = resource.public_id.replace('zingpos-menu/', '');
+        const item = MENU.find(m => m.id === itemId);
+        if (item && !item.image) {
+          item.image = resource.secure_url;
+          dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+        }
+      });
+      console.log(`[Cloudinary] Restored ${result.resources.length} menu image(s)`);
+    })
+    .catch(e => console.error('[Cloudinary] Image restore failed:', e.message));
+}
+
 // Rebuild occupiedTables from active (non-completed/paid/cancelled) orders
 const INACTIVE_STATUSES = new Set(['completed', 'paid', 'cancelled']);
 orders.forEach(order => {
