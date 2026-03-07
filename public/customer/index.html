@@ -374,6 +374,30 @@ header {
 }
 .np-hint { font-size: 11px; color: var(--text-dim); text-align: center; }
 
+/* ── Phone Input + Reorder Strip ────────────────────── */
+.reorder-strip {
+  margin-top: 8px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.03));
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  animation: fadeIn 0.2s ease;
+}
+.reorder-strip.hidden { display: none; }
+.reorder-info { flex: 1; min-width: 0; }
+.reorder-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.reorder-items { font-size: 11px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reorder-btn {
+  flex-shrink: 0;
+  background: var(--gold); color: #000;
+  border: none; border-radius: var(--radius-sm);
+  padding: 6px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: opacity var(--transition);
+}
+.reorder-btn:hover { opacity: 0.85; }
+
 /* ── FAB Cart Button (mobile) ────────────────────────── */
 .cart-fab {
   position: fixed; bottom: 20px; left: 50%;
@@ -1232,6 +1256,17 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <input type="text" id="customerName" placeholder="Your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="your_name" />
       <span class="field-error" id="nameError" data-i18n="min2">Min 2 characters</span>
     </div>
+    <div class="name-field-wrap" style="margin-top:8px">
+      <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+      <input type="tel" id="customerPhone" maxlength="15" autocomplete="tel" data-i18n-placeholder="phone_placeholder" placeholder="Phone (optional)" />
+    </div>
+    <div class="reorder-strip hidden" id="reorderStrip">
+      <div class="reorder-info">
+        <div class="reorder-name" id="reorderName"></div>
+        <div class="reorder-items" id="reorderItems"></div>
+      </div>
+      <button class="reorder-btn" id="reorderBtn" data-i18n="order_again">Order Again</button>
+    </div>
   </div>
 
   <div class="category-nav" id="categoryNav">
@@ -1303,6 +1338,17 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
         <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
         <input type="text" id="mCustomerName" placeholder="Your name" autocomplete="off" autocapitalize="words" data-i18n-placeholder="your_name" />
         <span class="field-error" id="mNameError" data-i18n="min2">Min 2 characters</span>
+      </div>
+      <div class="name-field-wrap" style="margin-top:8px">
+        <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+        <input type="tel" id="mCustomerPhone" maxlength="15" autocomplete="tel" data-i18n-placeholder="phone_placeholder" placeholder="Phone (optional)" />
+      </div>
+      <div class="reorder-strip hidden" id="mReorderStrip">
+        <div class="reorder-info">
+          <div class="reorder-name" id="mReorderName"></div>
+          <div class="reorder-items" id="mReorderItems"></div>
+        </div>
+        <button class="reorder-btn" id="mReorderBtn" data-i18n="order_again">Order Again</button>
       </div>
     </div>
 
@@ -1479,6 +1525,10 @@ const TRANSLATIONS = {
     your_name_label: 'Your Name',
     enter_name: 'Enter your name',
     min2: 'Min 2 characters',
+    phone_placeholder: 'Phone (optional)',
+    welcome_back: 'Welcome back',
+    last_order: 'Last order',
+    order_again: 'Order Again',
     your_order: 'Your Order',
     add_items: 'Add items to get started',
     service_charge: 'Service Charge (10%)',
@@ -1578,6 +1628,10 @@ const TRANSLATIONS = {
     your_name_label: 'आपका नाम',
     enter_name: 'नाम दर्ज करें',
     min2: 'न्यूनतम 2 अक्षर',
+    phone_placeholder: 'फ़ोन (वैकल्पिक)',
+    welcome_back: 'फिर आए',
+    last_order: 'पिछला ऑर्डर',
+    order_again: 'फिर से ऑर्डर करें',
     your_order: 'आपका ऑर्डर',
     add_items: 'शुरू करने के लिए आइटम जोड़ें',
     service_charge: 'सर्विस चार्ज (10%)',
@@ -1791,6 +1845,8 @@ const state = {
   trackingOrder: _loadOrder(),
   tableNo: _tableParam,
   customerName: '',
+  customerPhone: '',
+  _lastHistory: null,
   activeQuickFilters: new Set(), // multi-select: 'bestseller' | 'on-offer' | 'high-protein' | 'guilt-free'
   activeCategory: null,          // currently selected category (null = All)
 };
@@ -2450,6 +2506,7 @@ function submitOrder() {
     sessionId: state.sessionId,
     items: getCartItems(),
     customerName: getName(),
+    customerPhone: state.customerPhone,
     tableNo: getTable(),
     applyServiceCharge: getServiceToggle(),
     discountPercent: getDiscountInput(),
@@ -2912,6 +2969,68 @@ function onNameInput(value) {
 }
 document.getElementById('customerName').addEventListener('input', function() { onNameInput(this.value); });
 document.getElementById('mCustomerName').addEventListener('input', function() { onNameInput(this.value); });
+
+// ── Phone + Order History ────────────────────────────────
+let _historyTimer = null;
+function onPhoneInput(value) {
+  state.customerPhone = value.replace(/\D/g, '');
+  document.getElementById('customerPhone').value = value;
+  document.getElementById('mCustomerPhone').value = value;
+  clearTimeout(_historyTimer);
+  if (state.customerPhone.length >= 10) {
+    _historyTimer = setTimeout(() => fetchHistory(state.customerPhone), 500);
+  } else {
+    hideReorderStrip();
+  }
+}
+document.getElementById('customerPhone').addEventListener('input', function() { onPhoneInput(this.value); });
+document.getElementById('mCustomerPhone').addEventListener('input', function() { onPhoneInput(this.value); });
+
+async function fetchHistory(phone) {
+  try {
+    const res = await fetch(`/api/customer/history?phone=${phone}`);
+    const data = await res.json();
+    if (data.success && data.history.length > 0) {
+      state._lastHistory = data.history[0];
+      showReorderStrip(data.history[0]);
+    } else {
+      hideReorderStrip();
+    }
+  } catch (e) { hideReorderStrip(); }
+}
+
+function showReorderStrip(order) {
+  const itemsSummary = (order.items || []).map(i => `${i.quantity}× ${i.name}`).join(', ');
+  const total = order.billing?.total ? ` · ₹${Math.round(order.billing.total)}` : '';
+  const nameText = `${t('welcome_back')}, ${order.customerName}!`;
+  const itemsText = `${t('last_order')}: ${itemsSummary}${total}`;
+  ['reorderName', 'mReorderName'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = nameText; });
+  ['reorderItems', 'mReorderItems'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = itemsText; });
+  ['reorderStrip', 'mReorderStrip'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+}
+
+function hideReorderStrip() {
+  state._lastHistory = null;
+  ['reorderStrip', 'mReorderStrip'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+}
+
+function doReorder() {
+  if (!state._lastHistory) return;
+  const order = state._lastHistory;
+  onNameInput(order.customerName);
+  state.cart = {};
+  (order.items || []).forEach(item => {
+    const menuItem = state.menu.find(m => m.id === item.id);
+    if (menuItem && menuItem.inStock) state.cart[item.id] = { ...menuItem, quantity: item.quantity };
+  });
+  updateBillSummary();
+  broadcastCartDebounced();
+  if (isDesktop()) renderSidebarCart();
+  else openCart();
+  hideReorderStrip();
+}
+document.getElementById('reorderBtn').addEventListener('click', doReorder);
+document.getElementById('mReorderBtn').addEventListener('click', doReorder);
 
 // ── Toast ────────────────────────────────────────────────
 function showToast(msg, type = 'info', duration = 3000) {

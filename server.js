@@ -707,6 +707,16 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// ── Customer order history by phone ───────────────────────────────────────────
+app.get('/api/customer/history', (req, res) => {
+  const phone = (req.query.phone || '').replace(/\D/g, '');
+  if (phone.length < 10) return res.json({ success: false, error: 'Invalid phone' });
+  const rows = db.prepare(
+    "SELECT data FROM orders WHERE json_extract(data, '$.customerPhone') = ? ORDER BY json_extract(data, '$.createdAt') DESC LIMIT 3"
+  ).all(phone);
+  res.json({ success: true, history: rows.map(r => JSON.parse(r.data)) });
+});
+
 // ── Returns the correct public-facing URL for QR code generation ──────────────
 // Priority: PUBLIC_URL env var → local network IP → localhost
 app.get('/api/public-url', (req, res) => {
