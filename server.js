@@ -502,6 +502,7 @@ db.exec(`
 `);
 
 try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE menu_state ADD COLUMN stockCount INTEGER'); } catch (_) {}
 
 // Load persisted orderCounter
 const counterRow = db.prepare("SELECT value FROM app_config WHERE key='orderCounter'").get();
@@ -512,9 +513,14 @@ else db.prepare("INSERT INTO app_config (key, value) VALUES ('orderCounter', ?)"
 orders = db.prepare('SELECT data FROM orders').all().map(row => JSON.parse(row.data));
 
 // Apply persisted menu state
-db.prepare('SELECT id, inStock, offer, image FROM menu_state').all().forEach(row => {
+db.prepare('SELECT id, inStock, offer, image, stockCount FROM menu_state').all().forEach(row => {
   const item = MENU.find(m => m.id === row.id);
-  if (item) { item.inStock = !!row.inStock; item.offer = row.offer; item.image = row.image || null; }
+  if (item) {
+    item.inStock = !!row.inStock;
+    item.offer = row.offer;
+    item.image = row.image || null;
+    item.stockCount = (row.stockCount !== null && row.stockCount !== undefined) ? row.stockCount : null;
+  }
 });
 
 // Restore menu images from Cloudinary (handles ephemeral filesystem on Render)
@@ -526,7 +532,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
         const item = MENU.find(m => m.id === itemId);
         if (item && !item.image) {
           item.image = resource.secure_url;
-          dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+          dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
         }
       });
       console.log(`[Cloudinary] Restored ${result.resources.length} menu image(s)`);
@@ -550,7 +556,7 @@ const _updateOrder = db.prepare(
   'UPDATE orders SET status=?, paymentStatus=?, updatedAt=?, paidAt=?, data=? WHERE id=?'
 );
 const _upsertMenuState = db.prepare(
-  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image) VALUES (?, ?, ?, ?)'
+  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount) VALUES (?, ?, ?, ?, ?)'
 );
 const _upsertCounter = db.prepare(
   "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
@@ -566,8 +572,9 @@ function dbUpdateOrder(order) {
     order.paidAt || null, JSON.stringify(order), order.id);
 }
 
-function dbSaveMenuState(itemId, inStock, offer, image) {
-  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer, image || null);
+function dbSaveMenuState(itemId, inStock, offer, image, stockCount) {
+  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer, image || null,
+    (stockCount !== undefined && stockCount !== null) ? stockCount : null);
 }
 
 function dbSaveCounter() {
@@ -902,6 +909,26 @@ io.on('connection', (socket) => {
     clearCartTimeout(sessionId);
     delete activeCarts[sessionId];
 
+    // Decrement stock counts and auto-OOS when depleted
+    const lowStockAlerts = [];
+    let menuChanged = false;
+    order.items.forEach(ordered => {
+      const menuItem = MENU.find(m => m.id === ordered.id);
+      if (menuItem && menuItem.stockCount !== null) {
+        menuItem.stockCount = Math.max(0, menuItem.stockCount - ordered.quantity);
+        if (menuItem.stockCount === 0) {
+          menuItem.inStock = false;
+          console.log(`[Stock] ${menuItem.name} depleted → OOS`);
+        } else if (menuItem.stockCount < 3) {
+          lowStockAlerts.push({ id: menuItem.id, name: menuItem.name, stockCount: menuItem.stockCount });
+        }
+        dbSaveMenuState(menuItem.id, menuItem.inStock, menuItem.offer, menuItem.image, menuItem.stockCount);
+        menuChanged = true;
+      }
+    });
+    if (menuChanged) io.emit('menu:updated', { menu: MENU });
+    if (lowStockAlerts.length > 0) io.emit('menu:low_stock', { items: lowStockAlerts });
+
     io.emit('order:new', order);
     io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
 
@@ -1143,7 +1170,7 @@ io.on('connection', (socket) => {
     // Mark OOS items as out of stock across the whole menu
     (oosItemIds || []).forEach(id => {
       const menuItem = MENU.find(m => m.id === id);
-      if (menuItem) { menuItem.inStock = false; dbSaveMenuState(id, false, menuItem.offer, menuItem.image); }
+      if (menuItem) { menuItem.inStock = false; dbSaveMenuState(id, false, menuItem.offer, menuItem.image, menuItem.stockCount); }
     });
     dbUpdateOrder(order);
     io.emit('menu:updated', { menu: MENU });
@@ -1236,7 +1263,7 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.inStock = !!inStock;
-    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → ${inStock ? 'In Stock' : 'Out of Stock'}`);
@@ -1247,10 +1274,37 @@ io.on('connection', (socket) => {
     const item = MENU.find(m => m.id === itemId);
     if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
     item.offer = Math.min(Math.max(0, parseFloat(offerPercent) || 0), 50);
-    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
     io.emit('menu:updated', { menu: MENU });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Menu] ${item.name} → offer: ${item.offer}%`);
+  });
+
+  // ── Stock Count Management ──
+  socket.on('menu:set_stock', (data, ack) => {
+    const { itemId, stockCount } = data;
+    const item = MENU.find(m => m.id === itemId);
+    if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
+    const count = parseInt(stockCount, 10);
+    item.stockCount = isNaN(count) || count < 0 ? null : count;
+    if (item.stockCount === 0) item.inStock = false;
+    else if (item.stockCount > 0) item.inStock = true;
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
+    io.emit('menu:updated', { menu: MENU });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log(`[Menu] ${item.name} → stockCount: ${item.stockCount}`);
+  });
+
+  socket.on('menu:reset_stock', (data, ack) => {
+    // Reset all items: clear stockCount (unlimited), restore inStock=true
+    MENU.forEach(item => {
+      item.stockCount = null;
+      item.inStock = true;
+      dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
+    });
+    io.emit('menu:updated', { menu: MENU });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log('[Menu] All stock counts reset to unlimited');
   });
 
   // ── Customer Browsing Activity ──
@@ -1298,7 +1352,7 @@ app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) =
     });
 
     item.image = result.secure_url;
-    dbSaveMenuState(item.id, item.inStock, item.offer, item.image);
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
     io.emit('menu:updated', { menu: MENU });
     res.json({ success: true, imageUrl: item.image });
   } catch (e) {
@@ -1314,7 +1368,7 @@ app.delete('/api/admin/menu/:id/image', async (req, res) => {
   try { await cloudinary.uploader.destroy(`zingpos-menu/${req.params.id}`); } catch (_) {}
 
   item.image = null;
-  dbSaveMenuState(item.id, item.inStock, item.offer, null);
+  dbSaveMenuState(item.id, item.inStock, item.offer, null, item.stockCount);
   io.emit('menu:updated', { menu: MENU });
   res.json({ success: true });
 });

@@ -814,6 +814,32 @@ header {
 }
 .offer-input-mgr:focus { border-color: var(--gold); }
 .offer-pct { font-size: 11px; color: var(--text-dim); }
+.stock-wrap { display: flex; align-items: center; gap: 5px; }
+.stock-input-mgr {
+  width: 52px; height: 30px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0 6px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; outline: none; text-align: center;
+  -webkit-appearance: none; transition: border-color var(--transition);
+}
+.stock-input-mgr:focus { border-color: var(--gold); }
+.stock-input-mgr.low { border-color: var(--red); color: var(--red); }
+.stock-label { font-size: 11px; color: var(--text-dim); }
+.low-stock-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 8px;
+  background: var(--red-dim); color: var(--red); border: 1px solid var(--red);
+}
+.menu-mgr-reset-bar {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+}
+.reset-stock-btn {
+  font-size: 12px; font-weight: 600; padding: 6px 14px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-dim);
+  cursor: pointer; transition: all var(--transition);
+}
+.reset-stock-btn:hover { border-color: var(--gold); color: var(--gold); }
 
 /* ── Reports Overlay ─────────────────────────────── */
 .reports-overlay {
@@ -1161,6 +1187,9 @@ header {
     </div>
     <div class="menu-mgr-cats" id="menuMgrCats"></div>
     <div class="menu-mgr-list" id="menuMgrList"></div>
+    <div class="menu-mgr-reset-bar">
+      <button class="reset-stock-btn" id="resetAllStockBtn" data-i18n="reset_all_stock">🔄 Reset All Stock</button>
+    </div>
   </div>
 </div>
 
@@ -1383,6 +1412,8 @@ const TRANSLATIONS = {
     report_loading: 'Loading…', report_load_fail: 'Failed to load report:',
     // Menu manager
     in_stock: '✅ In Stock', out_of_stock: '❌ Out of Stock', pct_off: '% off',
+    stock_portions: 'portions', stock_unlimited: 'Unlimited', reset_all_stock: '🔄 Reset All Stock',
+    low_stock_alert: 'Low stock', stock_set: 'Stock updated',
     img_uploaded: 'Photo uploaded', img_upload_fail: 'Upload failed', img_removed: 'Photo removed',
     // Reports
     report_summary: 'Summary', report_total_revenue: 'Total Revenue',
@@ -1479,6 +1510,8 @@ const TRANSLATIONS = {
     report_loading: 'लोड हो रहा है…', report_load_fail: 'रिपोर्ट लोड नहीं हुई:',
     // Menu manager
     in_stock: '✅ स्टॉक में', out_of_stock: '❌ स्टॉक खत्म', pct_off: '% छूट',
+    stock_portions: 'प्लेट', stock_unlimited: 'असीमित', reset_all_stock: '🔄 सब रीसेट करें',
+    low_stock_alert: 'कम स्टॉक', stock_set: 'स्टॉक अपडेट हुआ',
     img_uploaded: 'फोटो अपलोड हुई', img_upload_fail: 'अपलोड विफल', img_removed: 'फोटो हटाई',
     // Reports
     report_summary: 'सारांश', report_total_revenue: 'कुल राजस्व',
@@ -1633,6 +1666,13 @@ socket.on('init', (data) => {
 socket.on('menu:updated', (data) => {
   state.menu = data.menu || state.menu;
   if (menuMgrOpen) renderMenuMgrList(currentMenuCat);
+});
+
+// Low stock alert from server
+socket.on('menu:low_stock', (data) => {
+  (data.items || []).forEach(item => {
+    showToast(`⚠️ ${t('low_stock_alert')}: ${item.name} — ${item.stockCount} ${t('stock_portions')} left`, 'error', 5000);
+  });
 });
 
 // Active carts update (live customer activity)
@@ -2645,6 +2685,11 @@ function renderMenuMgrList(cat) {
         <button class="stock-badge ${isIn ? 'in' : 'out'}" data-id="${item.id}" data-stock="${isIn}">
           ${isIn ? t('in_stock') : t('out_of_stock')}
         </button>
+        <div class="stock-wrap">
+          <input class="stock-input-mgr${item.stockCount !== null && item.stockCount < 3 ? ' low' : ''}" type="number" min="0" value="${item.stockCount !== null ? item.stockCount : ''}" placeholder="∞" data-id="${item.id}" />
+          <span class="stock-label">${t('stock_portions')}</span>
+          ${item.stockCount !== null && item.stockCount < 3 ? `<span class="low-stock-badge">${t('low_stock_alert')}</span>` : ''}
+        </div>
         <div class="offer-wrap">
           <input class="offer-input-mgr" type="number" min="0" max="50" value="${offer}" placeholder="0" data-id="${item.id}" />
           <span class="offer-pct">${t('pct_off')}</span>
@@ -2661,6 +2706,16 @@ function renderMenuMgrList(cat) {
       socket.emit('menu:toggle_stock', { itemId: item.id, inStock: newStock });
     });
 
+    // Stock count input (debounced)
+    const stockInput = row.querySelector('.stock-input-mgr');
+    stockInput.addEventListener('input', debounce(function() {
+      const raw = this.value.trim();
+      const val = raw === '' ? null : Math.max(0, parseInt(raw, 10) || 0);
+      socket.emit('menu:set_stock', { itemId: item.id, stockCount: val === null ? '' : val }, (res) => {
+        if (res && res.success) showToast(t('stock_set'), 'success');
+      });
+    }, 600));
+
     // Offer input (debounced)
     const offerInput = row.querySelector('.offer-input-mgr');
     offerInput.addEventListener('input', debounce(function() {
@@ -2675,6 +2730,11 @@ function renderMenuMgrList(cat) {
 
 document.getElementById('menuMgrBtn').addEventListener('click', openMenuMgr);
 document.getElementById('menuMgrClose').addEventListener('click', closeMenuMgr);
+document.getElementById('resetAllStockBtn').addEventListener('click', () => {
+  socket.emit('menu:reset_stock', {}, (res) => {
+    if (res && res.success) showToast(t('reset_all_stock'), 'success');
+  });
+});
 document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('menuMgrOverlay')) closeMenuMgr();
 });
