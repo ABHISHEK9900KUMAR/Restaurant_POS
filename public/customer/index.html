@@ -127,7 +127,8 @@ header {
   color: var(--text-dim);
   pointer-events: none;
 }
-.name-field-wrap input[type="text"] {
+.name-field-wrap input[type="text"],
+.name-field-wrap input[type="tel"] {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -139,7 +140,8 @@ header {
   transition: border-color var(--transition);
   -webkit-appearance: none;
 }
-.name-field-wrap input[type="text"]:focus { border-color: var(--gold); }
+.name-field-wrap input[type="text"]:focus,
+.name-field-wrap input[type="tel"]:focus  { border-color: var(--gold); }
 .name-field-wrap input[type="text"].error { border-color: var(--red); }
 .name-field-wrap .field-error { margin-top: 5px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
