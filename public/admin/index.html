@@ -1872,9 +1872,23 @@ function cardHTML(order) {
 
   // ── Awaiting customer response ──
   if (order.status === 'awaiting_customer') {
-    const oosListHTML = (order.oosItems || []).map(i =>
-      `<li>• ${currentLang === 'hi' && i.nameHi ? i.nameHi : i.name}</li>`
-    ).join('');
+    const oosIdSet = new Set((order.oosItems || []).map(i => i.id));
+    const itemsWithOOSHTML = (order.items || []).map(item => {
+      if (oosIdSet.has(item.id)) {
+        return `
+          <div class="order-item-row" style="opacity:0.45">
+            <span class="order-item-name" style="text-decoration:line-through">${item.emoji || ''} ${iName(item)}</span>
+            <span class="order-item-qty">×${item.quantity}</span>
+            <span class="order-item-price" style="color:var(--orange);font-size:10px;font-weight:700">UNAVAIL.</span>
+          </div>`;
+      }
+      return `
+        <div class="order-item-row">
+          <span class="order-item-name">${item.emoji || ''} ${iName(item)}</span>
+          <span class="order-item-qty">×${item.quantity}</span>
+          <span class="order-item-price">${fmt(item.price * item.quantity)}</span>
+        </div>`;
+    }).join('');
     return `
       <div class="card-header">
         <div>
@@ -1887,10 +1901,9 @@ function cardHTML(order) {
           <div class="status-badge awaiting_customer">${t('awaiting_customer')}</div>
         </div>
       </div>
-      <div class="card-items">${itemsHTML}</div>
+      <div class="card-items">${itemsWithOOSHTML}</div>
       <div class="awaiting-info">
         <div class="awaiting-info-label">${t('oos_flagged_label')}</div>
-        <ul class="awaiting-oos-list">${oosListHTML}</ul>
         <div class="awaiting-overrides">
           <button class="override-btn proceed" data-action="override" data-choice="proceed">${t('override_proceed')}</button>
           <button class="override-btn cancel"  data-action="override" data-choice="cancel">${t('override_cancel')}</button>
