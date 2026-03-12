@@ -75,6 +75,9 @@ const CONFIG = {
   PORT: process.env.PORT || 3000,
   UPI_VPA: process.env.UPI_VPA || '',        // e.g. "merchant@okaxis"
   UPI_NAME: process.env.UPI_NAME || 'Restaurant',
+  SHOP_NAME: process.env.SHOP_NAME || 'ZingPOS',
+  SHOP_TAGLINE: process.env.SHOP_TAGLINE || 'Restaurant & Bar',
+  GST_NO: process.env.GST_NO || '',          // e.g. "27AABCU9603R1ZX"
 };
 
 const UPLOADS_DIR = path.join(__dirname, 'public/uploads/menu');
@@ -701,6 +704,97 @@ app.get('/api/orders', (req, res) => {
   res.json({ success: true, data: orders });
 });
 
+// ── Demo Seed ─────────────────────────────────────────────────────────────────
+// POST /api/demo-seed — inject a few realistic demo orders (dev/demo use only)
+app.post('/api/demo-seed', (req, res) => {
+  if (orders.length > 0) return res.json({ success: false, message: 'Orders already exist — clear first' });
+
+  const now = Date.now();
+  const seed = [
+    {
+      table: 'T2', name: 'Rahul Sharma', phone: '9876543210',
+      items: [{ id: 'm4', qty: 1 }, { id: 'm13', qty: 2 }, { id: 'm20', qty: 1 }],
+      status: 'completed', paymentStatus: 'paid', paymentMethod: 'cash', cashTendered: 1000,
+      minsAgo: 45,
+    },
+    {
+      table: 'T5', name: 'Priya Singh', phone: '9123456780',
+      items: [{ id: 'm6', qty: 1 }, { id: 'm16', qty: 1 }, { id: 'm22', qty: 3 }],
+      status: 'ready', paymentStatus: 'unpaid',
+      minsAgo: 20,
+    },
+    {
+      table: 'T3', name: 'Amit Kumar', phone: '9988776655',
+      items: [{ id: 'm2', qty: 2 }, { id: 'm14', qty: 1 }],
+      status: 'preparing', paymentStatus: 'unpaid',
+      minsAgo: 10,
+    },
+    {
+      table: 'T7', name: 'Sneha Patel', phone: '9871234560',
+      items: [{ id: 'm8', qty: 1 }, { id: 'm19', qty: 2 }, { id: 'm23', qty: 1 }],
+      status: 'pending', paymentStatus: 'unpaid',
+      minsAgo: 2,
+    },
+  ];
+
+  seed.forEach(s => {
+    const items = s.items.map(si => {
+      const m = MENU.find(x => x.id === si.id);
+      if (!m) return null;
+      return { id: m.id, name: m.name, nameHi: m.nameHi, emoji: m.emoji, price: m.price, category: m.category, quantity: si.qty };
+    }).filter(Boolean);
+    if (!items.length) return;
+
+    const billing = calculateBill(items, { applyServiceCharge: true, discountPercent: 0 });
+    const ts = new Date(now - s.minsAgo * 60 * 1000).toISOString();
+    const orderId = `ORD-${++orderCounter}`;
+    _upsertCounter.run(orderCounter);
+
+    const order = {
+      id: orderId,
+      sessionId: 'demo-' + orderId,
+      customerName: s.name,
+      customerEmail: '',
+      customerPhone: s.phone,
+      tableNo: s.table,
+      items,
+      billing,
+      status: s.status,
+      paymentStatus: s.paymentStatus,
+      paymentMethod: s.paymentMethod || null,
+      cashTendered: s.cashTendered || null,
+      change: s.cashTendered ? round2(s.cashTendered - billing.total) : null,
+      paidAt: s.paymentStatus === 'paid' ? ts : null,
+      createdAt: ts,
+      updatedAt: ts,
+      statusHistory: [{ status: 'pending', timestamp: ts }],
+    };
+
+    orders.push(order);
+    dbSaveOrder(order);
+
+    if (s.status !== 'completed' && s.status !== 'cancelled') {
+      occupiedTables[s.table] = { customerName: s.name, orderId, since: ts };
+    }
+  });
+
+  broadcastTablesStatus();
+  io.emit('init', {
+    orders,
+    menu: MENU,
+    activeCarts: {},
+    tables: Object.keys(CONFIG).filter(k => k.startsWith('T')),
+    config: {
+      gstRate: CONFIG.GST_RATE, serviceChargeRate: CONFIG.SERVICE_CHARGE_RATE,
+      maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
+      upiVpa: CONFIG.UPI_VPA, upiName: CONFIG.UPI_NAME,
+      shopName: CONFIG.SHOP_NAME, shopTagline: CONFIG.SHOP_TAGLINE, gstNo: CONFIG.GST_NO,
+    },
+  });
+
+  res.json({ success: true, seeded: seed.length, message: `${seed.length} demo orders created` });
+});
+
 app.get('/api/config', (req, res) => {
   res.json({
     success: true,
@@ -710,6 +804,9 @@ app.get('/api/config', (req, res) => {
       maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
       upiVpa: CONFIG.UPI_VPA,
       upiName: CONFIG.UPI_NAME,
+      shopName: CONFIG.SHOP_NAME,
+      shopTagline: CONFIG.SHOP_TAGLINE,
+      gstNo: CONFIG.GST_NO,
     },
   });
 });
@@ -817,6 +914,9 @@ io.on('connection', (socket) => {
       maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
       upiVpa: CONFIG.UPI_VPA,
       upiName: CONFIG.UPI_NAME,
+      shopName: CONFIG.SHOP_NAME,
+      shopTagline: CONFIG.SHOP_TAGLINE,
+      gstNo: CONFIG.GST_NO,
     },
   });
 

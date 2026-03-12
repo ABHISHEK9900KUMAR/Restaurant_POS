@@ -2832,9 +2832,9 @@ function renderDigitalReceipt(order) {
   document.getElementById('trackerReceiptPanel').innerHTML = `
     <div id="receiptCapture" style="background:var(--surface);border-radius:var(--radius);padding:20px 18px;">
       <div class="receipt-header">
-        <div class="receipt-shop">ZINGPOS</div>
-        <div class="receipt-sub">${t('restaurant_bar')}</div>
-        <div class="receipt-sub">GST No: XXXXXXXXXXXX</div>
+        <div class="receipt-shop">${state.config.shopName || 'ZingPOS'}</div>
+        <div class="receipt-sub">${state.config.shopTagline || t('restaurant_bar')}</div>
+        ${state.config.gstNo ? `<div class="receipt-sub">GST No: ${state.config.gstNo}</div>` : ''}
       </div>
       <div class="receipt-meta">
         <span class="receipt-meta-label">${t('receipt_order')}</span><span class="receipt-meta-value">${order.id}</span>
