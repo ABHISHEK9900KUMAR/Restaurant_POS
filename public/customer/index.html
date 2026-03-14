@@ -2575,6 +2575,8 @@ socket.on('order:updated', (updated) => {
   }
 
   _saveOrder(updated);
+  renderTrackerItems(updated);
+  renderDigitalReceipt(updated);
   updateTrackerStatus(status);
   updatePaySection();
 });
