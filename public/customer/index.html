@@ -2360,7 +2360,7 @@ function syncCartDOM(container, items, isDesktop) {
         <div class="cart-item-emoji">${item.emoji}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${item.name}</div>
-          <div class="cart-item-price" data-unit="${item.price}">${fmt(item.price)}</div>
+          <div class="cart-item-price" data-unit="${item.price}" data-offer="${item.offer || 0}">${fmt(item.offer > 0 ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price)}</div>
         </div>
         <div class="qty-controls">
           <button class="qty-btn" data-action="dec">−</button>
@@ -2372,8 +2372,9 @@ function syncCartDOM(container, items, isDesktop) {
       el.querySelector('[data-action="inc"]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
       container.appendChild(el);
     }
+    const _eff = item.offer > 0 ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price;
     el.querySelector('[data-qty]').textContent = item.quantity;
-    el.querySelector('[data-unit]').textContent = fmt(item.price * item.quantity);
+    el.querySelector('[data-unit]').textContent = fmt(_eff * item.quantity);
     const decBtn = el.querySelector('[data-action="dec"]');
     if (item.quantity === 1) { decBtn.innerHTML = '🗑'; decBtn.classList.add('qty-del'); }
     else { decBtn.innerHTML = '−'; decBtn.classList.remove('qty-del'); }

@@ -513,7 +513,13 @@ if (counterRow) orderCounter = parseInt(counterRow.value, 10);
 else db.prepare("INSERT INTO app_config (key, value) VALUES ('orderCounter', ?)").run(String(orderCounter));
 
 // Load persisted orders
-orders = db.prepare('SELECT data FROM orders').all().map(row => JSON.parse(row.data));
+orders = db.prepare('SELECT data FROM orders').all().map(row => {
+  const order = JSON.parse(row.data);
+  if (order.items) {
+    order.items = order.items.map(item => ({ ...item, quantity: item.quantity ?? item.qty }));
+  }
+  return order;
+});
 
 // Apply persisted menu state
 db.prepare('SELECT id, inStock, offer, image, stockCount FROM menu_state').all().forEach(row => {
