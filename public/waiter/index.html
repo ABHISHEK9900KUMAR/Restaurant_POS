@@ -236,7 +236,7 @@ header {
   .menu-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 900px) {
-  #panel-new-order { display: grid; grid-template-columns: 1fr 360px; gap: 0; padding: 0; }
+  #panel-new-order.active { display: grid; grid-template-columns: 1fr 360px; gap: 0; padding: 0; }
   .menu-col { padding: 24px 24px 24px; overflow-y: auto; max-height: calc(100dvh - var(--header-h) - 49px); }
   .cart-col { border-left: 1px solid var(--border); overflow-y: auto; max-height: calc(100dvh - var(--header-h) - 49px); }
   .menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
@@ -1526,7 +1526,7 @@ function syncCartDOM(container, items) {
         <div class="cart-item-emoji">${item.emoji}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${item.name}</div>
-          <div class="cart-item-price" data-unit="${item.price}">${fmt(item.price)}</div>
+          <div class="cart-item-price" data-unit="${item.price}" data-offer="${item.offer || 0}">${fmt(item.offer > 0 ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price)}</div>
         </div>
         <div class="qty-controls">
           <button class="qty-btn" data-action="dec">−</button>
@@ -1537,8 +1537,9 @@ function syncCartDOM(container, items) {
       el.querySelector('[data-action="inc"]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
       container.appendChild(el);
     }
+    const _wEff = item.offer > 0 ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price;
     el.querySelector('[data-qty]').textContent = item.quantity;
-    el.querySelector('[data-unit]').textContent = fmt(item.price * item.quantity);
+    el.querySelector('[data-unit]').textContent = fmt(_wEff * item.quantity);
   });
 }
 
@@ -1576,7 +1577,12 @@ function calculateBill() {
   const items = getCartItems();
   const GST = state.config.gstRate || 0.05;
   const SVC = state.config.serviceChargeRate || 0.10;
-  const subtotal = items.reduce((s,i) => s + r2(i.price * i.quantity), 0);
+  const subtotal = items.reduce((s,i) => {
+    const mi = state.menu.find(m => m.id === i.id);
+    const offer = mi ? (mi.offer || 0) : 0;
+    const eff = offer > 0 ? r2(i.price * (1 - offer / 100)) : i.price;
+    return s + r2(eff * i.quantity);
+  }, 0);
   const serviceCharge = getServiceToggle() ? r2(subtotal * SVC) : 0;
   const taxable = r2(subtotal + serviceCharge);
   const gst = r2(taxable * GST);
