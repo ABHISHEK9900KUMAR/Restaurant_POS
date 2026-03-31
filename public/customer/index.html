@@ -4,12 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0d0d0d" />
-<title>ZingPOS — Order</title>
+<title>The Flavor Server — Order</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('zingpos-theme')||'dark');</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('flavorserver-theme')||'dark');</script>
 <style>
 /* ── Reset & Variables ───────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1235,7 +1235,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 
 <!-- ── MOBILE LAYOUT ── -->
 <header>
-  <div class="logo">ZingPOS<sup>Order</sup></div>
+  <div class="logo">The Flavor Server<sup>Order</sup></div>
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="lang-toggle" id="langToggle" role="group" aria-label="Language toggle">
       <button class="lang-btn active" data-lang="en">EN</button>
@@ -1437,7 +1437,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
   <div class="tracker-wrap">
 
     <div class="tracker-topbar">
-      <div class="tracker-brand">ZingPOS</div>
+      <div class="tracker-brand">The Flavor Server</div>
       <div class="tracker-order-id" id="trackerOrderId"></div>
     </div>
 
@@ -1593,7 +1593,7 @@ const TRANSLATIONS = {
     sharing: 'Sharing…',
     download_success: 'Receipt saved!',
     share_not_supported: 'Sharing not supported on this device',
-    receipt_filename: 'ZingPOS-Receipt',
+    receipt_filename: 'FlavorServer-Receipt',
     // OOS feature
     oos_title: 'Items Unavailable',
     oos_sub: 'These items in your order are currently out of stock:',
@@ -1696,7 +1696,7 @@ const TRANSLATIONS = {
     sharing: 'शेयर हो रहा है…',
     download_success: 'रसीद सहेजी गई!',
     share_not_supported: 'इस डिवाइस पर शेयरिंग उपलब्ध नहीं',
-    receipt_filename: 'ZingPOS-Raseed',
+    receipt_filename: 'FlavorServer-Raseed',
     // OOS feature
     oos_title: 'आइटम उपलब्ध नहीं',
     oos_sub: 'ये आइटम अभी उपलब्ध नहीं हैं:',
@@ -1818,14 +1818,14 @@ document.getElementById('langToggle').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════
-//  ZingPOS — Customer App
+//  The Flavor Server — Customer App
 // ═══════════════════════════════════════════════════════
 
 // Persist session across refreshes (same browser tab)
 const _tableParam = new URLSearchParams(window.location.search).get('table') || '';
-const _SESS_KEY    = 'zingpos-sid';
-const _ORD_KEY     = 'zingpos-order-' + (_tableParam || 'x');
-const _REORDER_KEY = 'zingpos-reorder-' + (_tableParam || 'x');
+const _SESS_KEY    = 'flavorserver-sid';
+const _ORD_KEY     = 'flavorserver-order-' + (_tableParam || 'x');
+const _REORDER_KEY = 'flavorserver-reorder-' + (_tableParam || 'x');
 
 function _loadSid()      { let id = sessionStorage.getItem(_SESS_KEY); if (!id) { id = uid('sess'); sessionStorage.setItem(_SESS_KEY, id); } return id; }
 function _saveSid(id)    { sessionStorage.setItem(_SESS_KEY, id); }
@@ -2835,7 +2835,7 @@ function renderDigitalReceipt(order) {
   document.getElementById('trackerReceiptPanel').innerHTML = `
     <div id="receiptCapture" style="background:var(--surface);border-radius:var(--radius);padding:20px 18px;">
       <div class="receipt-header">
-        <div class="receipt-shop">${state.config.shopName || 'ZingPOS'}</div>
+        <div class="receipt-shop">${state.config.shopName || 'The Flavor Server'}</div>
         <div class="receipt-sub">${state.config.shopTagline || t('restaurant_bar')}</div>
         ${state.config.gstNo ? `<div class="receipt-sub">GST No: ${state.config.gstNo}</div>` : ''}
       </div>
@@ -2924,11 +2924,11 @@ async function shareReceipt(orderId) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        title: `ZingPOS Receipt — ${orderId}`,
+        title: `The Flavor Server Receipt — ${orderId}`,
       });
     } else if (navigator.share) {
       // Fallback: share as data URL text if files not supported
-      await navigator.share({ title: `ZingPOS Receipt — ${orderId}`, text: `Your receipt from ZingPOS: ${orderId}` });
+      await navigator.share({ title: `The Flavor Server Receipt — ${orderId}`, text: `Your receipt from The Flavor Server: ${orderId}` });
     } else {
       showToast(t('share_not_supported'), 'info');
     }
@@ -3110,7 +3110,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
   btn.addEventListener('click', function() {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('zingpos-theme', next);
+    localStorage.setItem('flavorserver-theme', next);
     syncIcon();
   });
 })();
@@ -3126,7 +3126,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
 
   const html  = document.documentElement;
   const logo  = document.querySelector('.logo');
-  let current = localStorage.getItem('zingpos-palette') || 'gold';
+  let current = localStorage.getItem('flavorserver-palette') || 'gold';
 
   function applyPalette(id) {
     if (id === 'gold') html.removeAttribute('data-palette');
@@ -3155,7 +3155,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
     const next = PALETTES[(idx + 1) % PALETTES.length];
     current = next.id;
     applyPalette(current);
-    localStorage.setItem('zingpos-palette', current);
+    localStorage.setItem('flavorserver-palette', current);
 
     logo.classList.remove('logo-pop');
     void logo.offsetWidth;

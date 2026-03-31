@@ -75,8 +75,8 @@ const CONFIG = {
   PORT: process.env.PORT || 3000,
   UPI_VPA: process.env.UPI_VPA || '',        // e.g. "merchant@okaxis"
   UPI_NAME: process.env.UPI_NAME || 'Restaurant',
-  SHOP_NAME: process.env.SHOP_NAME || 'ZingPOS',
-  SHOP_TAGLINE: process.env.SHOP_TAGLINE || 'Restaurant & Bar',
+  SHOP_NAME: process.env.SHOP_NAME || 'The Flavor Server',
+  SHOP_TAGLINE: process.env.SHOP_TAGLINE || 'Pure Veg & Non-Veg Restaurant',
   GST_NO: process.env.GST_NO || '',          // e.g. "27AABCU9603R1ZX"
 };
 
@@ -109,7 +109,7 @@ function generateReceiptPDF(order) {
 
     // ── HEADER BAND ──────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(DARK);
-    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(30).text('ZingPOS', ML, 22);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(30).text('The Flavor Server', ML, 22);
     doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Restaurant Receipt', ML, 58);
     // Right side: order meta
     doc.fillColor('#AAAAAA').fontSize(9)
@@ -212,7 +212,7 @@ function generateReceiptPDF(order) {
        .text('Thank you for dining with us! We hope to see you again.', ML, y, { width: CW, align: 'center' });
     y += 14;
     doc.fillColor(GOLD).fontSize(8)
-       .text('Powered by ZingPOS', ML, y, { width: CW, align: 'center' });
+       .text('Powered by The Flavor Server', ML, y, { width: CW, align: 'center' });
 
     doc.end();
   });
@@ -300,7 +300,7 @@ function generateReportPDF(report) {
 
     // ── HEADER ───────────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(DARK);
-    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(28).text('ZingPOS', ML, 20);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(28).text('The Flavor Server', ML, 20);
     doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Daily Sales Report', ML, 54);
     doc.fillColor('#AAAAAA').fontSize(9)
        .text('Date: ' + report.date,                                   ML, 20, { width: CW, align: 'right' })
@@ -394,10 +394,10 @@ function generateReportPDF(report) {
     doc.rect(ML, y, CW, 1).fill(LINE);
     y += 14;
     doc.fillColor(GRAY).font('Helvetica').fontSize(9)
-       .text('ZingPOS — Automated Daily Sales Report', ML, y, { width: CW, align: 'center' });
+       .text('The Flavor Server — Automated Daily Sales Report', ML, y, { width: CW, align: 'center' });
     y += 13;
     doc.fillColor(GOLD).fontSize(8)
-       .text('Powered by ZingPOS', ML, y, { width: CW, align: 'center' });
+       .text('Powered by The Flavor Server', ML, y, { width: CW, align: 'center' });
 
     doc.end();
   });
@@ -405,63 +405,138 @@ function generateReportPDF(report) {
 
 // ─── Menu Data ───────────────────────────────────────────────────────────────
 const MENU = [
-  // Starters — Chinese
-  { id: 'm1',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Spring Roll',          nameHi: 'वेज स्प्रिंग रोल',          price: 180, emoji: '🌯', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 220, protein: 5,  carbs: 28, fat: 10, ingredients: ['Cabbage', 'Carrot', 'Bean Sprouts', 'Spring Onion', 'Flour Wrapper', 'Soy Sauce'] } },
-  { id: 'm2',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Paneer (Dry)',       nameHi: 'चिली पनीर (ड्राई)',          price: 260, emoji: '🧀', popular: true,  tags: ['high-protein'],
-    nutrition: { calories: 380, protein: 18, carbs: 22, fat: 22, ingredients: ['Paneer', 'Capsicum', 'Onion', 'Soy Sauce', 'Garlic', 'Cornstarch'] } },
-  { id: 'm3',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Veg Manchurian (Dry)',      nameHi: 'वेज मंचूरियन (ड्राई)',       price: 220, emoji: '🥦', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 280, protein: 7,  carbs: 32, fat: 13, ingredients: ['Mixed Vegetables', 'Garlic', 'Ginger', 'Soy Sauce', 'Chilli', 'Cornstarch'] } },
-  { id: 'm4',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chilli Chicken (Dry)',      nameHi: 'चिली चिकन (ड्राई)',          price: 280, emoji: '🍗', popular: true,  tags: ['high-protein'],
-    nutrition: { calories: 360, protein: 28, carbs: 18, fat: 18, ingredients: ['Chicken', 'Capsicum', 'Onion', 'Soy Sauce', 'Garlic', 'Green Chilli'] } },
-  { id: 'm5',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Manchurian (Dry)',  nameHi: 'चिकन मंचूरियन (ड्राई)',      price: 300, emoji: '🍜', popular: false, tags: ['high-protein'],
-    nutrition: { calories: 340, protein: 26, carbs: 20, fat: 16, ingredients: ['Chicken', 'Garlic', 'Ginger', 'Soy Sauce', 'Spring Onion', 'Cornstarch'] } },
-  // Starters — Tandoori
-  { id: 'm6',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Paneer Tikka',              nameHi: 'पनीर टिक्का',                price: 280, emoji: '🍢', popular: true,  tags: ['high-protein', 'guilt-free'],
-    nutrition: { calories: 320, protein: 20, carbs: 12, fat: 20, ingredients: ['Paneer', 'Bell Peppers', 'Onion', 'Yogurt', 'Tandoori Masala', 'Lemon'] } },
-  { id: 'm7',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Mushroom',         nameHi: 'तंदूरी मशरूम',               price: 250, emoji: '🍄', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 180, protein: 8,  carbs: 14, fat: 10, ingredients: ['Mushroom', 'Yogurt', 'Tandoori Masala', 'Ginger', 'Garlic', 'Lemon'] } },
-  { id: 'm8',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Tandoori Chicken (Half)',   nameHi: 'तंदूरी चिकन (हाफ)',          price: 340, emoji: '🍖', popular: true,  tags: ['high-protein', 'guilt-free'],
-    nutrition: { calories: 420, protein: 45, carbs: 8,  fat: 20, ingredients: ['Chicken', 'Yogurt', 'Tandoori Masala', 'Ginger', 'Garlic', 'Chaat Masala'] } },
-  { id: 'm9',  category: 'Starters',    categoryHi: 'स्टार्टर',      name: 'Chicken Tikka',             nameHi: 'चिकन टिक्का',                price: 320, emoji: '🥩', popular: false, tags: ['high-protein', 'guilt-free'],
-    nutrition: { calories: 380, protein: 38, carbs: 10, fat: 18, ingredients: ['Chicken Breast', 'Yogurt', 'Tikka Masala', 'Ginger', 'Garlic', 'Lemon'] } },
-  // Main Course — North Indian
-  { id: 'm10', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Paneer Butter Masala',      nameHi: 'पनीर बटर मसाला',             price: 300, emoji: '🫕', popular: true,  tags: ['high-protein'],
-    nutrition: { calories: 420, protein: 18, carbs: 24, fat: 28, ingredients: ['Paneer', 'Tomato', 'Butter', 'Cream', 'Cashew', 'Cardamom'] } },
-  { id: 'm11', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Dal Makhani',               nameHi: 'दाल मखनी',                   price: 240, emoji: '🫘', popular: true,  tags: ['high-protein', 'guilt-free'],
-    nutrition: { calories: 340, protein: 16, carbs: 38, fat: 14, ingredients: ['Black Lentils', 'Kidney Beans', 'Butter', 'Cream', 'Tomato', 'Garlic'] } },
-  { id: 'm12', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Butter Chicken',            nameHi: 'बटर चिकन',                   price: 360, emoji: '🍛', popular: true,  tags: ['high-protein'],
-    nutrition: { calories: 460, protein: 32, carbs: 22, fat: 26, ingredients: ['Chicken', 'Tomato', 'Butter', 'Cream', 'Cashew', 'Fenugreek'] } },
-  { id: 'm13', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Rogan Josh',         nameHi: 'मटन रोगन जोश',               price: 420, emoji: '🥩', popular: false, tags: ['high-protein'],
-    nutrition: { calories: 520, protein: 40, carbs: 12, fat: 32, ingredients: ['Mutton', 'Kashmiri Chilli', 'Fennel', 'Cardamom', 'Cinnamon', 'Yogurt'] } },
-  // Main Course — Biryani
-  { id: 'm14', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Veg Biryani',               nameHi: 'वेज बिरयानी',                price: 240, emoji: '🍱', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 380, protein: 10, carbs: 58, fat: 12, ingredients: ['Basmati Rice', 'Mixed Vegetables', 'Saffron', 'Fried Onions', 'Whole Spices', 'Ghee'] } },
-  { id: 'm15', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Chicken Biryani (Full)',    nameHi: 'चिकन बिरयानी (फुल)',         price: 340, emoji: '🍲', popular: true,  tags: ['high-protein'],
-    nutrition: { calories: 560, protein: 38, carbs: 62, fat: 18, ingredients: ['Basmati Rice', 'Chicken', 'Saffron', 'Fried Onions', 'Yogurt', 'Whole Spices'] } },
-  { id: 'm16', category: 'Main Course', categoryHi: 'मुख्य व्यंजन', name: 'Mutton Biryani',            nameHi: 'मटन बिरयानी',                price: 420, emoji: '🥘', popular: false, tags: ['high-protein'],
-    nutrition: { calories: 620, protein: 40, carbs: 64, fat: 22, ingredients: ['Basmati Rice', 'Mutton', 'Saffron', 'Fried Onions', 'Whole Spices', 'Ghee'] } },
-  // Breads
-  { id: 'm17', category: 'Breads',      categoryHi: 'रोटी',          name: 'Tandoori Roti',             nameHi: 'तंदूरी रोटी',                price: 25,  emoji: '🫓', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 80,  protein: 3,  carbs: 16, fat: 1,  ingredients: ['Whole Wheat Flour', 'Water', 'Salt'] } },
-  { id: 'm18', category: 'Breads',      categoryHi: 'रोटी',          name: 'Butter Naan',               nameHi: 'बटर नान',                    price: 55,  emoji: '🧈', popular: true,  tags: [],
-    nutrition: { calories: 180, protein: 5,  carbs: 28, fat: 6,  ingredients: ['Refined Flour', 'Butter', 'Yogurt', 'Yeast', 'Salt'] } },
-  { id: 'm19', category: 'Breads',      categoryHi: 'रोटी',          name: 'Garlic Naan',               nameHi: 'लहसुन नान',                  price: 70,  emoji: '🧄', popular: false, tags: [],
-    nutrition: { calories: 200, protein: 5,  carbs: 30, fat: 7,  ingredients: ['Refined Flour', 'Garlic', 'Butter', 'Yogurt', 'Coriander', 'Yeast'] } },
-  // Beverages
-  { id: 'm20', category: 'Beverages',   categoryHi: 'पेय',           name: 'Coke (300ml)',              nameHi: 'कोक (300मिली)',               price: 40,  emoji: '🥤', popular: false, tags: [],
-    nutrition: { calories: 130, protein: 0,  carbs: 35, fat: 0,  ingredients: ['Carbonated Water', 'Sugar', 'Caramel Colour', 'Phosphoric Acid', 'Natural Flavours', 'Caffeine'] } },
-  { id: 'm21', category: 'Beverages',   categoryHi: 'पेय',           name: 'Sprite (300ml)',            nameHi: 'स्प्राइट (300मिली)',          price: 40,  emoji: '🍋', popular: false, tags: [],
-    nutrition: { calories: 120, protein: 0,  carbs: 33, fat: 0,  ingredients: ['Carbonated Water', 'Sugar', 'Citric Acid', 'Natural Flavour', 'Sodium Citrate'] } },
-  { id: 'm22', category: 'Beverages',   categoryHi: 'पेय',           name: 'Mineral Water (1L)',        nameHi: 'मिनरल वाटर (1ली)',            price: 20,  emoji: '💧', popular: false, tags: ['guilt-free'],
-    nutrition: { calories: 0,   protein: 0,  carbs: 0,  fat: 0,  ingredients: ['Purified Water'] } },
-  // Desserts
-  { id: 'm23', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Gulab Jamun (2 pcs)',       nameHi: 'गुलाब जामुन (2 पीस)',        price: 90,  emoji: '🍮', popular: true,  tags: [],
-    nutrition: { calories: 320, protein: 6,  carbs: 48, fat: 12, ingredients: ['Milk Solids', 'Refined Flour', 'Cardamom', 'Rose Water', 'Sugar Syrup', 'Ghee'] } },
-  { id: 'm24', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Rasgulla (2 pcs)',          nameHi: 'रसगुल्ला (2 पीस)',           price: 90,  emoji: '🍡', popular: false, tags: [],
-    nutrition: { calories: 240, protein: 8,  carbs: 38, fat: 6,  ingredients: ['Chenna', 'Sugar', 'Cardamom', 'Rose Water'] } },
-  { id: 'm25', category: 'Desserts',    categoryHi: 'मिठाई',         name: 'Brownie with Ice Cream',    nameHi: 'ब्राउनी विद आइसक्रीम',      price: 160, emoji: '🍫', popular: true,  tags: [],
-    nutrition: { calories: 480, protein: 6,  carbs: 62, fat: 22, ingredients: ['Dark Chocolate', 'Butter', 'Eggs', 'Flour', 'Sugar', 'Vanilla Ice Cream'] } },
+  // ─── Veg Starters ───
+  { id: 'm1',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Chilly (Half)',       nameHi: 'पनीर चिली (हाफ)',           price: 100, emoji: '🧀', popular: true,  tags: ['veg'] },
+  { id: 'm2',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Chilly (Full)',       nameHi: 'पनीर चिली (फुल)',           price: 200, emoji: '🧀', popular: true,  tags: ['veg'] },
+  { id: 'm3',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Manchurian (Half)',   nameHi: 'पनीर मंचूरियन (हाफ)',       price: 100, emoji: '🥘', popular: false, tags: ['veg'] },
+  { id: 'm4',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Manchurian (Full)',   nameHi: 'पनीर मंचूरियन (फुल)',       price: 200, emoji: '🥘', popular: false, tags: ['veg'] },
+  { id: 'm5',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Pepper Dry (Half)',   nameHi: 'पनीर पेप्पर ड्राई (हाफ)',   price: 120, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm6',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer Pepper Dry (Full)',   nameHi: 'पनीर पेप्पर ड्राई (फुल)',   price: 240, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm7',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer 65 (Half)',           nameHi: 'पनीर 65 (हाफ)',             price: 120, emoji: '🧀', popular: false, tags: ['veg'] },
+  { id: 'm8',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Paneer 65 (Full)',           nameHi: 'पनीर 65 (फुल)',             price: 240, emoji: '🧀', popular: false, tags: ['veg'] },
+  { id: 'm9',  category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Mushroom Chilly (Half)',     nameHi: 'मशरूम चिली (हाफ)',          price: 100, emoji: '🍄', popular: false, tags: ['veg'] },
+  { id: 'm10', category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Mushroom Chilly (Full)',     nameHi: 'मशरूम चिली (फुल)',          price: 200, emoji: '🍄', popular: false, tags: ['veg'] },
+  { id: 'm11', category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Mushroom Manchurian (Half)', nameHi: 'मशरूम मंचूरियन (हाफ)',      price: 100, emoji: '🍄', popular: false, tags: ['veg'] },
+  { id: 'm12', category: 'Veg Starters',     categoryHi: 'वेज स्टार्टर',      name: 'Mushroom Manchurian (Full)', nameHi: 'मशरूम मंचूरियन (फुल)',      price: 200, emoji: '🍄', popular: false, tags: ['veg'] },
+
+  // ─── Non-Veg Starters ───
+  { id: 'm13', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chilly Chicken (Half)',      nameHi: 'चिली चिकन (हाफ)',           price: 100, emoji: '🍗', popular: true,  tags: ['non-veg'] },
+  { id: 'm14', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chilly Chicken (Full)',      nameHi: 'चिली चिकन (फुल)',           price: 200, emoji: '🍗', popular: true,  tags: ['non-veg'] },
+  { id: 'm15', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chicken Manchurian (Half)',  nameHi: 'चिकन मंचूरियन (हाफ)',       price: 100, emoji: '🍜', popular: false, tags: ['non-veg'] },
+  { id: 'm16', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chicken Manchurian (Full)',  nameHi: 'चिकन मंचूरियन (फुल)',       price: 200, emoji: '🍜', popular: false, tags: ['non-veg'] },
+  { id: 'm17', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chicken 65 (Half)',          nameHi: 'चिकन 65 (हाफ)',             price: 120, emoji: '🍗', popular: true,  tags: ['non-veg'] },
+  { id: 'm18', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Chicken 65 (Full)',          nameHi: 'चिकन 65 (फुल)',             price: 240, emoji: '🍗', popular: true,  tags: ['non-veg'] },
+  { id: 'm19', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Pepper Chicken (Half)',      nameHi: 'पेप्पर चिकन (हाफ)',         price: 120, emoji: '🌶️', popular: false, tags: ['non-veg'] },
+  { id: 'm20', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Pepper Chicken (Full)',      nameHi: 'पेप्पर चिकन (फुल)',         price: 240, emoji: '🌶️', popular: false, tags: ['non-veg'] },
+  { id: 'm21', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Lemon Chicken (Half)',       nameHi: 'लेमन चिकन (हाफ)',           price: 120, emoji: '🍋', popular: false, tags: ['non-veg'] },
+  { id: 'm22', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Lemon Chicken (Full)',       nameHi: 'लेमन चिकन (फुल)',           price: 240, emoji: '🍋', popular: false, tags: ['non-veg'] },
+  { id: 'm23', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Dry Chicken (2Pc)',          nameHi: 'ड्राई चिकन (2 पीस)',        price: 109, emoji: '🍖', popular: false, tags: ['non-veg'] },
+  { id: 'm24', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Dry Chicken (4Pc)',          nameHi: 'ड्राई चिकन (4 पीस)',        price: 199, emoji: '🍖', popular: true,  tags: ['non-veg'] },
+  { id: 'm25', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Dry Chicken (8Pc)',          nameHi: 'ड्राई चिकन (8 पीस)',        price: 389, emoji: '🍖', popular: false, tags: ['non-veg'] },
+  { id: 'm26', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Fish Fry (2Pc)',             nameHi: 'फिश फ्राई (2 पीस)',         price: 109, emoji: '🐟', popular: false, tags: ['non-veg'] },
+  { id: 'm27', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Fish Fry (4Pc)',             nameHi: 'फिश फ्राई (4 पीस)',         price: 209, emoji: '🐟', popular: false, tags: ['non-veg'] },
+  { id: 'm28', category: 'Non-Veg Starters', categoryHi: 'नॉन-वेज स्टार्टर', name: 'Fish Fry (8Pc)',             nameHi: 'फिश फ्राई (8 पीस)',         price: 399, emoji: '🐟', popular: false, tags: ['non-veg'] },
+
+  // ─── Main Course Veg ───
+  { id: 'm29', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Kadhai Paneer',            nameHi: 'कढ़ाई पनीर',                price: 109, emoji: '🫕', popular: true,  tags: ['veg'] },
+  { id: 'm30', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Matar Paneer',             nameHi: 'मटर पनीर',                  price: 109, emoji: '🫕', popular: false, tags: ['veg'] },
+  { id: 'm31', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Mushroom Masala',          nameHi: 'मशरूम मसाला',               price: 129, emoji: '🍄', popular: false, tags: ['veg'] },
+  { id: 'm32', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Chole Masala',             nameHi: 'छोले मसाला',                price: 99,  emoji: '🫘', popular: false, tags: ['veg'] },
+  { id: 'm33', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Paneer Bhurji',            nameHi: 'पनीर भुर्जी',               price: 99,  emoji: '🧀', popular: false, tags: ['veg'] },
+  { id: 'm34', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Aloo Bhujiya',             nameHi: 'आलू भुजिया',                price: 59,  emoji: '🥔', popular: false, tags: ['veg'] },
+  { id: 'm35', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Aloo Chokha',              nameHi: 'आलू चोखा',                  price: 59,  emoji: '🥔', popular: false, tags: ['veg'] },
+  { id: 'm36', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Aloo Baigan Tamatar Chokha', nameHi: 'आलू बैगन टमाटर चोखा',    price: 49,  emoji: '🍆', popular: false, tags: ['veg'] },
+  { id: 'm37', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Paneer Butter Masala',     nameHi: 'पनीर बटर मसाला',            price: 149, emoji: '🧈', popular: true,  tags: ['veg'] },
+  { id: 'm38', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Paneer Makhani',           nameHi: 'पनीर मखनी',                 price: 149, emoji: '🫕', popular: true,  tags: ['veg'] },
+  { id: 'm39', category: 'Main Course Veg',  categoryHi: 'मुख्य व्यंजन (वेज)', name: 'Veg Regular',              nameHi: 'वेज रेगुलर',                price: 69,  emoji: '🥗', popular: false, tags: ['veg'] },
+
+  // ─── Main Course Non-Veg ───
+  { id: 'm40', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Chicken Curry (2Pc)',   nameHi: 'चिकन करी (2 पीस)',    price: 99,  emoji: '🍛', popular: false, tags: ['non-veg'] },
+  { id: 'm41', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Chicken Curry (4Pc)',   nameHi: 'चिकन करी (4 पीस)',    price: 189, emoji: '🍛', popular: true,  tags: ['non-veg'] },
+  { id: 'm42', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Chicken Curry (8Pc)',   nameHi: 'चिकन करी (8 पीस)',    price: 369, emoji: '🍛', popular: false, tags: ['non-veg'] },
+  { id: 'm43', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Fish Curry (2Pc)',      nameHi: 'फिश करी (2 पीस)',     price: 139, emoji: '🐟', popular: false, tags: ['non-veg'] },
+  { id: 'm44', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Fish Curry (4Pc)',      nameHi: 'फिश करी (4 पीस)',     price: 269, emoji: '🐟', popular: false, tags: ['non-veg'] },
+  { id: 'm45', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Fish Curry (8Pc)',      nameHi: 'फिश करी (8 पीस)',     price: 519, emoji: '🐟', popular: false, tags: ['non-veg'] },
+  { id: 'm46', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Bhurji (2Pc)',      nameHi: 'अंडा भुर्जी (2 पीस)', price: 49,  emoji: '🥚', popular: false, tags: ['non-veg'] },
+  { id: 'm47', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Bhurji (4Pc)',      nameHi: 'अंडा भुर्जी (4 पीस)', price: 95,  emoji: '🥚', popular: false, tags: ['non-veg'] },
+  { id: 'm48', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Bhurji (8Pc)',      nameHi: 'अंडा भुर्जी (8 पीस)', price: 189, emoji: '🥚', popular: false, tags: ['non-veg'] },
+  { id: 'm49', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Omelette (2Pc)',        nameHi: 'ऑमलेट (2 पीस)',       price: 49,  emoji: '🍳', popular: false, tags: ['non-veg'] },
+  { id: 'm50', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Omelette (4Pc)',        nameHi: 'ऑमलेट (4 पीस)',       price: 95,  emoji: '🍳', popular: false, tags: ['non-veg'] },
+  { id: 'm51', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Omelette (8Pc)',        nameHi: 'ऑमलेट (8 पीस)',       price: 189, emoji: '🍳', popular: false, tags: ['non-veg'] },
+  { id: 'm52', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Curry (2Pc)',       nameHi: 'अंडा करी (2 पीस)',    price: 79,  emoji: '🥚', popular: false, tags: ['non-veg'] },
+  { id: 'm53', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Curry (4Pc)',       nameHi: 'अंडा करी (4 पीस)',    price: 149, emoji: '🥚', popular: false, tags: ['non-veg'] },
+  { id: 'm54', category: 'Main Course Non-Veg', categoryHi: 'मुख्य व्यंजन (नॉन-वेज)', name: 'Egg Curry (8Pc)',       nameHi: 'अंडा करी (8 पीस)',    price: 289, emoji: '🥚', popular: false, tags: ['non-veg'] },
+
+  // ─── Veg Meals ───
+  { id: 'm55', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Paneer Plain Rice Meal',     nameHi: 'पनीर प्लेन राइस मील',     price: 169, emoji: '🍱', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm56', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Paneer Jeera Rice Meal',     nameHi: 'पनीर जीरा राइस मील',      price: 179, emoji: '🍱', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm57', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Paneer Pulav Meal',          nameHi: 'पनीर पुलाव मील',           price: 189, emoji: '🍱', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm58', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Paneer Roti Meal',           nameHi: 'पनीर रोटी मील',            price: 169, emoji: '🫓', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm59', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Standard Veg Thali',         nameHi: 'स्टैंडर्ड वेज थाली',       price: 109, emoji: '🍽️', popular: true,  tags: ['veg', 'meal'] },
+  { id: 'm60', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Special Veg Thali',          nameHi: 'स्पेशल वेज थाली',          price: 159, emoji: '🍽️', popular: true,  tags: ['veg', 'meal'] },
+  { id: 'm61', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Dal Chawal Bhujiya',         nameHi: 'दाल चावल भुजिया',          price: 99,  emoji: '🍚', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm62', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Dal Chawal Chokha',          nameHi: 'दाल चावल चोखा',            price: 99,  emoji: '🍚', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm63', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Roti Sabzi Meal',            nameHi: 'रोटी सब्जी मील',           price: 99,  emoji: '🫓', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm64', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Paratha Sabzi Meal',         nameHi: 'पराठा सब्जी मील',          price: 129, emoji: '🫓', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm65', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Puri Sabzi Meal',            nameHi: 'पूरी सब्जी मील',           price: 129, emoji: '🫓', popular: false, tags: ['veg', 'meal'] },
+  { id: 'm66', category: 'Veg Meals',        categoryHi: 'वेज मील्स',          name: 'Dal Khichdi',                nameHi: 'दाल खिचड़ी',               price: 99,  emoji: '🍚', popular: false, tags: ['veg', 'meal'] },
+
+  // ─── Non-Veg Meals ───
+  { id: 'm67', category: 'Non-Veg Meals',    categoryHi: 'नॉन-वेज मील्स',     name: 'Chicken Plain Rice Meal',    nameHi: 'चिकन प्लेन राइस मील',     price: 189, emoji: '🍱', popular: true,  tags: ['non-veg', 'meal'] },
+  { id: 'm68', category: 'Non-Veg Meals',    categoryHi: 'नॉन-वेज मील्स',     name: 'Chicken Jeera Rice Meal',    nameHi: 'चिकन जीरा राइस मील',      price: 199, emoji: '🍱', popular: false, tags: ['non-veg', 'meal'] },
+  { id: 'm69', category: 'Non-Veg Meals',    categoryHi: 'नॉन-वेज मील्स',     name: 'Chicken Pulav Meal',         nameHi: 'चिकन पुलाव मील',           price: 209, emoji: '🍱', popular: false, tags: ['non-veg', 'meal'] },
+  { id: 'm70', category: 'Non-Veg Meals',    categoryHi: 'नॉन-वेज मील्स',     name: 'Roti Chicken Meal',          nameHi: 'रोटी चिकन मील',            price: 189, emoji: '🫓', popular: false, tags: ['non-veg', 'meal'] },
+  { id: 'm71', category: 'Non-Veg Meals',    categoryHi: 'नॉन-वेज मील्स',     name: 'Fish Thali',                 nameHi: 'फिश थाली',                 price: 199, emoji: '🐟', popular: false, tags: ['non-veg', 'meal'] },
+
+  // ─── Rice & Biryani ───
+  { id: 'm72', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Plain Rice (Half)',          nameHi: 'प्लेन राइस (हाफ)',         price: 45,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm73', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Plain Rice (Full)',          nameHi: 'प्लेन राइस (फुल)',         price: 80,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm74', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Jeera Rice (Half)',          nameHi: 'जीरा राइस (हाफ)',          price: 65,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm75', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Jeera Rice (Full)',          nameHi: 'जीरा राइस (फुल)',          price: 99,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm76', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Ghee Rice (Half)',           nameHi: 'घी राइस (हाफ)',            price: 65,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm77', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Ghee Rice (Full)',           nameHi: 'घी राइस (फुल)',            price: 99,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm78', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Veg Pulav (Half)',           nameHi: 'वेज पुलाव (हाफ)',          price: 69,  emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm79', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Veg Pulav (Full)',           nameHi: 'वेज पुलाव (फुल)',          price: 129, emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm80', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Veg Biryani',               nameHi: 'वेज बिरयानी',               price: 139, emoji: '🍲', popular: false, tags: ['veg'] },
+  { id: 'm81', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Chicken Biryani',           nameHi: 'चिकन बिरयानी',              price: 159, emoji: '🍲', popular: true,  tags: ['non-veg'] },
+  { id: 'm82', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Egg Fried Rice',            nameHi: 'एग फ्राइड राइस',           price: 139, emoji: '🍳', popular: false, tags: ['non-veg'] },
+  { id: 'm83', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Veg Fried Rice',            nameHi: 'वेज फ्राइड राइस',          price: 129, emoji: '🍚', popular: false, tags: ['veg'] },
+  { id: 'm84', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Veg Schezwan Fried Rice',   nameHi: 'वेज शेजवान फ्राइड राइस',   price: 139, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm85', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Paneer Fried Rice',         nameHi: 'पनीर फ्राइड राइस',         price: 149, emoji: '🧀', popular: false, tags: ['veg'] },
+  { id: 'm86', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Paneer Schezwan Fried Rice', nameHi: 'पनीर शेजवान फ्राइड राइस', price: 159, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm87', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Chicken Fried Rice',        nameHi: 'चिकन फ्राइड राइस',         price: 159, emoji: '🍗', popular: false, tags: ['non-veg'] },
+  { id: 'm88', category: 'Rice & Biryani',   categoryHi: 'चावल और बिरयानी',   name: 'Chicken Schezwan Fried Rice', nameHi: 'चिकन शेजवान फ्राइड राइस', price: 169, emoji: '🌶️', popular: false, tags: ['non-veg'] },
+
+  // ─── Noodles ───
+  { id: 'm89', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Veg Noodles',               nameHi: 'वेज नूडल्स',                price: 129, emoji: '🍜', popular: false, tags: ['veg'] },
+  { id: 'm90', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Veg Schezwan Noodles',      nameHi: 'वेज शेजवान नूडल्स',         price: 139, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm91', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Paneer Noodles',            nameHi: 'पनीर नूडल्स',               price: 149, emoji: '🧀', popular: false, tags: ['veg'] },
+  { id: 'm92', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Paneer Schezwan Noodles',   nameHi: 'पनीर शेजवान नूडल्स',        price: 159, emoji: '🌶️', popular: false, tags: ['veg'] },
+  { id: 'm93', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Chicken Noodles',           nameHi: 'चिकन नूडल्स',               price: 159, emoji: '🍗', popular: false, tags: ['non-veg'] },
+  { id: 'm94', category: 'Noodles',          categoryHi: 'नूडल्स',             name: 'Chicken Schezwan Noodles',  nameHi: 'चिकन शेजवान नूडल्स',        price: 169, emoji: '🌶️', popular: true,  tags: ['non-veg'] },
+
+  // ─── Roti & Paratha ───
+  { id: 'm95',  category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Plain Roti',                nameHi: 'प्लेन रोटी',                price: 10,  emoji: '🫓', popular: false, tags: ['veg'] },
+  { id: 'm96',  category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Ghee Roti',                 nameHi: 'घी रोटी',                   price: 15,  emoji: '🫓', popular: false, tags: ['veg'] },
+  { id: 'm97',  category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Butter Roti',               nameHi: 'बटर रोटी',                  price: 12,  emoji: '🧈', popular: false, tags: ['veg'] },
+  { id: 'm98',  category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Plain Paratha',             nameHi: 'प्लेन पराठा',               price: 25,  emoji: '🫓', popular: false, tags: ['veg'] },
+  { id: 'm99',  category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Aloo Paratha',              nameHi: 'आलू पराठा',                 price: 55,  emoji: '🥔', popular: true,  tags: ['veg'] },
+  { id: 'm100', category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Sattu Paratha',             nameHi: 'सत्तू पराठा',               price: 55,  emoji: '🫓', popular: false, tags: ['veg'] },
+  { id: 'm101', category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Aloo Pyaz Paratha',         nameHi: 'आलू प्याज़ पराठा',           price: 60,  emoji: '🧅', popular: false, tags: ['veg'] },
+  { id: 'm102', category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Pyaz Paratha',              nameHi: 'प्याज़ पराठा',               price: 30,  emoji: '🧅', popular: false, tags: ['veg'] },
+  { id: 'm103', category: 'Roti & Paratha',  categoryHi: 'रोटी और पराठा',     name: 'Paneer Paratha',            nameHi: 'पनीर पराठा',                price: 70,  emoji: '🧀', popular: false, tags: ['veg'] },
+
+  // ─── Dal ───
+  { id: 'm104', category: 'Dal',             categoryHi: 'दाल',               name: 'Dal Fry (Half)',            nameHi: 'दाल फ्राई (हाफ)',           price: 50,  emoji: '🫘', popular: false, tags: ['veg'] },
+  { id: 'm105', category: 'Dal',             categoryHi: 'दाल',               name: 'Dal Fry (Full)',            nameHi: 'दाल फ्राई (फुल)',           price: 90,  emoji: '🫘', popular: false, tags: ['veg'] },
+  { id: 'm106', category: 'Dal',             categoryHi: 'दाल',               name: 'Dal Tadka (Half)',          nameHi: 'दाल तड़का (हाफ)',           price: 70,  emoji: '🫘', popular: true,  tags: ['veg'] },
+  { id: 'm107', category: 'Dal',             categoryHi: 'दाल',               name: 'Dal Tadka (Full)',          nameHi: 'दाल तड़का (फुल)',           price: 120, emoji: '🫘', popular: true,  tags: ['veg'] },
+
+  // ─── Beverages ───
+  { id: 'm108', category: 'Beverages',       categoryHi: 'पेय',               name: 'Lassi',                     nameHi: 'लस्सी',                    price: 60,  emoji: '🥛', popular: true,  tags: ['veg'] },
+  { id: 'm109', category: 'Beverages',       categoryHi: 'पेय',               name: 'Sattu',                     nameHi: 'सत्तू',                    price: 40,  emoji: '🥤', popular: false, tags: ['veg'] },
+  { id: 'm110', category: 'Beverages',       categoryHi: 'पेय',               name: 'Soft Drinks',               nameHi: 'सॉफ्ट ड्रिंक्स',           price: 40,  emoji: '🥤', popular: false, tags: ['veg'] },
+  { id: 'm111', category: 'Beverages',       categoryHi: 'पेय',               name: 'Mineral Water',             nameHi: 'मिनरल वाटर',               price: 20,  emoji: '💧', popular: false, tags: ['veg'] },
 ];
 
 // Add dynamic fields to every menu item
@@ -534,10 +609,10 @@ db.prepare('SELECT id, inStock, offer, image, stockCount FROM menu_state').all()
 
 // Restore menu images from Cloudinary (handles ephemeral filesystem on Render)
 if (process.env.CLOUDINARY_CLOUD_NAME) {
-  cloudinary.api.resources({ type: 'upload', prefix: 'zingpos-menu/', max_results: 100 })
+  cloudinary.api.resources({ type: 'upload', prefix: 'flavorserver-menu/', max_results: 100 })
     .then(result => {
       result.resources.forEach(resource => {
-        const itemId = resource.public_id.replace('zingpos-menu/', '');
+        const itemId = resource.public_id.replace('flavorserver-menu/', '');
         const item = MENU.find(m => m.id === itemId);
         if (item && !item.image) {
           item.image = resource.secure_url;
@@ -1450,14 +1525,22 @@ app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) =
       .jpeg({ quality: 82 })
       .toBuffer();
 
-    const result = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        { public_id: `zingpos-menu/${req.params.id}`, overwrite: true, resource_type: 'image' },
-        (err, result) => err ? reject(err) : resolve(result)
-      ).end(resizedBuffer);
-    });
+    // Try Cloudinary first, fall back to local storage
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { public_id: `flavorserver-menu/${req.params.id}`, overwrite: true, resource_type: 'image' },
+          (err, result) => err ? reject(err) : resolve(result)
+        ).end(resizedBuffer);
+      });
+      item.image = result.secure_url;
+    } else {
+      // Local storage fallback
+      const filename = `${req.params.id}.jpg`;
+      fs.writeFileSync(path.join(UPLOADS_DIR, filename), resizedBuffer);
+      item.image = `/uploads/menu/${filename}`;
+    }
 
-    item.image = result.secure_url;
     dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
     io.emit('menu:updated', { menu: MENU });
     res.json({ success: true, imageUrl: item.image });
@@ -1467,11 +1550,70 @@ app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) =
   }
 });
 
+// ─── Set Menu Image from URL (for seeding) ──────────────────────────────────
+app.post('/api/admin/menu/:id/image-url', express.json(), async (req, res) => {
+  const item = MENU.find(m => m.id === req.params.id);
+  if (!item) return res.json({ success: false, error: 'Item not found' });
+  const { url } = req.body;
+  if (!url) return res.json({ success: false, error: 'No URL provided' });
+
+  try {
+    // Fetch image from URL (follows redirects across http/https)
+    const _https = require('https');
+    const _http  = require('http');
+
+    const imageBuffer = await new Promise((resolve, reject) => {
+      const request = (fetchUrl, redirectCount = 0) => {
+        if (redirectCount > 10) return reject(new Error('Too many redirects'));
+        const mod = fetchUrl.startsWith('https') ? _https : _http;
+        mod.get(fetchUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }, (response) => {
+          if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            let loc = response.headers.location;
+            // Handle relative redirects
+            if (loc.startsWith('/')) {
+              const u = new URL(fetchUrl);
+              loc = u.origin + loc;
+            }
+            return request(loc, redirectCount + 1);
+          }
+          if (response.statusCode !== 200) {
+            return reject(new Error(`HTTP ${response.statusCode}`));
+          }
+          const chunks = [];
+          response.on('data', c => chunks.push(c));
+          response.on('end', () => resolve(Buffer.concat(chunks)));
+          response.on('error', reject);
+        }).on('error', reject);
+      };
+      request(url);
+    });
+
+    const resizedBuffer = await sharp(imageBuffer)
+      .resize(600, 400, { fit: 'cover' })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+
+    const filename = `${req.params.id}.jpg`;
+    fs.writeFileSync(path.join(UPLOADS_DIR, filename), resizedBuffer);
+    item.image = `/uploads/menu/${filename}`;
+
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
+    res.json({ success: true, imageUrl: item.image });
+  } catch (e) {
+    console.error(`Image URL fetch error for ${req.params.id}:`, e.message);
+    res.json({ success: false, error: 'Failed to fetch image: ' + e.message });
+  }
+});
+
 app.delete('/api/admin/menu/:id/image', async (req, res) => {
   const item = MENU.find(m => m.id === req.params.id);
   if (!item) return res.json({ success: false, error: 'Item not found' });
 
-  try { await cloudinary.uploader.destroy(`zingpos-menu/${req.params.id}`); } catch (_) {}
+  if (process.env.CLOUDINARY_CLOUD_NAME) {
+    try { await cloudinary.uploader.destroy(`flavorserver-menu/${req.params.id}`); } catch (_) {}
+  } else {
+    try { fs.unlinkSync(path.join(UPLOADS_DIR, `${req.params.id}.jpg`)); } catch (_) {}
+  }
 
   item.image = null;
   dbSaveMenuState(item.id, item.inStock, item.offer, null, item.stockCount);
@@ -1484,7 +1626,7 @@ server.listen(CONFIG.PORT, () => {
   const networkUrl = `http://${LOCAL_IP}:${CONFIG.PORT}`;
   const publicBase = PUBLIC_URL || networkUrl;
 
-  console.log(`\n⚡  ZingPOS Server is running!\n`);
+  console.log(`\n⚡  The Flavor Server Server is running!\n`);
   console.log(`   💻  PC (Admin):      http://localhost:${CONFIG.PORT}/admin`);
   console.log(`   🧑‍💼  Waiter Tab:      http://localhost:${CONFIG.PORT}/waiter`);
   console.log(`   📱  Phone (Customer): ${networkUrl}/customer`);
