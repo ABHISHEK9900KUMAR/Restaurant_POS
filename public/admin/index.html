@@ -976,6 +976,21 @@ header {
   .qr-panel { padding: 20px 16px; }
   .qr-tabs { gap: 6px; }
   .qr-tab { padding: 5px 11px; font-size: 12px; }
+
+  /* Menu manager: bottom-sheet on mobile */
+  .menu-mgr-overlay { padding: 0; align-items: flex-end; }
+  .menu-mgr-panel { border-radius: 20px 20px 0 0; max-height: 92vh; display: flex; flex-direction: column; margin: 0; }
+  .menu-mgr-header { padding: 16px 16px 12px; }
+  .menu-mgr-cats { padding: 8px 14px; }
+  .menu-mgr-list { max-height: unset; flex: 1; overflow-y: auto; }
+  /* Each row: image+name on one line, controls wrap below */
+  .menu-mgr-row { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
+  .mgr-info { flex: 1; min-width: 0; }
+  .mgr-controls { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .stock-badge { flex-shrink: 0; }
+  .stock-wrap { flex: 1; min-width: 130px; }
+  .offer-wrap { flex: 1; min-width: 90px; }
+  .menu-mgr-reset-bar { padding: 10px 14px; }
 }
 
 /* ── Light Mode ──────────────────────────────────── */

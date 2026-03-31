@@ -2051,11 +2051,11 @@ function renderMenu() {
         ${oos ? `<div class="item-oos-label">${t('out_of_stock')}</div>` : ''}
         <div class="item-badge" id="badge-${item.id}">0</div>
       `;
-      if (!oos) card.addEventListener('click', (e) => {
-        if (e._longPressHandled) return;
+      const isLPConsumed = initLongPress(card, item);
+      if (!oos) card.addEventListener('click', () => {
+        if (isLPConsumed && isLPConsumed()) return;
         addToCart(item);
       });
-      initLongPress(card, item);
       grid.appendChild(card);
     });
     section.appendChild(grid);
@@ -2143,46 +2143,51 @@ let _lpTimer = null;
 let _lpActive = false;
 
 function initLongPress(card, item) {
-  if (!item.nutrition) return; // no data → no popup
+  if (!item.nutrition) return null; // no data → no popup
 
-  let _startX = 0, _startY = 0;
+  let startX = 0, startY = 0, lpConsumed = false;
 
-  const start = (e) => {
+  // Use touch events — pointer events fire pointercancel too aggressively on
+  // mobile when the browser detects a potential scroll, killing the timer.
+  card.addEventListener('touchstart', (e) => {
     _lpActive = false;
-    _startX = e.clientX;
-    _startY = e.clientY;
+    lpConsumed = false;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
     _lpTimer = setTimeout(() => {
       _lpActive = true;
+      if (navigator.vibrate) navigator.vibrate(40); // subtle haptic
       showNutritionPopup(item);
     }, 600);
-  };
+  }, { passive: true });
 
-  const move = (e) => {
-    if (_lpTimer && (Math.abs(e.clientX - _startX) > 10 || Math.abs(e.clientY - _startY) > 10)) {
-      clearTimeout(_lpTimer);
-      _lpTimer = null;
+  card.addEventListener('touchmove', (e) => {
+    if (!_lpTimer) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) {
+      clearTimeout(_lpTimer); _lpTimer = null; // user is scrolling
     }
-  };
+  }, { passive: true });
 
-  const end = (e) => {
-    clearTimeout(_lpTimer);
-    _lpTimer = null;
+  card.addEventListener('touchend', () => {
+    clearTimeout(_lpTimer); _lpTimer = null;
     if (_lpActive) {
       _lpActive = false;
-      hideNutritionPopup();
-      // Mark event so click handler doesn't fire addToCart
-      if (e) e._longPressHandled = true;
+      lpConsumed = true;
+      // Popup stays visible — user taps the backdrop to dismiss.
+      // Suppress the click that fires after touchend.
+      setTimeout(() => { lpConsumed = false; }, 400);
     }
-  };
+  });
 
-  card.addEventListener('pointerdown',  start,  { passive: true });
-  card.addEventListener('pointermove',  move,   { passive: true });
-  card.addEventListener('pointerup',    end);
-  card.addEventListener('pointercancel', end);
-  // pointerleave intentionally omitted — fires too eagerly on mobile scroll
+  card.addEventListener('touchcancel', () => {
+    clearTimeout(_lpTimer); _lpTimer = null;
+    _lpActive = false;
+  });
 
-  // Prevent context menu on long press (mobile) — always block on cards with nutrition
   card.addEventListener('contextmenu', e => e.preventDefault());
+
+  return () => lpConsumed; // getter used by click handler
 }
 
 function showNutritionPopup(item) {
@@ -2218,6 +2223,11 @@ function showNutritionPopup(item) {
 function hideNutritionPopup() {
   document.getElementById('nutritionPopup').classList.remove('visible');
 }
+
+// Tap the backdrop (outside the card) to close the popup
+document.getElementById('nutritionPopup').addEventListener('click', (e) => {
+  if (!e.target.closest('.nutrition-popup-card')) hideNutritionPopup();
+});
 
 // ── Cart ────────────────────────────────────────────────
 function emitBrowsing(item, action) {
