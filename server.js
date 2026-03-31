@@ -49,7 +49,8 @@ const LOCAL_IP = getLocalIP();
 
 // Public URL — set via env var to override (e.g. for ngrok/production)
 // e.g.  PUBLIC_URL=https://abc123.ngrok.io node server.js
-const PUBLIC_URL = process.env.PUBLIC_URL || null;
+// RENDER_EXTERNAL_URL is set automatically by Render for every web service
+const PUBLIC_URL = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || null;
 
 const app = express();
 const server = http.createServer(app);
