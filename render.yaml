@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: flavor-server-pos
+    runtime: node
+    branch: feat/glass-ui
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_PASS
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: SHOP_NAME
+        value: The Flavor Server
