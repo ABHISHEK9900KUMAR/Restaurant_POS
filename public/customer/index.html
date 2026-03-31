@@ -2145,12 +2145,23 @@ let _lpActive = false;
 function initLongPress(card, item) {
   if (!item.nutrition) return; // no data → no popup
 
+  let _startX = 0, _startY = 0;
+
   const start = (e) => {
     _lpActive = false;
+    _startX = e.clientX;
+    _startY = e.clientY;
     _lpTimer = setTimeout(() => {
       _lpActive = true;
       showNutritionPopup(item);
     }, 600);
+  };
+
+  const move = (e) => {
+    if (_lpTimer && (Math.abs(e.clientX - _startX) > 10 || Math.abs(e.clientY - _startY) > 10)) {
+      clearTimeout(_lpTimer);
+      _lpTimer = null;
+    }
   };
 
   const end = (e) => {
@@ -2164,10 +2175,11 @@ function initLongPress(card, item) {
     }
   };
 
-  card.addEventListener('pointerdown', start, { passive: true });
-  card.addEventListener('pointerup',   end);
+  card.addEventListener('pointerdown',  start,  { passive: true });
+  card.addEventListener('pointermove',  move,   { passive: true });
+  card.addEventListener('pointerup',    end);
   card.addEventListener('pointercancel', end);
-  card.addEventListener('pointerleave', end);
+  // pointerleave intentionally omitted — fires too eagerly on mobile scroll
 
   // Prevent context menu on long press (mobile) — always block on cards with nutrition
   card.addEventListener('contextmenu', e => e.preventDefault());

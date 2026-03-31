@@ -1160,7 +1160,7 @@ header {
       <div class="qr-canvas-wrap" id="qrCanvasWrap">
         <img id="qrDisplayImg" src="" width="220" height="220" alt="QR Code" />
       </div>
-      <div class="qr-display-url" id="qrDisplayUrl"></div>
+      <a class="qr-display-url" id="qrDisplayUrl" target="_blank" rel="noopener"></a>
       <div class="qr-display-hint" data-i18n="qr_hint">Print and place this at the table</div>
     </div>
     <!-- Occupied state shown instead of QR -->
@@ -2484,7 +2484,9 @@ function selectQRTable(tableId, updateActiveClass = true) {
     occupiedPanel.classList.remove('visible');
     const url = networkBase + '/customer?table=' + tableId;
     document.getElementById('qrDisplayImg').src = '/api/qr?url=' + encodeURIComponent(url);
-    document.getElementById('qrDisplayUrl').textContent = url;
+    const urlEl = document.getElementById('qrDisplayUrl');
+    urlEl.textContent = url;
+    urlEl.href = url;
   }
 }
 

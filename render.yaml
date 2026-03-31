@@ -14,5 +14,7 @@ services:
         sync: false
       - key: CLOUDINARY_URL
         sync: false
+      - key: PUBLIC_URL
+        value: https://flavor-server-0cge.onrender.com
       - key: SHOP_NAME
         value: The Flavor Server
