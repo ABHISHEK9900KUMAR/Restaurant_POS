@@ -2313,6 +2313,7 @@ function printKOT(order) {
 
   const itemsLines = (order.items || []).map(item =>
     `<div class="kot-item"><span class="kot-qty">${item.quantity}x</span><span class="kot-name">${item.name || ''}</span></div>`
+    + (item.note ? `<div class="kot-note">  ↳ ${item.note}</div>` : '')
   ).join('');
 
   const totalItems = (order.items || []).reduce((s, i) => s + i.quantity, 0);
@@ -2330,6 +2331,7 @@ function printKOT(order) {
   .kot-item { display: flex; gap: 6px; padding: 2px 0; font-size: 12px; }
   .kot-qty { font-weight: bold; min-width: 24px; }
   .kot-name { flex: 1; }
+  .kot-note { font-size: 11px; color: #444; font-style: italic; padding: 0 0 3px 8px; }
   .total-items { font-size: 12px; text-align: center; font-weight: bold; padding: 2px 0; }
   .footer { font-size: 10px; color: #555; text-align: center; margin-top: 4px; }
   @media print { body { -webkit-print-color-adjust: exact; } }
