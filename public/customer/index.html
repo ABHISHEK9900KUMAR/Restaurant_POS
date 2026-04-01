@@ -1227,6 +1227,90 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 }
 .theme-btn:hover { background: var(--surface3); }
 
+/* ── Search Button (header) ──────────────────────────── */
+.search-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text-mid); cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+.search-btn:hover { background: var(--surface3); }
+.search-btn.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.search-btn svg { width: 16px; height: 16px; }
+
+/* ── Search Bar Strip ────────────────────────────────── */
+.search-bar-wrap {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  padding: 8px 0 10px;
+  margin-bottom: 4px;
+}
+.search-bar-wrap.open { display: block; }
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-field-icon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--text-dim); pointer-events: none;
+  flex-shrink: 0;
+}
+#searchInput {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 11px 42px 11px 38px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; outline: none;
+  height: 44px;
+  -webkit-appearance: none;
+  transition: border-color var(--transition);
+}
+#searchInput::placeholder { color: var(--text-dim); }
+#searchInput::-webkit-search-decoration,
+#searchInput::-webkit-search-cancel-button,
+#searchInput::-webkit-search-results-button { -webkit-appearance: none; display: none; }
+.search-clear-btn {
+  position: absolute; right: 9px; top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface3); border: none;
+  color: var(--text-mid); border-radius: 50%;
+  width: 26px; height: 26px;
+  display: none; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition);
+}
+.search-clear-btn:hover { background: var(--border2); color: var(--text); }
+.search-clear-btn.visible { display: flex; }
+
+/* ── Search No Results ───────────────────────────────── */
+#searchNoResults {
+  display: none;
+  padding: 40px 0;
+  text-align: center;
+  color: var(--text-dim);
+}
+#searchNoResults.visible { display: block; }
+.search-no-results-icon { font-size: 36px; opacity: 0.4; margin-bottom: 10px; }
+.search-no-results-text { font-size: 14px; }
+.search-no-results-sub  { font-size: 12px; margin-top: 4px; color: var(--text-dim); }
+
 </style>
 </head>
 <body>
@@ -1241,6 +1325,11 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <button class="lang-btn active" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="hi">हिंदी</button>
     </div>
+    <button class="search-btn" id="searchBtn" aria-label="Search menu">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8.5" cy="8.5" r="5.5"/><line x1="13.5" y1="13.5" x2="18" y2="18"/>
+      </svg>
+    </button>
     <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
     <div class="table-badge" id="tableBadge"><span id="tableBadgeText">—</span></div>
     <div class="connection-status">
@@ -1252,6 +1341,18 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 
 <!-- Scrollable menu area -->
 <main class="menu-panel" id="menuPanel">
+
+  <!-- Search Bar (sticky within scroll container) -->
+  <div id="searchBarWrap" class="search-bar-wrap" aria-hidden="true">
+    <div class="search-input-wrap">
+      <svg class="search-field-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8.5" cy="8.5" r="5.5"/><line x1="13.5" y1="13.5" x2="18" y2="18"/>
+      </svg>
+      <input type="search" id="searchInput" placeholder="Search menu…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="search_placeholder" />
+      <button class="search-clear-btn" id="searchClearBtn" aria-label="Clear search">✕</button>
+    </div>
+  </div>
+
   <div class="customer-form">
     <div class="name-field-wrap">
       <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
@@ -1278,6 +1379,11 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
   <div class="quick-filter-nav" id="quickFilterNav"></div>
 
   <div id="menuContent">
+    <div id="searchNoResults">
+      <div class="search-no-results-icon">🔍</div>
+      <div class="search-no-results-text" id="searchNoResultsText">No items found</div>
+      <div class="search-no-results-sub" id="searchNoResultsSub">Try a different word</div>
+    </div>
     <div class="page-state" id="loadingState">
       <div class="load-ring"></div>
       <div class="page-state-text" data-i18n="connecting_menu">Connecting to menu…</div>
@@ -1616,6 +1722,10 @@ const TRANSLATIONS = {
     np_fat:      'Fat',
     np_ingredients: 'Ingredients',
     np_hint:     'Release to dismiss',
+    // Search
+    search_placeholder:      'Search menu…',
+    search_no_results:       'No items found for',
+    search_no_results_sub:   'Try a different word',
   },
   hi: {
     connecting: 'जोड़ रहे हैं…',
@@ -1719,6 +1829,10 @@ const TRANSLATIONS = {
     np_fat:      'फैट',
     np_ingredients: 'सामग्री',
     np_hint:     'छोड़ें तो बंद होगा',
+    // Search
+    search_placeholder:    'मेनू खोजें…',
+    search_no_results:     'कोई आइटम नहीं मिला',
+    search_no_results_sub: 'कोई और शब्द आज़माएं',
   }
 };
 
@@ -1773,6 +1887,10 @@ function applyTranslations() {
       else statusTxt.textContent = t('connecting');
     }
   }
+
+  // Search input placeholder
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.placeholder = t('search_placeholder');
 
   // FAB text
   const fabText = document.getElementById('fabText');
@@ -1851,6 +1969,7 @@ const state = {
   _lastHistory: null,
   activeQuickFilters: new Set(), // multi-select: 'bestseller' | 'on-offer' | 'high-protein' | 'guilt-free'
   activeCategory: null,          // currently selected category (null = All)
+  searchQuery: '',               // current search string
 };
 
 function uid(prefix) {
@@ -2109,31 +2228,129 @@ function clearQuickFilter() {
   applyFilters();
 }
 
+// ── Search ───────────────────────────────────────────────
+
+function openSearch() {
+  const wrap     = document.getElementById('searchBarWrap');
+  const input    = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  wrap.classList.add('open');
+  wrap.setAttribute('aria-hidden', 'false');
+  searchBtn.classList.add('active');
+  // Scroll to top so search bar is fully visible
+  document.getElementById('menuPanel').scrollTop = 0;
+  requestAnimationFrame(() => input.focus());
+}
+
+function closeSearch() {
+  const wrap      = document.getElementById('searchBarWrap');
+  const input     = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const clearBtn  = document.getElementById('searchClearBtn');
+  wrap.classList.remove('open');
+  wrap.setAttribute('aria-hidden', 'true');
+  searchBtn.classList.remove('active');
+  input.value = '';
+  clearBtn.classList.remove('visible');
+  state.searchQuery = '';
+  applyFilters();
+}
+
+// Search button: toggle open/close
+document.getElementById('searchBtn').addEventListener('click', () => {
+  if (document.getElementById('searchBarWrap').classList.contains('open')) {
+    closeSearch();
+  } else {
+    openSearch();
+  }
+});
+
+// Real-time filtering as user types
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  state.searchQuery = e.target.value;
+  document.getElementById('searchClearBtn').classList.toggle('visible', state.searchQuery.length > 0);
+  applyFilters();
+  // Scroll to top on first character so results are visible
+  if (state.searchQuery.length === 1) {
+    document.getElementById('menuPanel').scrollTop = 0;
+  }
+});
+
+// Clear button: clear text, stay in search mode
+document.getElementById('searchClearBtn').addEventListener('click', () => {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchClearBtn').classList.remove('visible');
+  state.searchQuery = '';
+  applyFilters();
+  input.focus();
+});
+
+// Escape key: close search
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('searchBarWrap').classList.contains('open')) {
+    closeSearch();
+  }
+});
+
 function applyFilters() {
-  // ── Step 1: category — show/hide sections (single-select, unchanged logic)
+  const q = (state.searchQuery || '').toLowerCase().trim();
+  const hasSearch = q.length > 0;
+  const hasQF     = state.activeQuickFilters.size > 0;
+
+  // ── Step 1: category — bypass when search is active (show all sections)
   document.querySelectorAll('.menu-section').forEach(s => {
-    s.style.display = (!state.activeCategory || s.dataset.cat === state.activeCategory) ? '' : 'none';
+    if (hasSearch) {
+      s.style.display = '';
+    } else {
+      s.style.display = (!state.activeCategory || s.dataset.cat === state.activeCategory) ? '' : 'none';
+    }
   });
 
-  // ── Step 2: quick filters — hide items not matching ALL active filters (AND logic)
+  // ── Step 2: per-item filtering (quickfilters AND search, both must match)
   document.querySelectorAll('.menu-item').forEach(card => {
-    if (!state.activeQuickFilters.size) { card.classList.remove('qf-hidden'); return; }
     const itemId = card.id.replace('card-', '');
-    const item = state.menu.find(i => i.id === itemId);
-    const matches = item && [...state.activeQuickFilters].every(fId => {
-      const qf = QF_DEFS.find(q => q.id === fId);
+    const item   = state.menu.find(i => i.id === itemId);
+
+    // Quick-filter check (AND across all active filters)
+    const qfMatch = !hasQF || (item && [...state.activeQuickFilters].every(fId => {
+      const qf = QF_DEFS.find(d => d.id === fId);
       return qf && qf.match(item);
-    });
-    card.classList.toggle('qf-hidden', !matches);
+    }));
+
+    // Search check — name (EN + HI), category
+    const searchMatch = !hasSearch || (item && (
+      item.name.toLowerCase().includes(q) ||
+      (item.nameHi     && item.nameHi.toLowerCase().includes(q)) ||
+      item.category.toLowerCase().includes(q) ||
+      (item.categoryHi && item.categoryHi.toLowerCase().includes(q))
+    ));
+
+    card.classList.toggle('qf-hidden', !(qfMatch && searchMatch));
   });
 
-  // ── Step 3: hide visible sections where every item is now qf-hidden
-  if (state.activeQuickFilters.size) {
+  // ── Step 3: hide sections where all items are hidden
+  if (hasSearch || hasQF) {
     document.querySelectorAll('.menu-section').forEach(section => {
-      if (section.style.display === 'none') return; // already hidden by category
+      if (section.style.display === 'none') return;
       const hasVisible = [...section.querySelectorAll('.menu-item')].some(c => !c.classList.contains('qf-hidden'));
       if (!hasVisible) section.style.display = 'none';
     });
+  }
+
+  // ── Step 4: show / hide "no results" panel (search only)
+  const noResultsEl   = document.getElementById('searchNoResults');
+  const noResultsText = document.getElementById('searchNoResultsText');
+  const noResultsSub  = document.getElementById('searchNoResultsSub');
+  if (noResultsEl) {
+    if (hasSearch) {
+      const anyVisible = [...document.querySelectorAll('.menu-section')].some(s => s.style.display !== 'none');
+      noResultsEl.classList.toggle('visible', !anyVisible);
+      if (noResultsText) noResultsText.textContent = t('search_no_results') + ' "' + state.searchQuery + '"';
+      if (noResultsSub)  noResultsSub.textContent  = t('search_no_results_sub');
+    } else {
+      noResultsEl.classList.remove('visible');
+    }
   }
 }
 
