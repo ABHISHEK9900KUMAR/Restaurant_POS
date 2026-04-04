@@ -392,26 +392,50 @@ footer {
 
 /* ── RESPONSIVE ──────────────────────────────────────────── */
 @media (max-width: 900px) {
+  /* Nav — hide desktop CTA, show short mobile CTA only */
   .nav-links { display: none; }
+  .nav-cta:not(.nav-mobile-cta) { display: none; }
   .nav-mobile-cta { display: block; }
-  .hero-inner { grid-template-columns: 1fr; gap: 48px; text-align: center; }
-  .hero-sub { margin: 0 auto 36px; }
-  .hero-actions { justify-content: center; }
+
+  /* Hero */
+  .hero { padding: 80px 5vw 48px; }
+  .hero-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
+  .hero-sub { margin: 0 auto 28px; font-size: 15px; }
+  .hero-actions { justify-content: center; flex-direction: column; align-items: center; }
+  .hero-actions .btn-primary,
+  .hero-actions .btn-secondary { width: 100%; max-width: 320px; justify-content: center; }
   .hero-visual { display: none; }
+
+  /* Sections */
+  section { padding: 60px 5vw; }
   .problem-grid { grid-template-columns: 1fr; }
   .features-grid { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr; gap: 32px; }
   .steps::before { display: none; }
   .for-grid { grid-template-columns: repeat(2, 1fr); }
-  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 100%; }
+
+  /* Contact form */
   .form-row { grid-template-columns: 1fr; }
-  .contact-form { padding: 28px 20px; }
-  footer { flex-direction: column; text-align: center; }
-  .footer-links { justify-content: center; }
+  .contact-form { padding: 24px 16px; }
+  .form-submit { font-size: 14px; }
+
+  /* Footer */
+  footer { flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+  .footer-links { justify-content: center; flex-wrap: wrap; }
+
+  /* Strip */
+  .strip { gap: 16px; padding: 14px 5vw; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+  .strip-item { flex-shrink: 0; font-size: 13px; }
 }
 @media (max-width: 600px) {
-  .strip { gap: 24px; }
+  .nav-logo { font-size: 20px; }
+  .nav-mobile-cta { font-size: 12px; padding: 8px 14px; }
+  .hero h1 { font-size: clamp(28px, 8vw, 42px); }
+  .section-title { font-size: clamp(22px, 6vw, 32px); }
   .for-grid { grid-template-columns: 1fr 1fr; }
+  .pricing-card { padding: 28px 20px; }
+  .mii-strip { padding: 24px 5vw; }
 }
 </style>
 </head>
@@ -426,7 +450,7 @@ footer {
     <a href="#pricing">Pricing</a>
     <a href="#contact">Contact</a>
   </div>
-  <a href="#contact" class="nav-cta nav-mobile-cta">Contact us for live demo →</a>
+  <a href="#contact" class="nav-cta nav-mobile-cta">Get Demo →</a>
   <a href="#contact" class="nav-cta">Contact us for live demo →</a>
 </nav>
 
