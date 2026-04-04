@@ -1,5 +1,5 @@
 /**
- * Menu Image Seeder for The Flavor Server
+ * Menu Image Seeder for Dinefy
  * Downloads food images and assigns them to menu items via the local API.
  *
  * Usage: node seed-menu-images.js

@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Flavor Server — Owner Dashboard</title>
+<title>Dinefy — Owner Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('flavorserver-theme')||'dark');</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('dinefy-theme')||'dark');</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -68,19 +68,21 @@ header {
 }
 
 .logo {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 17px;
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.02em;
+  color: var(--gold);
+  letter-spacing: 0.02em;
 }
 .logo span {
   color: var(--text-dim);
-  font-weight: 400;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 9px;
   font-family: 'DM Sans', sans-serif;
-  margin-left: 8px;
-  letter-spacing: 0;
+  margin-left: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: super;
 }
 
 .header-right { display: flex; align-items: center; gap: 16px; }
@@ -953,8 +955,8 @@ header {
     flex-wrap: wrap;
     gap: 6px;
   }
-  .logo { font-size: 18px; }
-  .logo span { display: none; }
+  .logo { font-size: 22px; }
+  .logo span { display: inline; }
   .header-right {
     width: 100%;
     gap: 6px;
@@ -1115,7 +1117,7 @@ header {
 <!-- PIN Lock Screen -->
 <div id="pin-screen">
   <div class="pin-box">
-    <div class="pin-logo">The Flavor Server</div>
+    <div class="pin-logo">Dinefy</div>
     <div class="pin-role">Owner Dashboard</div>
     <div class="pin-dots" id="pinDots">
       <div class="pin-dot" id="pd0"></div>
@@ -1144,11 +1146,12 @@ header {
 <div id="reconnect-banner">⚡ Reconnecting to server…</div>
 
 <header>
-  <div class="logo">The Flavor Server <span>Owner Dashboard</span></div>
+  <div class="logo">Dinefy <span>Owner Dashboard</span></div>
   <div class="header-right">
     <div class="stat-chip">Orders: <strong id="statTotal">0</strong></div>
     <div class="stat-chip">Pending: <strong id="statPending">0</strong></div>
     <div class="stat-chip">Revenue: <strong id="statRevenue">₹0.00</strong></div>
+    <div class="stat-chip" title="Today's cash collected">💵 <strong id="statCash">₹0</strong></div>
     <div class="lang-toggle" id="langToggle">
       <button class="lang-btn active" data-lang="en">EN</button>
       <button class="lang-btn" data-lang="hi">हिंदी</button>
@@ -1158,6 +1161,7 @@ header {
     <button class="qr-btn" id="reportsBtn">📊 <span data-i18n="reports_btn_lbl">Reports</span></button>
     <button class="qr-btn" id="kotSettingsBtn">🖨 <span>KOT</span></button>
     <button class="qr-btn" id="upiSettingsBtn">💳 <span data-i18n="upi_settings_title">UPI Settings</span></button>
+    <button class="qr-btn" id="gstSettingsBtn">🧾 <span data-i18n="gst_settings_title">GST Settings</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -1239,7 +1243,7 @@ header {
     <div class="reports-body" style="gap:16px">
       <div>
         <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="kot_restaurant_name">Restaurant Name</label>
-        <input type="text" class="reports-date-input" id="kotName" style="width:100%" placeholder="The Flavor Server" />
+        <input type="text" class="reports-date-input" id="kotName" style="width:100%" placeholder="Dinefy" />
       </div>
       <div>
         <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="kot_paper_width">Paper Width</label>
@@ -1278,6 +1282,33 @@ header {
         <input type="text" class="reports-date-input" id="upiNameInput" style="width:100%" placeholder="My Restaurant" />
       </div>
       <button class="reports-load-btn" id="upiSettingsSaveBtn" style="width:100%;padding:10px" data-i18n="kot_save">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- GST Settings -->
+<div class="reports-overlay" id="gstSettingsOverlay">
+  <div class="reports-panel" style="max-width:420px">
+    <div class="reports-header">
+      <div class="reports-title">🧾 <span data-i18n="gst_settings_title">GST Settings</span></div>
+      <button class="reports-close" id="gstSettingsClose">✕</button>
+    </div>
+    <div class="reports-body" style="gap:16px">
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="gstin_label">GSTIN (15-digit)</label>
+        <input type="text" class="reports-date-input" id="gstinInput" style="width:100%;text-transform:uppercase" placeholder="e.g. 10AABCU9603R1ZX" maxlength="15" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-mid);display:block;margin-bottom:5px" data-i18n="invoice_prefix_label">Invoice Prefix</label>
+        <input type="text" class="reports-date-input" id="invoicePrefixInput" style="width:100%;text-transform:uppercase" placeholder="FS" maxlength="6" />
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px" data-i18n="invoice_prefix_hint">e.g. "FS" generates FS-2526-0001</div>
+      </div>
+      <div style="background:var(--surface3);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text-mid);line-height:1.6">
+        <strong>SAC Code:</strong> 996331 (Restaurant dine-in)<br/>
+        <strong>GST Rate:</strong> 5% — CGST 2.5% + SGST 2.5%<br/>
+        <span data-i18n="gst_settings_note">These appear on every printed receipt.</span>
+      </div>
+      <button class="reports-load-btn" id="gstSettingsSaveBtn" style="width:100%;padding:10px" data-i18n="kot_save">Save Settings</button>
     </div>
   </div>
 </div>
@@ -1449,6 +1480,15 @@ const TRANSLATIONS = {
     report_no_orders: 'No paid orders on this date',
     report_hourly: 'Hourly Order Volume',
     report_pdf_btn: '⬇ PDF Report', report_excel_btn: '📊 Export Excel',
+    report_cash_collected: 'Cash Collected', report_upi_collected: 'UPI Collected',
+    // GST Settings
+    gst_settings_title: 'GST Settings',
+    gstin_label: 'GSTIN (15-digit)',
+    invoice_prefix_label: 'Invoice Prefix',
+    invoice_prefix_hint: 'e.g. "FS" generates FS-2526-0001',
+    gst_settings_saved: 'GST settings saved',
+    gst_settings_note: 'These appear on every printed receipt.',
+    invoice_no: 'Invoice No.',
   },
   hi: {
     owner_dashboard: 'मालिक डैशबोर्ड',
@@ -1547,6 +1587,15 @@ const TRANSLATIONS = {
     report_no_orders: 'इस तारीख को कोई भुगतान नहीं',
     report_hourly: 'प्रति घंटे ऑर्डर',
     report_pdf_btn: '⬇ PDF रिपोर्ट', report_excel_btn: '📊 Excel निर्यात',
+    report_cash_collected: 'नकद संग्रह', report_upi_collected: 'UPI संग्रह',
+    // GST Settings
+    gst_settings_title: 'GST सेटिंग',
+    gstin_label: 'GSTIN (15 अंक)',
+    invoice_prefix_label: 'इनवॉइस उपसर्ग',
+    invoice_prefix_hint: 'जैसे "FS" → FS-2526-0001',
+    gst_settings_saved: 'GST सेटिंग सहेजी',
+    gst_settings_note: 'ये हर प्रिंटेड रसीद पर दिखेंगे।',
+    invoice_no: 'इनवॉइस नं.',
   }
 };
 
@@ -1742,7 +1791,7 @@ socket.on('order:updated', (updatedOrder) => {
   }
   renderAll();
   // Auto-print KOT when customer responds "prepare the rest" to an OOS ping
-  if (updatedOrder.reviewResponse === 'proceed' && localStorage.getItem('flavorserver-kot-autoprint') === 'true') {
+  if (updatedOrder.reviewResponse === 'proceed' && localStorage.getItem('dinefy-kot-autoprint') === 'true') {
     printKOT(updatedOrder);
   }
 });
@@ -1780,13 +1829,16 @@ function renderAll(flashId = null) {
 function updateStats() {
   const total = state.orders.length;
   const pending = state.orders.filter(o => o.status === 'pending').length;
-  const revenue = state.orders
-    .filter(o => o.paymentStatus === 'paid')
+  const paidOrders = state.orders.filter(o => o.paymentStatus === 'paid');
+  const revenue = paidOrders.reduce((s, o) => s + (o.billing?.total || 0), 0);
+  const cashToday = paidOrders
+    .filter(o => o.paymentMethod === 'cash')
     .reduce((s, o) => s + (o.billing?.total || 0), 0);
 
   document.getElementById('statTotal').textContent = total;
   document.getElementById('statPending').textContent = pending;
   document.getElementById('statRevenue').textContent = fmt(revenue);
+  document.getElementById('statCash').textContent = fmt(cashToday);
 }
 
 function renderOrders(flashId = null) {
@@ -2023,7 +2075,7 @@ function bindCardEvents(card, order) {
         eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
       }, (res) => {
         if (res.success) {
-          if (localStorage.getItem('flavorserver-kot-autoprint') === 'true') printKOT(order);
+          if (localStorage.getItem('dinefy-kot-autoprint') === 'true') printKOT(order);
         } else {
           showToast(res.error || t('failed_status'), 'error');
           acceptBtn.disabled = false;
@@ -2083,7 +2135,7 @@ function bindCardEvents(card, order) {
       }, (res) => {
         if (res.success) {
           if (choice === 'cancel') showToast(t('order_cancelled_t'), 'info');
-          if (choice === 'proceed' && localStorage.getItem('flavorserver-kot-autoprint') === 'true') printKOT(res.order);
+          if (choice === 'proceed' && localStorage.getItem('dinefy-kot-autoprint') === 'true') printKOT(res.order);
         } else {
           showToast(res.error || t('failed_status'), 'error');
           btn.disabled = false;
@@ -2247,19 +2299,21 @@ function printReceipt(order) {
 </head>
 <body>
   <div class="center">
-    <div class="shop-name">${state.config.shopName || 'The Flavor Server'}</div>
+    <div class="shop-name">${state.config.shopName || 'Dinefy'}</div>
     <div class="shop-sub">${state.config.shopTagline || 'Restaurant & Bar'}</div>
-    ${state.config.gstNo ? `<div class="shop-sub">GST No: ${state.config.gstNo}</div>` : ''}
+    ${(state.config.gstin || state.config.gstNo) ? `<div class="shop-sub">GSTIN: ${state.config.gstin || state.config.gstNo}</div>` : ''}
   </div>
 
   <hr class="divider" />
 
   <table class="meta">
+    ${order.invoiceNo ? `<tr><td><strong>${t('invoice_no')}</strong></td><td><strong>${order.invoiceNo}</strong></td></tr>` : ''}
     <tr><td>${t('receipt_order')}</td><td>${order.id}</td></tr>
     <tr><td>${t('receipt_date')}</td><td>${dateStr}</td></tr>
     <tr><td>${t('receipt_time')}</td><td>${timeStr}</td></tr>
     <tr><td>${t('receipt_customer')}</td><td>${order.customerName}</td></tr>
     <tr><td>${t('receipt_table')}</td><td>${order.tableNo}</td></tr>
+    ${state.config.sacCode ? `<tr><td>SAC Code</td><td>${state.config.sacCode}</td></tr>` : ''}
   </table>
 
   <hr class="divider" />
@@ -2275,7 +2329,8 @@ function printReceipt(order) {
     <tr><td>${t('subtotal')}</td><td></td><td class="right">₹${b.subtotal.toFixed(2)}</td></tr>
     ${discountRow}
     ${serviceRow}
-    <tr><td>${t('gst')}</td><td></td><td class="right">₹${b.gst.toFixed(2)}</td></tr>
+    <tr><td>CGST (2.5%)</td><td></td><td class="right">₹${(b.cgst !== undefined ? b.cgst : b.gst / 2).toFixed(2)}</td></tr>
+    <tr><td>SGST (2.5%)</td><td></td><td class="right">₹${(b.sgst !== undefined ? b.sgst : b.gst / 2).toFixed(2)}</td></tr>
     <tr class="total-row"><td>${t('receipt_total')}</td><td></td><td class="right">₹${b.total.toFixed(2)}</td></tr>
     <tr><td colspan="3"><hr class="divider" /></td></tr>
     ${changeRow}
@@ -2302,9 +2357,9 @@ function printReceipt(order) {
 
 // ─── KOT Printing ────────────────────────────────────────
 function printKOT(order) {
-  const width  = localStorage.getItem('flavorserver-kot-width')  || '80';
-  const name   = localStorage.getItem('flavorserver-kot-name')   || 'The Flavor Server';
-  const footer = localStorage.getItem('flavorserver-kot-footer') || 'Thank you!';
+  const width  = localStorage.getItem('dinefy-kot-width')  || '80';
+  const name   = localStorage.getItem('dinefy-kot-name')   || 'Dinefy';
+  const footer = localStorage.getItem('dinefy-kot-footer') || 'Thank you!';
   const pxWidth = width === '58' ? '219px' : '302px';
 
   const now = new Date(order.createdAt);
@@ -2918,12 +2973,22 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
           <div class="report-stat-card">
             <div class="report-stat-label">${t('report_gst_collected')}</div>
             <div class="report-stat-value">${rs(s.totalGST)}</div>
-            <div class="report-stat-sub">${t('report_gst_rate')}</div>
+            <div class="report-stat-sub">CGST ${rs(s.totalCGST || s.totalGST/2)} · SGST ${rs(s.totalSGST || s.totalGST/2)}</div>
           </div>
           <div class="report-stat-card">
             <div class="report-stat-label">${t('report_avg_order')}</div>
             <div class="report-stat-value">${rs(s.avgOrderValue)}</div>
             <div class="report-stat-sub">${t('report_service_charge_lbl')} ${rs(s.totalServiceCharge)}</div>
+          </div>
+        </div>
+        <div class="reports-stat-row" style="margin-top:10px;grid-template-columns:repeat(2,1fr)">
+          <div class="report-stat-card">
+            <div class="report-stat-label">💵 ${t('report_cash_collected')}</div>
+            <div class="report-stat-value" style="color:var(--green)">${rs(data.paymentBreakdown?.cash || 0)}</div>
+          </div>
+          <div class="report-stat-card">
+            <div class="report-stat-label">📱 ${t('report_upi_collected')}</div>
+            <div class="report-stat-value" style="color:var(--gold)">${rs(data.paymentBreakdown?.upi || 0)}</div>
           </div>
         </div>
       </div>
@@ -3061,7 +3126,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
 
     try {
       const wb = new ExcelJS.Workbook();
-      wb.creator = 'The Flavor Server';
+      wb.creator = 'Dinefy';
       wb.created = new Date();
 
       const GOLD_ARGB   = 'FFC9A84C';
@@ -3094,7 +3159,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
       const ws1 = wb.addWorksheet('Summary');
       ws1.columns = [{ width: 30 }, { width: 20 }];
 
-      const t1 = ws1.addRow(['The Flavor Server — Daily Sales Report']);
+      const t1 = ws1.addRow(['Dinefy — Daily Sales Report']);
       ws1.mergeCells('A1:B1');
       t1.height = 32;
       t1.getCell(1).font  = { bold: true, size: 16, color: { argb: GOLD_ARGB }, name: 'Calibri' };
@@ -3201,7 +3266,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href = url; a.download = `FlavorServer-Report-${data.date}.xlsx`;
+      a.href = url; a.download = `Dinefy-Report-${data.date}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -3273,7 +3338,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   const errEl  = document.getElementById('pinError');
   let entry = '';
 
-  if (sessionStorage.getItem('flavorserver-admin-auth') === '1') {
+  if (sessionStorage.getItem('dinefy-admin-auth') === '1') {
     screen.classList.add('hidden');
     return;
   }
@@ -3290,7 +3355,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
       const res = await fetch('/api/auth?pin=' + entry + '&role=admin');
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('flavorserver-admin-auth', '1');
+        sessionStorage.setItem('dinefy-admin-auth', '1');
         screen.classList.add('fade-out');
         screen.addEventListener('animationend', () => screen.classList.add('hidden'), { once: true });
       } else {
@@ -3343,19 +3408,19 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   const footerEl    = document.getElementById('kotFooter');
 
   function openKot() {
-    nameEl.value      = localStorage.getItem('flavorserver-kot-name')   || '';
-    widthEl.value     = localStorage.getItem('flavorserver-kot-width')  || '80';
-    autoPrintEl.checked = localStorage.getItem('flavorserver-kot-autoprint') === 'true';
-    footerEl.value    = localStorage.getItem('flavorserver-kot-footer') || '';
+    nameEl.value      = localStorage.getItem('dinefy-kot-name')   || '';
+    widthEl.value     = localStorage.getItem('dinefy-kot-width')  || '80';
+    autoPrintEl.checked = localStorage.getItem('dinefy-kot-autoprint') === 'true';
+    footerEl.value    = localStorage.getItem('dinefy-kot-footer') || '';
     overlay.classList.add('open');
   }
   function closeKot() { overlay.classList.remove('open'); }
 
   saveBtn.addEventListener('click', () => {
-    localStorage.setItem('flavorserver-kot-name',      nameEl.value.trim()   || 'The Flavor Server');
-    localStorage.setItem('flavorserver-kot-width',     widthEl.value);
-    localStorage.setItem('flavorserver-kot-autoprint', autoPrintEl.checked ? 'true' : 'false');
-    localStorage.setItem('flavorserver-kot-footer',    footerEl.value.trim() || 'Thank you!');
+    localStorage.setItem('dinefy-kot-name',      nameEl.value.trim()   || 'Dinefy');
+    localStorage.setItem('dinefy-kot-width',     widthEl.value);
+    localStorage.setItem('dinefy-kot-autoprint', autoPrintEl.checked ? 'true' : 'false');
+    localStorage.setItem('dinefy-kot-footer',    footerEl.value.trim() || 'Thank you!');
     showToast(t('kot_saved'), 'success');
     closeKot();
   });
@@ -3376,8 +3441,8 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   const nameEl  = document.getElementById('upiNameInput');
 
   function openUpiSettings() {
-    vpaEl.value  = localStorage.getItem('flavorserver-upi-vpa')  || '';
-    nameEl.value = localStorage.getItem('flavorserver-upi-name') || '';
+    vpaEl.value  = localStorage.getItem('dinefy-upi-vpa')  || '';
+    nameEl.value = localStorage.getItem('dinefy-upi-name') || '';
     overlay.classList.add('open');
   }
   function closeUpiSettings() { overlay.classList.remove('open'); }
@@ -3385,8 +3450,8 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   saveBtn.addEventListener('click', () => {
     const vpa  = vpaEl.value.trim();
     const name = nameEl.value.trim() || 'Restaurant';
-    localStorage.setItem('flavorserver-upi-vpa',  vpa);
-    localStorage.setItem('flavorserver-upi-name', name);
+    localStorage.setItem('dinefy-upi-vpa',  vpa);
+    localStorage.setItem('dinefy-upi-name', name);
     socket.emit('config:update_upi', { upiVpa: vpa, upiName: name }, () => {
       showToast(t('upi_settings_saved'), 'success');
     });
@@ -3399,13 +3464,44 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeUpiSettings(); });
 })();
 
+// ── GST Settings ─────────────────────────────────────
+(function() {
+  const overlay    = document.getElementById('gstSettingsOverlay');
+  const openBtn    = document.getElementById('gstSettingsBtn');
+  const closeBtn   = document.getElementById('gstSettingsClose');
+  const saveBtn    = document.getElementById('gstSettingsSaveBtn');
+  const gstinEl    = document.getElementById('gstinInput');
+  const prefixEl   = document.getElementById('invoicePrefixInput');
+
+  function openGstSettings() {
+    gstinEl.value  = state.config.gstin  || '';
+    prefixEl.value = state.config.invoicePrefix || 'FS';
+    overlay.classList.add('open');
+  }
+  function closeGstSettings() { overlay.classList.remove('open'); }
+
+  saveBtn.addEventListener('click', () => {
+    const gstin         = gstinEl.value.trim().toUpperCase();
+    const invoicePrefix = (prefixEl.value.trim().toUpperCase() || 'FS').slice(0, 6);
+    socket.emit('config:update_gst', { gstin, invoicePrefix }, (res) => {
+      if (res && res.success) showToast(t('gst_settings_saved'), 'success');
+    });
+    closeGstSettings();
+  });
+
+  openBtn.addEventListener('click', openGstSettings);
+  closeBtn.addEventListener('click', closeGstSettings);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeGstSettings(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeGstSettings(); });
+})();
+
 // ── UPI Payment Modal ─────────────────────────────────
 let _upiActiveOrder = null;
 
 function openUpiModal(order) {
   _upiActiveOrder = order;
-  const vpa    = localStorage.getItem('flavorserver-upi-vpa')  || '';
-  const name   = localStorage.getItem('flavorserver-upi-name') || 'Restaurant';
+  const vpa    = localStorage.getItem('dinefy-upi-vpa')  || '';
+  const name   = localStorage.getItem('dinefy-upi-name') || 'Restaurant';
   const amount = (order.billing && order.billing.total) ? order.billing.total.toFixed(2) : '0.00';
 
   document.getElementById('upiPayAmount').textContent = '₹' + amount;
@@ -3478,7 +3574,7 @@ function openUpiModal(order) {
   btn.addEventListener('click', function() {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('flavorserver-theme', next);
+    localStorage.setItem('dinefy-theme', next);
     syncIcon();
   });
 })();

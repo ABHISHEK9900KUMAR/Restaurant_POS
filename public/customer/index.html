@@ -4,12 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0d0d0d" />
-<title>The Flavor Server — Order</title>
+<title>Dinefy — Order</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('flavorserver-theme')||'dark');</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('dinefy-theme')||'dark');</script>
 <style>
 /* ── Reset & Variables ───────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -426,6 +426,60 @@ header {
   width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 800;
+}
+
+/* ── Combo Suggestion Strip ─────────────────────────── */
+.combo-strip {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  width: min(calc(100% - 32px), 360px);
+  background: var(--surface2); border: 1px solid var(--gold);
+  border-radius: var(--radius); padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s, transform 0.22s;
+  z-index: 65;
+}
+.combo-strip.visible {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.combo-strip-emoji { font-size: 22px; flex-shrink: 0; line-height: 1; }
+.combo-strip-body { flex: 1; min-width: 0; }
+.combo-strip-label { font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.combo-strip-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.combo-strip-price { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+.combo-strip-add {
+  background: var(--gold); color: #000; border: none;
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  flex-shrink: 0; font-family: 'DM Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+.combo-strip-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 14px; cursor: pointer; padding: 4px; line-height: 1;
+  flex-shrink: 0;
+}
+@media (min-width: 900px) {
+  .combo-strip {
+    bottom: 24px; left: 28px;
+    transform: translateY(16px);
+    max-width: calc(50vw - 56px);
+  }
+  .combo-strip.visible { transform: translateY(0); }
+}
+
+/* ── Stock Low Badge (customer card) ─────────────────── */
+.stock-low-badge {
+  position: absolute; bottom: 38px; left: 8px;
+  background: rgba(231,76,60,0.88); color: #fff;
+  border-radius: 8px; padding: 2px 7px;
+  font-size: 10px; font-weight: 700;
+  pointer-events: none; z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* ── Cart Overlay & Sheet ────────────────────────────── */
@@ -1360,7 +1414,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 
 <!-- ── MOBILE LAYOUT ── -->
 <header>
-  <div class="logo">The Flavor Server<sup>Order</sup></div>
+  <div class="logo">Dinefy<sup>Order</sup></div>
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="lang-toggle" id="langToggle" role="group" aria-label="Language toggle">
       <button class="lang-btn active" data-lang="en">EN</button>
@@ -1464,6 +1518,18 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
     <div class="np-ingredients" id="npIngredients"></div>
     <div class="np-hint" id="npHint"></div>
   </div>
+</div>
+
+<!-- Combo Suggestion Strip -->
+<div class="combo-strip" id="comboStrip" role="status" aria-live="polite">
+  <span class="combo-strip-emoji" id="comboEmoji">🍛</span>
+  <div class="combo-strip-body">
+    <div class="combo-strip-label" id="comboPairLabel">Pairs well with</div>
+    <div class="combo-strip-name" id="comboName"></div>
+    <div class="combo-strip-price" id="comboPrice"></div>
+  </div>
+  <button class="combo-strip-add" id="comboAddBtn">+ Add</button>
+  <button class="combo-strip-close" id="comboCloseBtn" aria-label="Dismiss">✕</button>
 </div>
 
 <!-- FAB (mobile only) -->
@@ -1584,7 +1650,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
   <div class="tracker-wrap">
 
     <div class="tracker-topbar">
-      <div class="tracker-brand">The Flavor Server</div>
+      <div class="tracker-brand">Dinefy</div>
       <div class="tracker-order-id" id="trackerOrderId"></div>
     </div>
 
@@ -1740,7 +1806,7 @@ const TRANSLATIONS = {
     sharing: 'Sharing…',
     download_success: 'Receipt saved!',
     share_not_supported: 'Sharing not supported on this device',
-    receipt_filename: 'FlavorServer-Receipt',
+    receipt_filename: 'Dinefy-Receipt',
     // OOS feature
     oos_title: 'Items Unavailable',
     oos_sub: 'These items in your order are currently out of stock:',
@@ -1772,6 +1838,12 @@ const TRANSLATIONS = {
     // Cart note
     cart_add_note:           '✏ Add note',
     cart_note_placeholder:   'e.g. less spicy, no onion…',
+    // Combo suggestions
+    pair_with:               'Pairs well with',
+    // Stock
+    only_n_left:             'Only {n} left',
+    // Wait time
+    ready_in_min:            '⏱ Ready in ~{n} min',
   },
   hi: {
     connecting: 'जोड़ रहे हैं…',
@@ -1852,7 +1924,7 @@ const TRANSLATIONS = {
     sharing: 'शेयर हो रहा है…',
     download_success: 'रसीद सहेजी गई!',
     share_not_supported: 'इस डिवाइस पर शेयरिंग उपलब्ध नहीं',
-    receipt_filename: 'FlavorServer-Raseed',
+    receipt_filename: 'Dinefy-Raseed',
     // OOS feature
     oos_title: 'आइटम उपलब्ध नहीं',
     oos_sub: 'ये आइटम अभी उपलब्ध नहीं हैं:',
@@ -1884,6 +1956,12 @@ const TRANSLATIONS = {
     // Cart note
     cart_add_note:         '✏ नोट जोड़ें',
     cart_note_placeholder: 'जैसे: कम मसाला, प्याज़ नहीं…',
+    // Combo suggestions
+    pair_with:             'इसके साथ लें',
+    // Stock
+    only_n_left:           'केवल {n} बचा',
+    // Wait time
+    ready_in_min:          '⏱ ~{n} मिनट में तैयार',
   }
 };
 
@@ -1987,14 +2065,14 @@ document.getElementById('langToggle').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════
-//  The Flavor Server — Customer App
+//  Dinefy — Customer App
 // ═══════════════════════════════════════════════════════
 
 // Persist session across refreshes (same browser tab)
 const _tableParam = new URLSearchParams(window.location.search).get('table') || '';
-const _SESS_KEY    = 'flavorserver-sid';
-const _ORD_KEY     = 'flavorserver-order-' + (_tableParam || 'x');
-const _REORDER_KEY = 'flavorserver-reorder-' + (_tableParam || 'x');
+const _SESS_KEY    = 'dinefy-sid';
+const _ORD_KEY     = 'dinefy-order-' + (_tableParam || 'x');
+const _REORDER_KEY = 'dinefy-reorder-' + (_tableParam || 'x');
 
 function _loadSid()      { let id = sessionStorage.getItem(_SESS_KEY); if (!id) { id = uid('sess'); sessionStorage.setItem(_SESS_KEY, id); } return id; }
 function _saveSid(id)    { sessionStorage.setItem(_SESS_KEY, id); }
@@ -2028,7 +2106,7 @@ function uid(prefix) {
 }
 
 // ── Favourites ────────────────────────────────────────────
-const _FAV_KEY = 'flavorserver-favs';
+const _FAV_KEY = 'dinefy-favs';
 function getFavs() {
   try { return new Set(JSON.parse(localStorage.getItem(_FAV_KEY)) || []); }
   catch(e) { return new Set(); }
@@ -2240,6 +2318,7 @@ function renderMenu() {
         </div>
         ${(() => { const ic = []; if (item.popular) ic.push('🏆'); if (hasOffer) ic.push('🔥'); if ((item.tags||[]).includes('high-protein')) ic.push('💪'); if ((item.tags||[]).includes('guilt-free')) ic.push('🥗'); return ic.length ? `<div class="item-tag-icons">${ic.map(e=>`<span class="item-tag-icon">${e}</span>`).join('')}</div>` : ''; })()}
         ${oos ? `<div class="item-oos-label">${t('out_of_stock')}</div>` : ''}
+        ${(!oos && item.stockCount !== null && item.stockCount > 0 && item.stockCount <= 5) ? `<div class="stock-low-badge" id="slbadge-${item.id}">${t('only_n_left').replace('{n}', item.stockCount)}</div>` : `<div class="stock-low-badge" id="slbadge-${item.id}" style="display:none"></div>`}
         <div class="item-badge" id="badge-${item.id}">0</div>
       `;
       const isLPConsumed = initLongPress(card, item);
@@ -2535,10 +2614,12 @@ function emitBrowsing(item, action) {
 }
 function addToCart(item) {
   if (item.inStock === false) return;
+  const isNew = !state.cart[item.id];
   if (state.cart[item.id]) state.cart[item.id].quantity++;
   else state.cart[item.id] = { ...item, quantity: 1 };
   emitBrowsing(item, 'added');
   onCartChanged();
+  if (isNew) showComboSuggestion(item);
   const card = document.getElementById('card-' + item.id);
   if (card) {
     card.classList.remove('flash');
@@ -2556,10 +2637,14 @@ function updateQty(itemId, delta) {
   onCartChanged();
 }
 function getCartItems() {
-  return Object.values(state.cart).map(i => ({
-    id: i.id, name: i.name, price: i.price, emoji: i.emoji, quantity: i.quantity,
-    note: i.note || '',
-  }));
+  return Object.values(state.cart).map(i => {
+    const mi = state.menu.find(m => m.id === i.id);
+    return {
+      id: i.id, name: i.name, price: i.price, emoji: i.emoji, quantity: i.quantity,
+      note: i.note || '',
+      cookTime: (mi && mi.cookTime) || 15,
+    };
+  });
 }
 function cartTotal() {
   return Object.values(state.cart).reduce((s, i) => s + i.quantity, 0);
@@ -2573,6 +2658,97 @@ function onCartChanged() {
   updateBillSummary();
   broadcastCartDebounced();
 }
+
+// ── Combo Suggestions ────────────────────────────────────
+function getComboIds(item) {
+  const n = item.name.toLowerCase();
+  const isVeg = (item.tags || []).includes('veg');
+
+  // Indo-Chinese starters: chilly / manchurian / 65 / pepper dry
+  if (n.includes('chilly') || n.includes('manchurian') || /\b65\b/.test(n) || n.includes('pepper dry') || n.includes('pepper chicken'))
+    return isVeg ? ['m89', 'm83'] : ['m93', 'm87'];  // Veg/Chicken Noodles or Fried Rice
+
+  // Lemon chicken / dry chicken / fish fry → roti + dal
+  if (n.includes('lemon chicken') || n.includes('dry chicken') || n.includes('fish fry'))
+    return ['m95', 'm106'];  // Plain Roti, Dal Tadka Half
+
+  // Gravy mains: masala / makhani / butter / kadhai / matar → roti
+  if (n.includes('masala') || n.includes('makhani') || n.includes('butter') || n.includes('kadhai') || n.includes('matar'))
+    return isVeg ? ['m97', 'm98'] : ['m97', 'm95'];  // Butter Roti / Plain Paratha
+
+  // Curry (chicken curry, fish curry, egg curry) → roti + rice
+  if (n.includes('curry'))
+    return ['m95', 'm72'];  // Plain Roti, Plain Rice Half
+
+  // Egg bhurji / omelette / egg → roti
+  if (n.includes('egg') || n.includes('omelette') || n.includes('bhurji'))
+    return ['m95', 'm97'];  // Plain Roti, Butter Roti
+
+  // Chole / chokha / aloo bhujiya / veg regular → roti
+  if (n.includes('chole') || n.includes('chokha') || n.includes('bhujiya') || n.includes('veg regular'))
+    return ['m95', 'm106'];  // Plain Roti, Dal Tadka Half
+
+  // Biryani → lassi
+  if (n.includes('biryani'))
+    return ['m108', 'm106'];  // Lassi, Dal Tadka Half
+
+  // Fried rice / pulav / schezwan rice → dal tadka
+  if (n.includes('fried rice') || n.includes('pulav') || (n.includes('rice') && !n.includes('biryani')))
+    return ['m106', 'm108'];  // Dal Tadka Half, Lassi
+
+  // Noodles → lassi
+  if (n.includes('noodles'))
+    return ['m108', 'm109'];  // Lassi, Sattu
+
+  // Dal → roti
+  if (n.includes('dal'))
+    return ['m95', 'm72'];  // Plain Roti, Plain Rice Half
+
+  // Paratha → lassi + dal
+  if (n.includes('paratha'))
+    return ['m108', 'm106'];  // Lassi, Dal Tadka Half
+
+  // Plain/Ghee/Butter Roti → dal
+  if (n.includes('roti'))
+    return ['m106', 'm107'];  // Dal Tadka Half / Full
+
+  // Meals (thali) → lassi
+  if (item.category.includes('Meals'))
+    return ['m108'];
+
+  return null;
+}
+
+let _comboTimer = null;
+function showComboSuggestion(addedItem) {
+  if (!addedItem || addedItem.category === 'Beverages') return;
+  const ids = getComboIds(addedItem);
+  if (!ids) return;
+  const suggest = ids.map(id => state.menu.find(m => m.id === id))
+    .find(m => m && m.inStock !== false && !state.cart[m.id] && m.category !== addedItem.category);
+  if (!suggest) return;
+  const strip = document.getElementById('comboStrip');
+  if (!strip) return;
+  document.getElementById('comboEmoji').textContent = suggest.emoji;
+  document.getElementById('comboPairLabel').textContent = t('pair_with');
+  document.getElementById('comboName').textContent = iName(suggest);
+  document.getElementById('comboPrice').textContent = fmt(suggest.price);
+  strip.dataset.suggestId = suggest.id;
+  if (_comboTimer) clearTimeout(_comboTimer);
+  strip.classList.add('visible');
+  _comboTimer = setTimeout(() => strip.classList.remove('visible'), 5000);
+}
+document.getElementById('comboAddBtn').addEventListener('click', () => {
+  const strip = document.getElementById('comboStrip');
+  const id = strip.dataset.suggestId;
+  if (id) { const item = state.menu.find(m => m.id === id); if (item) addToCart(item); }
+  strip.classList.remove('visible');
+  if (_comboTimer) { clearTimeout(_comboTimer); _comboTimer = null; }
+});
+document.getElementById('comboCloseBtn').addEventListener('click', () => {
+  document.getElementById('comboStrip').classList.remove('visible');
+  if (_comboTimer) { clearTimeout(_comboTimer); _comboTimer = null; }
+});
 
 // ── FAB (mobile) ────────────────────────────────────────
 function updateFab() {
@@ -2924,6 +3100,14 @@ socket.on('order:updated', (updated) => {
   renderTrackerItems(updated);
   renderDigitalReceipt(updated);
   updateTrackerStatus(status);
+  if (status === 'preparing') {
+    const cookTimes = (updated.items || []).map(item => {
+      const mi = state.menu.find(m => m.id === item.id);
+      return (mi && mi.cookTime) || 15;
+    });
+    const maxCook = cookTimes.length ? Math.max(...cookTimes) : 15;
+    document.getElementById('trackerSub').textContent = t('ready_in_min').replace('{n}', maxCook);
+  }
   updatePaySection();
 });
 
@@ -3180,7 +3364,7 @@ function renderDigitalReceipt(order) {
   document.getElementById('trackerReceiptPanel').innerHTML = `
     <div id="receiptCapture" style="background:var(--surface);border-radius:var(--radius);padding:20px 18px;">
       <div class="receipt-header">
-        <div class="receipt-shop">${state.config.shopName || 'The Flavor Server'}</div>
+        <div class="receipt-shop">${state.config.shopName || 'Dinefy'}</div>
         <div class="receipt-sub">${state.config.shopTagline || t('restaurant_bar')}</div>
         ${state.config.gstNo ? `<div class="receipt-sub">GST No: ${state.config.gstNo}</div>` : ''}
       </div>
@@ -3269,11 +3453,11 @@ async function shareReceipt(orderId) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        title: `The Flavor Server Receipt — ${orderId}`,
+        title: `Dinefy Receipt — ${orderId}`,
       });
     } else if (navigator.share) {
       // Fallback: share as data URL text if files not supported
-      await navigator.share({ title: `The Flavor Server Receipt — ${orderId}`, text: `Your receipt from The Flavor Server: ${orderId}` });
+      await navigator.share({ title: `Dinefy Receipt — ${orderId}`, text: `Your receipt from Dinefy: ${orderId}` });
     } else {
       showToast(t('share_not_supported'), 'info');
     }
@@ -3455,7 +3639,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
   btn.addEventListener('click', function() {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('flavorserver-theme', next);
+    localStorage.setItem('dinefy-theme', next);
     syncIcon();
   });
 })();
@@ -3471,7 +3655,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
 
   const html  = document.documentElement;
   const logo  = document.querySelector('.logo');
-  let current = localStorage.getItem('flavorserver-palette') || 'gold';
+  let current = localStorage.getItem('dinefy-palette') || 'gold';
 
   function applyPalette(id) {
     if (id === 'gold') html.removeAttribute('data-palette');
@@ -3500,7 +3684,7 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
     const next = PALETTES[(idx + 1) % PALETTES.length];
     current = next.id;
     applyPalette(current);
-    localStorage.setItem('flavorserver-palette', current);
+    localStorage.setItem('dinefy-palette', current);
 
     logo.classList.remove('logo-pop');
     void logo.offsetWidth;

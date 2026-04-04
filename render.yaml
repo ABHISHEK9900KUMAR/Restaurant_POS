@@ -17,4 +17,4 @@ services:
       - key: PUBLIC_URL
         value: https://flavor-server-0cge.onrender.com
       - key: SHOP_NAME
-        value: The Flavor Server
+        value: Dinefy

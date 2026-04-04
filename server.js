@@ -69,16 +69,19 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 const CONFIG = {
-  GST_RATE: 0.05,           // 5% GST
+  GST_RATE: 0.05,           // 5% GST (CGST 2.5% + SGST 2.5%)
   SERVICE_CHARGE_RATE: 0.10, // 10% Service Charge
   MAX_DISCOUNT_PERCENT: 30,  // Max 30% discount
   CART_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
   PORT: process.env.PORT || 3000,
   UPI_VPA: process.env.UPI_VPA || '',        // e.g. "merchant@okaxis"
   UPI_NAME: process.env.UPI_NAME || 'Restaurant',
-  SHOP_NAME: process.env.SHOP_NAME || 'The Flavor Server',
+  SHOP_NAME: process.env.SHOP_NAME || 'Dinefy',
   SHOP_TAGLINE: process.env.SHOP_TAGLINE || 'Pure Veg & Non-Veg Restaurant',
-  GST_NO: process.env.GST_NO || '',          // e.g. "27AABCU9603R1ZX"
+  GST_NO: process.env.GST_NO || '',          // e.g. "27AABCU9603R1ZX"  (legacy key)
+  GSTIN: process.env.GSTIN || process.env.GST_NO || '',   // preferred key
+  SAC_CODE: '996331',                        // SAC for restaurant dine-in services
+  INVOICE_PREFIX: process.env.INVOICE_PREFIX || 'FS',
 };
 
 const UPLOADS_DIR = path.join(__dirname, 'public/uploads/menu');
@@ -110,7 +113,7 @@ function generateReceiptPDF(order) {
 
     // ── HEADER BAND ──────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(DARK);
-    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(30).text('The Flavor Server', ML, 22);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(30).text('Dinefy', ML, 22);
     doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Restaurant Receipt', ML, 58);
     // Right side: order meta
     doc.fillColor('#AAAAAA').fontSize(9)
@@ -213,7 +216,7 @@ function generateReceiptPDF(order) {
        .text('Thank you for dining with us! We hope to see you again.', ML, y, { width: CW, align: 'center' });
     y += 14;
     doc.fillColor(GOLD).fontSize(8)
-       .text('Powered by The Flavor Server', ML, y, { width: CW, align: 'center' });
+       .text('Powered by Dinefy', ML, y, { width: CW, align: 'center' });
 
     doc.end();
   });
@@ -274,7 +277,12 @@ function generateDailyReport(dateStr) {
     hourlyOrders[new Date(istMs).getUTCHours()]++;
   });
 
-  return { date: dateStr, summary, topItems, tableRevenue, hourlyOrders, paymentBreakdown: { cash: totalRevenue } };
+  const cashRevenue = round2(paidOrders.filter(o => o.paymentMethod === 'cash').reduce((s, o) => s + (o.billing?.total || 0), 0));
+  const upiRevenue  = round2(paidOrders.filter(o => o.paymentMethod === 'upi').reduce((s, o) => s + (o.billing?.total || 0), 0));
+  const totalCGST   = round2(paidOrders.reduce((s, o) => s + (o.billing?.cgst || o.billing?.gst / 2 || 0), 0));
+  const totalSGST   = round2(paidOrders.reduce((s, o) => s + (o.billing?.sgst || o.billing?.gst / 2 || 0), 0));
+
+  return { date: dateStr, summary: { ...summary, totalCGST, totalSGST }, topItems, tableRevenue, hourlyOrders, paymentBreakdown: { cash: cashRevenue, upi: upiRevenue } };
 }
 
 // ─── Report PDF Generator ─────────────────────────────────────────────────────
@@ -301,7 +309,7 @@ function generateReportPDF(report) {
 
     // ── HEADER ───────────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(DARK);
-    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(28).text('The Flavor Server', ML, 20);
+    doc.fillColor(GOLD).font('Helvetica-Bold').fontSize(28).text('Dinefy', ML, 20);
     doc.fillColor('#FFFFFF').font('Helvetica').fontSize(10).text('Daily Sales Report', ML, 54);
     doc.fillColor('#AAAAAA').fontSize(9)
        .text('Date: ' + report.date,                                   ML, 20, { width: CW, align: 'right' })
@@ -322,13 +330,21 @@ function generateReportPDF(report) {
       y += 19;
     };
 
-    sumRow('Total Revenue',    rs(s.totalRevenue),    true, GOLD);
-    sumRow('Total Orders',     String(s.ordersCount));
-    sumRow('Paid Orders',      String(s.paidCount));
-    sumRow('Avg Order Value',  rs(s.avgOrderValue));
-    sumRow('GST Collected',    rs(s.totalGST));
-    sumRow('Service Charge',   rs(s.totalServiceCharge));
+    sumRow('Total Revenue (incl. GST)', rs(s.totalRevenue), true, GOLD);
+    sumRow('Total Orders',              String(s.ordersCount));
+    sumRow('Paid Orders',               String(s.paidCount));
+    sumRow('Avg Order Value',           rs(s.avgOrderValue));
     if (s.totalDiscount > 0) sumRow('Total Discounts', rs(s.totalDiscount));
+    sumRow('Service Charge',            rs(s.totalServiceCharge));
+    // GST breakdown
+    sumRow('CGST Collected (2.5%)',     rs(s.totalCGST || s.totalGST / 2));
+    sumRow('SGST Collected (2.5%)',     rs(s.totalSGST || s.totalGST / 2));
+    sumRow('Total GST (5%)',            rs(s.totalGST), false, '#999999');
+    y += 6;
+    // Payment split
+    doc.rect(ML, y, CW, 1).fill(LINE); y += 10;
+    sumRow('Cash Collected',   rs(report.paymentBreakdown?.cash || 0), true);
+    sumRow('UPI Collected',    rs(report.paymentBreakdown?.upi  || 0), true);
 
     y += 12;
 
@@ -395,10 +411,10 @@ function generateReportPDF(report) {
     doc.rect(ML, y, CW, 1).fill(LINE);
     y += 14;
     doc.fillColor(GRAY).font('Helvetica').fontSize(9)
-       .text('The Flavor Server — Automated Daily Sales Report', ML, y, { width: CW, align: 'center' });
+       .text('Dinefy — Automated Daily Sales Report', ML, y, { width: CW, align: 'center' });
     y += 13;
     doc.fillColor(GOLD).fontSize(8)
-       .text('Powered by The Flavor Server', ML, y, { width: CW, align: 'center' });
+       .text('Powered by Dinefy', ML, y, { width: CW, align: 'center' });
 
     doc.end();
   });
@@ -541,12 +557,20 @@ const MENU = [
 ];
 
 // Add dynamic fields to every menu item
-MENU.forEach(item => { item.inStock = true; item.offer = 0; });
+const COOK_TIMES = {
+  'Veg Starters': 10, 'Non-Veg Starters': 15,
+  'Main Course Veg': 12, 'Main Course Non-Veg': 15,
+  'Veg Meals': 12, 'Non-Veg Meals': 15,
+  'Rice & Biryani': 20, 'Noodles': 12,
+  'Roti & Paratha': 8, 'Dal': 10, 'Beverages': 3,
+};
+MENU.forEach(item => { item.inStock = true; item.offer = 0; item.cookTime = COOK_TIMES[item.category] || 15; });
 
 // ─── In-Memory State ─────────────────────────────────────────────────────────
 let orders = [];         // Confirmed orders
 let activeCarts = {};    // Temporary cart sessions
 let orderCounter = 1000; // Starting order ID
+let invoiceCounter = 0;  // Sequential invoice number (persisted)
 
 // ─── Table Occupancy Tracking ─────────────────────────────────────────────────
 // occupiedTables: { 'T1': { customerName, orderId, since } }
@@ -578,6 +602,16 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    phone TEXT,
+    restaurant TEXT,
+    city TEXT,
+    business_type TEXT,
+    message TEXT,
+    created_at TEXT NOT NULL
+  );
 `);
 
 try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
@@ -587,6 +621,17 @@ try { db.exec('ALTER TABLE menu_state ADD COLUMN stockCount INTEGER'); } catch (
 const counterRow = db.prepare("SELECT value FROM app_config WHERE key='orderCounter'").get();
 if (counterRow) orderCounter = parseInt(counterRow.value, 10);
 else db.prepare("INSERT INTO app_config (key, value) VALUES ('orderCounter', ?)").run(String(orderCounter));
+
+// Load persisted invoiceCounter
+const invCounterRow = db.prepare("SELECT value FROM app_config WHERE key='invoiceCounter'").get();
+if (invCounterRow) invoiceCounter = parseInt(invCounterRow.value, 10);
+else db.prepare("INSERT OR REPLACE INTO app_config (key, value) VALUES ('invoiceCounter', ?)").run(String(invoiceCounter));
+
+// Load persisted GST config overrides (set via admin panel)
+const gstinRow = db.prepare("SELECT value FROM app_config WHERE key='gstin'").get();
+if (gstinRow && gstinRow.value) CONFIG.GSTIN = gstinRow.value;
+const invPrefixRow = db.prepare("SELECT value FROM app_config WHERE key='invoicePrefix'").get();
+if (invPrefixRow && invPrefixRow.value) CONFIG.INVOICE_PREFIX = invPrefixRow.value;
 
 // Load persisted orders
 orders = db.prepare('SELECT data FROM orders').all().map(row => {
@@ -610,10 +655,10 @@ db.prepare('SELECT id, inStock, offer, image, stockCount FROM menu_state').all()
 
 // Restore menu images from Cloudinary (handles ephemeral filesystem on Render)
 if (process.env.CLOUDINARY_CLOUD_NAME) {
-  cloudinary.api.resources({ type: 'upload', prefix: 'flavorserver-menu/', max_results: 100 })
+  cloudinary.api.resources({ type: 'upload', prefix: 'dinefy-menu/', max_results: 100 })
     .then(result => {
       result.resources.forEach(resource => {
-        const itemId = resource.public_id.replace('flavorserver-menu/', '');
+        const itemId = resource.public_id.replace('dinefy-menu/', '');
         const item = MENU.find(m => m.id === itemId);
         if (item && !item.image) {
           item.image = resource.secure_url;
@@ -685,6 +730,22 @@ function broadcastTablesStatus() {
   io.emit('tables:status', { tables: getTablesStatus() });
 }
 
+// ─── Invoice Helpers ─────────────────────────────────────────────────────────
+function getFinancialYear() {
+  const istMs = Date.now() + (5.5 * 60 * 60 * 1000);
+  const ist = new Date(istMs);
+  const year = ist.getUTCFullYear();
+  const month = ist.getUTCMonth() + 1;
+  if (month >= 4) return `${String(year).slice(2)}${String(year + 1).slice(2)}`;
+  return `${String(year - 1).slice(2)}${String(year).slice(2)}`;
+}
+
+function assignInvoiceNo(order) {
+  invoiceCounter++;
+  db.prepare("INSERT OR REPLACE INTO app_config (key, value) VALUES ('invoiceCounter', ?)").run(String(invoiceCounter));
+  order.invoiceNo = `${CONFIG.INVOICE_PREFIX}-${getFinancialYear()}-${String(invoiceCounter).padStart(4, '0')}`;
+}
+
 // ─── Billing Engine (Centralized) ───────────────────────────────────────────
 function calculateBill(items, options = {}) {
   const { applyServiceCharge = false, discountPercent = 0 } = options;
@@ -703,7 +764,9 @@ function calculateBill(items, options = {}) {
   const discountedSubtotal = round2(subtotal - discountAmount);
   const serviceCharge = applyServiceCharge ? round2(discountedSubtotal * CONFIG.SERVICE_CHARGE_RATE) : 0;
   const taxableAmount = round2(discountedSubtotal + serviceCharge);
-  const gst = round2(taxableAmount * CONFIG.GST_RATE);
+  const cgst  = round2(taxableAmount * 0.025);
+  const sgst  = round2(taxableAmount * 0.025);
+  const gst   = round2(cgst + sgst);   // kept for backward compat
   const total = round2(taxableAmount + gst);
 
   return {
@@ -712,7 +775,10 @@ function calculateBill(items, options = {}) {
     discountAmount,
     discountedSubtotal,
     serviceCharge,
+    cgst,
+    sgst,
     gst,
+    gstRate: CONFIG.GST_RATE,
     total,
     itemCount: items.reduce((s, i) => s + Math.max(0, Math.floor(i.quantity)), 0),
   };
@@ -870,7 +936,7 @@ app.post('/api/demo-seed', (req, res) => {
       gstRate: CONFIG.GST_RATE, serviceChargeRate: CONFIG.SERVICE_CHARGE_RATE,
       maxDiscountPercent: CONFIG.MAX_DISCOUNT_PERCENT,
       upiVpa: CONFIG.UPI_VPA, upiName: CONFIG.UPI_NAME,
-      shopName: CONFIG.SHOP_NAME, shopTagline: CONFIG.SHOP_TAGLINE, gstNo: CONFIG.GST_NO,
+      shopName: CONFIG.SHOP_NAME, shopTagline: CONFIG.SHOP_TAGLINE, gstNo: CONFIG.GSTIN, gstin: CONFIG.GSTIN, sacCode: CONFIG.SAC_CODE, invoicePrefix: CONFIG.INVOICE_PREFIX,
     },
   });
 
@@ -888,7 +954,7 @@ app.get('/api/config', (req, res) => {
       upiName: CONFIG.UPI_NAME,
       shopName: CONFIG.SHOP_NAME,
       shopTagline: CONFIG.SHOP_TAGLINE,
-      gstNo: CONFIG.GST_NO,
+      gstNo: CONFIG.GSTIN, gstin: CONFIG.GSTIN, sacCode: CONFIG.SAC_CODE, invoicePrefix: CONFIG.INVOICE_PREFIX,
     },
   });
 });
@@ -917,6 +983,94 @@ app.get('/api/public-url', (req, res) => {
   });
 });
 
+// ── Contact Form Lead Capture ─────────────────────────────
+app.post('/api/contact', (req, res) => {
+  const { name, phone, restaurant, city, business_type, message } = req.body;
+  if (!name || !phone || !restaurant) return res.status(400).json({ error: 'Missing required fields' });
+  const created_at = new Date().toISOString();
+  db.prepare(`INSERT INTO leads (name, phone, restaurant, city, business_type, message, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(name, phone, restaurant || '', city || '', business_type || '', message || '', created_at);
+  res.json({ success: true });
+});
+
+// ── Leads Viewer ──────────────────────────────────────────
+app.get('/leads', (req, res) => {
+  // Basic Auth — password from LEADS_PASSWORD env variable
+  const pwd = process.env.LEADS_PASSWORD;
+  if (!pwd) return res.status(500).send('LEADS_PASSWORD env variable not set.');
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Basic ')) {
+    const decoded = Buffer.from(auth.slice(6), 'base64').toString();
+    const pass = decoded.includes(':') ? decoded.split(':').slice(1).join(':') : decoded;
+    if (pass === pwd) {
+      // authenticated — fall through
+    } else {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Dinefy Leads"');
+      return res.status(401).send('Wrong password.');
+    }
+  } else {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Dinefy Leads"');
+    return res.status(401).send('Authentication required.');
+  }
+
+  const rows = db.prepare('SELECT * FROM leads ORDER BY id DESC').all();
+  const fmt = iso => {
+    const d = new Date(iso);
+    return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+  const rows_html = rows.length
+    ? rows.map(r => `
+      <tr>
+        <td>${r.id}</td>
+        <td><strong>${r.name}</strong></td>
+        <td><a href="tel:${r.phone}">${r.phone}</a></td>
+        <td>${r.restaurant}</td>
+        <td>${r.city}</td>
+        <td>${r.business_type}</td>
+        <td style="color:#8a8580;font-size:12px">${r.message || '—'}</td>
+        <td style="white-space:nowrap;font-size:12px">${fmt(r.created_at)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" style="text-align:center;color:#8a8580;padding:40px">No leads yet.</td></tr>';
+
+  const csv = ['id,name,phone,restaurant,city,business_type,message,date',
+    ...rows.map(r => [r.id, r.name, r.phone, r.restaurant, r.city, r.business_type, `"${(r.message||'').replace(/"/g,'""')}"`, r.created_at].join(','))
+  ].join('\n');
+  const csvB64 = Buffer.from(csv).toString('base64');
+
+  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<title>Dinefy — Leads</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d0d;color:#f0ede8;font-family:'DM Sans',sans-serif;padding:32px 5vw}
+h1{font-family:'Playfair Display',serif;color:#c9a84c;font-size:28px;margin-bottom:6px}
+.sub{color:#8a8580;font-size:14px;margin-bottom:28px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.count{background:#1e1e1e;border:1px solid #2a2a2a;border-radius:20px;padding:4px 14px;font-size:13px;color:#c9a84c}
+.dl{background:#c9a84c;color:#000;font-size:13px;font-weight:700;padding:8px 20px;border-radius:50px;text-decoration:none;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8580;border-bottom:1px solid #2a2a2a}
+td{padding:11px 12px;border-bottom:1px solid #1e1e1e;vertical-align:top}
+tr:hover td{background:#161616}
+a{color:#c9a84c}
+@media(max-width:700px){table,thead,tbody,th,td,tr{display:block}thead{display:none}td{padding:6px 0;border:none}td::before{content:attr(data-label);font-size:10px;color:#8a8580;display:block;margin-bottom:2px}tr{background:#161616;border:1px solid #2a2a2a;border-radius:10px;margin-bottom:10px;padding:12px 14px}}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"/>
+</head><body>
+<h1>Dinefy Leads</h1>
+<p class="sub">Contact form submissions from /website_landing_page</p>
+<div class="bar">
+  <span class="count">${rows.length} lead${rows.length !== 1 ? 's' : ''}</span>
+  <a class="dl" href="data:text/csv;base64,${csvB64}" download="dinefy-leads.csv">⬇ Download CSV</a>
+</div>
+<table>
+<thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Restaurant</th><th>City</th><th>Type</th><th>Message</th><th>Date</th></tr></thead>
+<tbody>${rows_html}</tbody>
+</table>
+</body></html>`);
+});
+
 // ── App Routes ────────────────────────────────────────────
 app.get('/customer', (req, res) => res.sendFile(path.join(__dirname, 'public/customer/index.html')));
 app.get('/customer/', (req, res) => res.sendFile(path.join(__dirname, 'public/customer/index.html')));
@@ -924,6 +1078,7 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/
 app.get('/admin/', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 app.get('/waiter', (req, res) => res.sendFile(path.join(__dirname, 'public/waiter/index.html')));
 app.get('/waiter/', (req, res) => res.sendFile(path.join(__dirname, 'public/waiter/index.html')));
+app.get('/website_landing_page', (req, res) => res.sendFile(path.join(__dirname, 'public/website_landing_page.html')));
 app.get('/', (req, res) => res.redirect('/customer'));
 
 app.get('/api/tables', (req, res) => {
@@ -998,7 +1153,7 @@ io.on('connection', (socket) => {
       upiName: CONFIG.UPI_NAME,
       shopName: CONFIG.SHOP_NAME,
       shopTagline: CONFIG.SHOP_TAGLINE,
-      gstNo: CONFIG.GST_NO,
+      gstNo: CONFIG.GSTIN, gstin: CONFIG.GSTIN, sacCode: CONFIG.SAC_CODE, invoicePrefix: CONFIG.INVOICE_PREFIX,
     },
   });
 
@@ -1192,12 +1347,14 @@ io.on('connection', (socket) => {
     const change = round2(cash - order.billing.total);
 
     order.paymentStatus = 'paid';
+    order.paymentMethod = 'cash';
     order.status = 'completed';
     order.paidAt = getTimestamp();
     order.cashTendered = round2(cash);
     order.change = change;
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'paid', timestamp: getTimestamp() });
+    assignInvoiceNo(order);
     dbUpdateOrder(order);
 
     // Free the table
@@ -1209,7 +1366,7 @@ io.on('connection', (socket) => {
 
     if (typeof ack === 'function') ack({ success: true, order, change });
 
-    console.log(`[Payment] Order paid: ${orderId}, Change: ₹${change}`);
+    console.log(`[Payment] Cash order paid: ${orderId}, Invoice: ${order.invoiceNo}, Change: ₹${change}`);
     emailReceipt(order);
   });
 
@@ -1220,6 +1377,18 @@ io.on('connection', (socket) => {
     io.emit('config:updated', { upiVpa: CONFIG.UPI_VPA, upiName: CONFIG.UPI_NAME });
     if (typeof ack === 'function') ack({ success: true });
     console.log(`[Config] UPI updated: ${CONFIG.UPI_VPA}`);
+  });
+
+  // ── Update GST Config (Admin) ──
+  socket.on('config:update_gst', (data, ack) => {
+    CONFIG.GSTIN           = (data.gstin          || '').trim().toUpperCase();
+    CONFIG.INVOICE_PREFIX  = (data.invoicePrefix  || 'FS').trim().toUpperCase();
+    // Persist to DB so it survives restarts
+    db.prepare("INSERT OR REPLACE INTO app_config (key, value) VALUES ('gstin', ?)").run(CONFIG.GSTIN);
+    db.prepare("INSERT OR REPLACE INTO app_config (key, value) VALUES ('invoicePrefix', ?)").run(CONFIG.INVOICE_PREFIX);
+    io.emit('config:updated', { gstin: CONFIG.GSTIN, invoicePrefix: CONFIG.INVOICE_PREFIX });
+    if (typeof ack === 'function') ack({ success: true });
+    console.log(`[Config] GST updated: GSTIN=${CONFIG.GSTIN}, Prefix=${CONFIG.INVOICE_PREFIX}`);
   });
 
   // ── Process UPI Payment (Admin) ──
@@ -1253,6 +1422,7 @@ io.on('connection', (socket) => {
     order.paymentMethod = 'upi';
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'paid', timestamp: getTimestamp() });
+    assignInvoiceNo(order);
     dbUpdateOrder(order);
 
     // Free the table
@@ -1530,7 +1700,7 @@ app.post('/api/admin/menu/:id/image', upload.single('image'), async (req, res) =
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       const result = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream(
-          { public_id: `flavorserver-menu/${req.params.id}`, overwrite: true, resource_type: 'image' },
+          { public_id: `dinefy-menu/${req.params.id}`, overwrite: true, resource_type: 'image' },
           (err, result) => err ? reject(err) : resolve(result)
         ).end(resizedBuffer);
       });
@@ -1611,7 +1781,7 @@ app.delete('/api/admin/menu/:id/image', async (req, res) => {
   if (!item) return res.json({ success: false, error: 'Item not found' });
 
   if (process.env.CLOUDINARY_CLOUD_NAME) {
-    try { await cloudinary.uploader.destroy(`flavorserver-menu/${req.params.id}`); } catch (_) {}
+    try { await cloudinary.uploader.destroy(`dinefy-menu/${req.params.id}`); } catch (_) {}
   } else {
     try { fs.unlinkSync(path.join(UPLOADS_DIR, `${req.params.id}.jpg`)); } catch (_) {}
   }
@@ -1627,7 +1797,7 @@ server.listen(CONFIG.PORT, () => {
   const networkUrl = `http://${LOCAL_IP}:${CONFIG.PORT}`;
   const publicBase = PUBLIC_URL || networkUrl;
 
-  console.log(`\n⚡  The Flavor Server Server is running!\n`);
+  console.log(`\n⚡  Dinefy Server is running!\n`);
   console.log(`   💻  PC (Admin):      http://localhost:${CONFIG.PORT}/admin`);
   console.log(`   🧑‍💼  Waiter Tab:      http://localhost:${CONFIG.PORT}/waiter`);
   console.log(`   📱  Phone (Customer): ${networkUrl}/customer`);

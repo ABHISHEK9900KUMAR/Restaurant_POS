@@ -4,11 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0d0d0d" />
-<title>The Flavor Server — Waiter</title>
+<title>Dinefy — Waiter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <script src="/socket.io/socket.io.js"></script>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('flavorserver-theme')||'dark');</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('dinefy-theme')||'dark');</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -817,7 +817,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 <!-- PIN Lock Screen -->
 <div id="pin-screen">
   <div class="pin-box">
-    <div class="pin-logo">The Flavor Server</div>
+    <div class="pin-logo">Dinefy</div>
     <div class="pin-role">Waiter</div>
     <div class="pin-dots" id="pinDots">
       <div class="pin-dot" id="pd0"></div>
@@ -846,7 +846,7 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 <div id="reconnect-banner">⚡ Reconnecting…</div>
 
 <header>
-  <div class="logo">The Flavor Server<sup id="logoSup">Waiter</sup></div>
+  <div class="logo">Dinefy<sup id="logoSup">Waiter</sup></div>
   <div class="header-right">
     <div class="lang-toggle" id="langToggle">
       <button class="lang-btn active" data-lang="en">EN</button>
@@ -1951,7 +1951,7 @@ applyTranslations();
   btn.addEventListener('click', function() {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('flavorserver-theme', next);
+    localStorage.setItem('dinefy-theme', next);
     syncIcon();
   });
 })();
@@ -1963,7 +1963,7 @@ applyTranslations();
   const errEl  = document.getElementById('pinError');
   let entry = '';
 
-  if (sessionStorage.getItem('flavorserver-waiter-auth') === '1') {
+  if (sessionStorage.getItem('dinefy-waiter-auth') === '1') {
     screen.classList.add('hidden');
     return;
   }
@@ -1980,7 +1980,7 @@ applyTranslations();
       const res = await fetch('/api/auth?pin=' + entry + '&role=waiter');
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('flavorserver-waiter-auth', '1');
+        sessionStorage.setItem('dinefy-waiter-auth', '1');
         screen.classList.add('fade-out');
         screen.addEventListener('animationend', () => screen.classList.add('hidden'), { once: true });
       } else {
