@@ -397,10 +397,10 @@ footer {
   .nav-cta:not(.nav-mobile-cta) { display: none; }
   .nav-mobile-cta { display: block; }
 
-  /* Hero */
-  .hero { padding: 80px 5vw 48px; }
-  .hero-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
-  .hero-sub { margin: 0 auto 28px; font-size: 15px; }
+  /* Hero — remove full-screen height on mobile, tighten padding */
+  .hero { min-height: auto; padding: 72px 5vw 40px; align-items: flex-start; }
+  .hero-inner { grid-template-columns: 1fr; gap: 24px; text-align: center; }
+  .hero-sub { margin: 0 auto 24px; font-size: 15px; }
   .hero-actions { justify-content: center; flex-direction: column; align-items: center; }
   .hero-actions .btn-primary,
   .hero-actions .btn-secondary { width: 100%; max-width: 320px; justify-content: center; }
