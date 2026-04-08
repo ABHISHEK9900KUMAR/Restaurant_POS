@@ -851,6 +851,104 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 .tracker-new-order-btn.visible { display: block; }
 .tracker-new-order-btn:hover { background: var(--gold-light); }
 
+/* ── Countdown Timer ─────────────────────────────────── */
+#trackerCountdown {
+  text-align: center; margin: 0 0 20px;
+  padding: 14px 20px; border-radius: var(--radius-sm);
+  background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+}
+.countdown-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--blue); text-transform: uppercase; margin-bottom: 6px;
+}
+.countdown-clock {
+  font-size: 28px; font-weight: 800; letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.countdown-clock.overdue { color: var(--green); }
+
+/* ── Add More Items Button ───────────────────────────── */
+.add-more-btn {
+  display: block; width: 100%;
+  margin: 16px 0 0; padding: 12px 20px;
+  background: transparent; border: 1.5px dashed var(--gold);
+  border-radius: var(--radius-sm); color: var(--gold);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all var(--transition);
+}
+.add-more-btn:hover { background: rgba(201,168,76,0.1); }
+
+/* ── Add Items Modal ─────────────────────────────────── */
+.add-items-modal {
+  display: none; position: fixed; inset: 0; z-index: 1200;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+  flex-direction: column; align-items: stretch; justify-content: flex-end;
+}
+.add-items-modal.open { display: flex; animation: slideUpAddItems 0.3s cubic-bezier(0.32,0.72,0,1); }
+@keyframes slideUpAddItems { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.add-items-panel {
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.add-items-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.add-items-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 700; color: var(--text);
+}
+.add-items-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 18px; cursor: pointer; padding: 4px 8px;
+}
+.add-items-menu {
+  flex: 1; overflow-y: auto; padding: 12px 0;
+  -webkit-overflow-scrolling: touch;
+}
+.add-item-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; border-bottom: 1px solid var(--border2);
+}
+.add-item-row:last-child { border-bottom: none; }
+.add-item-emoji { font-size: 22px; flex-shrink: 0; }
+.add-item-info { flex: 1; min-width: 0; }
+.add-item-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.add-item-price { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.add-item-oos { font-size: 11px; color: var(--red); font-weight: 600; margin-top: 2px; }
+.add-item-qty-ctrl {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.add-item-qty-ctrl button {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--border2); background: var(--surface2);
+  color: var(--text); font-size: 16px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.add-item-qty-ctrl button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.add-item-qty-ctrl button:disabled { opacity: 0.35; cursor: default; }
+.add-item-qty-val {
+  min-width: 20px; text-align: center;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.add-items-footer {
+  padding: 14px 20px 24px; border-top: 1px solid var(--border);
+  flex-shrink: 0; background: var(--surface);
+}
+.add-items-summary {
+  font-size: 13px; color: var(--text-dim); margin-bottom: 10px; text-align: center;
+}
+.add-items-confirm-btn {
+  width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm);
+  background: var(--gold); color: #000;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: all var(--transition);
+}
+.add-items-confirm-btn:hover:not(:disabled) { background: var(--gold-light); }
+.add-items-confirm-btn:disabled { opacity: 0.5; cursor: default; }
+
 /* ── Order Tracker ───────────────────────────────────── */
 #order-tracker {
   display: none;
@@ -1692,19 +1790,43 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
         </div>
       </div>
 
+      <!-- Countdown Timer (shown while preparing) -->
+      <div id="trackerCountdown" style="display:none">
+        <div class="countdown-label" id="countdownLabel"></div>
+        <div class="countdown-clock" id="countdownClock"></div>
+      </div>
+
       <div class="tracker-items-card" id="trackerItems"></div>
       <div class="tracker-total-row" id="trackerTotal"></div>
       <div id="trackerPaySection" style="display:none">
         <a id="trackerUpiBtn" class="tracker-upi-btn" href="#"></a>
         <div class="tracker-upi-hint" id="trackerUpiHint"></div>
       </div>
+
+      <!-- Add More Items button (hidden by default, shown when pending/preparing) -->
+      <button class="add-more-btn" id="addMoreBtn" style="display:none"></button>
     </div>
 
     <!-- Receipt Panel -->
     <div id="trackerReceiptPanel" style="display:none"></div>
 
-    <button class="tracker-new-btn" id="trackerNewBtn" data-i18n="place_another">+ Place Another Order</button>
+    <button class="tracker-new-btn" id="trackerNewBtn" data-i18n="place_another" style="display:none">+ Place Another Order</button>
     <button class="tracker-new-order-btn" id="trackerNewOrderBtn"></button>
+  </div>
+</div>
+
+<!-- ── ADD MORE ITEMS MODAL ── -->
+<div class="add-items-modal" id="addItemsModal">
+  <div class="add-items-panel">
+    <div class="add-items-header">
+      <div class="add-items-title" id="addItemsTitle"></div>
+      <button class="add-items-close" id="addItemsClose">✕</button>
+    </div>
+    <div class="add-items-menu" id="addItemsMenuList"></div>
+    <div class="add-items-footer">
+      <div class="add-items-summary" id="addItemsSummary"></div>
+      <button class="add-items-confirm-btn" id="addItemsConfirm" disabled></button>
+    </div>
   </div>
 </div>
 
@@ -1844,6 +1966,16 @@ const TRANSLATIONS = {
     only_n_left:             'Only {n} left',
     // Wait time
     ready_in_min:            '⏱ Ready in ~{n} min',
+    // Add items feature
+    add_more_items:          '+ Add More Items',
+    add_items_modal_title:   'Add to Your Order',
+    add_items_confirm:       'Add to Order',
+    add_items_cancel:        'Cancel',
+    items_added_toast:       'Items added to your order!',
+    add_items_failed:        'Could not add items. Please try again.',
+    countdown_label:         'Est. time remaining',
+    countdown_overdue:       'Almost ready!',
+    qty_label:               'Qty',
   },
   hi: {
     connecting: 'जोड़ रहे हैं…',
@@ -1962,6 +2094,16 @@ const TRANSLATIONS = {
     only_n_left:           'केवल {n} बचा',
     // Wait time
     ready_in_min:          '⏱ ~{n} मिनट में तैयार',
+    // Add items feature
+    add_more_items:        '+ और आइटम जोड़ें',
+    add_items_modal_title: 'ऑर्डर में जोड़ें',
+    add_items_confirm:     'ऑर्डर में जोड़ें',
+    add_items_cancel:      'रद्द करें',
+    items_added_toast:     'आइटम आपके ऑर्डर में जोड़े गए!',
+    add_items_failed:      'आइटम नहीं जोड़ पाए। दोबारा कोशिश करें।',
+    countdown_label:       'अनुमानित समय शेष',
+    countdown_overdue:     'लगभग तैयार!',
+    qty_label:             'मात्रा',
   }
 };
 
@@ -2054,6 +2196,7 @@ function setLang(lang) {
     updateTrackerStatus(status);
     renderTrackerItems(state.trackingOrder);
     renderDigitalReceipt(state.trackingOrder);
+    updateAddMoreBtn(status);
     updatePaySection();
   }
 }
@@ -2171,6 +2314,8 @@ function restoreTracker(order) {
   renderDigitalReceipt(order);
   const status = order.paymentStatus === 'paid' ? 'paid' : order.status;
   updateTrackerStatus(status);
+  updateAddMoreBtn(status);
+  if (status === 'preparing') startPrepCountdown(order);
   updatePaySection();
   const tracker = document.getElementById('order-tracker');
   tracker.style.animation = 'none';
@@ -3100,13 +3245,11 @@ socket.on('order:updated', (updated) => {
   renderTrackerItems(updated);
   renderDigitalReceipt(updated);
   updateTrackerStatus(status);
+  updateAddMoreBtn(status);
   if (status === 'preparing') {
-    const cookTimes = (updated.items || []).map(item => {
-      const mi = state.menu.find(m => m.id === item.id);
-      return (mi && mi.cookTime) || 15;
-    });
-    const maxCook = cookTimes.length ? Math.max(...cookTimes) : 15;
-    document.getElementById('trackerSub').textContent = t('ready_in_min').replace('{n}', maxCook);
+    startPrepCountdown(updated);
+  } else {
+    stopPrepCountdown();
   }
   updatePaySection();
 });
@@ -3117,10 +3260,190 @@ socket.on('config:updated', (cfg) => {
   updatePaySection();
 });
 
+// ── Prep Countdown Timer ──────────────────────────────
+let _countdownInterval = null;
+
+function getMaxCookTime(order) {
+  const cookTimes = (order.items || []).map(item => {
+    const mi = state.menu.find(m => m.id === item.id);
+    return (item.cookTime) || (mi && mi.cookTime) || 15;
+  });
+  return cookTimes.length ? Math.max(...cookTimes) : 15;
+}
+
+function startPrepCountdown(order) {
+  stopPrepCountdown();
+  const el = document.getElementById('trackerCountdown');
+  const labelEl = document.getElementById('countdownLabel');
+  const clockEl = document.getElementById('countdownClock');
+  if (!el || !clockEl) return;
+
+  const maxCookMs = getMaxCookTime(order) * 60 * 1000;
+  const startTime = order.prepStartedAt ? new Date(order.prepStartedAt).getTime() : Date.now();
+  const endTime = startTime + maxCookMs;
+
+  labelEl.textContent = t('countdown_label');
+  el.style.display = '';
+
+  function tick() {
+    const remaining = endTime - Date.now();
+    if (remaining <= 0) {
+      clockEl.textContent = t('countdown_overdue');
+      clockEl.classList.add('overdue');
+    } else {
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      clockEl.textContent = `${mins}m ${String(secs).padStart(2, '0')}s`;
+      clockEl.classList.remove('overdue');
+    }
+  }
+  tick();
+  _countdownInterval = setInterval(tick, 1000);
+}
+
+function stopPrepCountdown() {
+  if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+  const el = document.getElementById('trackerCountdown');
+  if (el) el.style.display = 'none';
+}
+
+// ── Add More Items Button ─────────────────────────────
+function updateAddMoreBtn(status) {
+  const btn = document.getElementById('addMoreBtn');
+  if (!btn) return;
+  const canAdd = status === 'pending' || status === 'preparing';
+  btn.style.display = canAdd ? '' : 'none';
+  btn.textContent = t('add_more_items');
+}
+
+document.getElementById('addMoreBtn').addEventListener('click', () => {
+  openAddItemsModal();
+});
+
+// ── Add Items Modal ───────────────────────────────────
+let _addItemsCart = {}; // itemId → quantity
+
+function openAddItemsModal() {
+  _addItemsCart = {};
+  const modal = document.getElementById('addItemsModal');
+  document.getElementById('addItemsTitle').textContent = t('add_items_modal_title');
+  document.getElementById('addItemsConfirm').textContent = t('add_items_confirm');
+  renderAddItemsMenu();
+  updateAddItemsSummary();
+  modal.classList.add('open');
+}
+
+function closeAddItemsModal() {
+  document.getElementById('addItemsModal').classList.remove('open');
+  _addItemsCart = {};
+}
+
+document.getElementById('addItemsClose').addEventListener('click', closeAddItemsModal);
+document.getElementById('addItemsModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeAddItemsModal();
+});
+
+function renderAddItemsMenu() {
+  const list = document.getElementById('addItemsMenuList');
+  const inStockItems = (state.menu || []).filter(item => item.inStock !== false);
+  list.innerHTML = inStockItems.map(item => {
+    const name = currentLang === 'hi' && item.nameHi ? item.nameHi : item.name;
+    const price = item.offer > 0
+      ? Math.round(item.price * (1 - item.offer / 100))
+      : item.price;
+    const qty = _addItemsCart[item.id] || 0;
+    return `
+      <div class="add-item-row" data-item-id="${item.id}">
+        <span class="add-item-emoji">${item.emoji || '🍽'}</span>
+        <div class="add-item-info">
+          <div class="add-item-name">${name}</div>
+          <div class="add-item-price">₹${price}</div>
+        </div>
+        <div class="add-item-qty-ctrl">
+          <button class="ai-dec" data-id="${item.id}" ${qty === 0 ? 'disabled' : ''}>−</button>
+          <span class="add-item-qty-val">${qty}</span>
+          <button class="ai-inc" data-id="${item.id}">+</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function updateAddItemsSummary() {
+  const totalItems = Object.values(_addItemsCart).reduce((s, q) => s + q, 0);
+  const confirmBtn = document.getElementById('addItemsConfirm');
+  const summaryEl  = document.getElementById('addItemsSummary');
+  if (totalItems === 0) {
+    summaryEl.textContent = '';
+    confirmBtn.disabled = true;
+  } else {
+    // Calculate extra total
+    let extraTotal = 0;
+    Object.entries(_addItemsCart).forEach(([id, qty]) => {
+      const mi = state.menu.find(m => m.id === id);
+      if (mi) {
+        const price = mi.offer > 0 ? Math.round(mi.price * (1 - mi.offer / 100)) : mi.price;
+        extraTotal += price * qty;
+      }
+    });
+    summaryEl.textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · +₹${extraTotal}`;
+    confirmBtn.disabled = false;
+  }
+}
+
+document.getElementById('addItemsMenuList').addEventListener('click', (e) => {
+  const incBtn = e.target.closest('.ai-inc');
+  const decBtn = e.target.closest('.ai-dec');
+  const itemId = (incBtn || decBtn)?.dataset.id;
+  if (!itemId) return;
+
+  if (incBtn) {
+    _addItemsCart[itemId] = (_addItemsCart[itemId] || 0) + 1;
+  } else if (decBtn) {
+    const cur = _addItemsCart[itemId] || 0;
+    if (cur > 1) _addItemsCart[itemId] = cur - 1;
+    else delete _addItemsCart[itemId];
+  }
+  renderAddItemsMenu();
+  updateAddItemsSummary();
+});
+
+document.getElementById('addItemsConfirm').addEventListener('click', () => {
+  const order = state.trackingOrder;
+  if (!order) return;
+
+  const itemsToAdd = Object.entries(_addItemsCart).map(([id, qty]) => {
+    const mi = state.menu.find(m => m.id === id);
+    if (!mi) return null;
+    const price = mi.offer > 0 ? Math.round(mi.price * (1 - mi.offer / 100)) : mi.price;
+    return { id, name: mi.name, nameHi: mi.nameHi || '', price, emoji: mi.emoji || '', quantity: qty, cookTime: mi.cookTime || 15 };
+  }).filter(Boolean);
+
+  if (itemsToAdd.length === 0) return;
+
+  const confirmBtn = document.getElementById('addItemsConfirm');
+  confirmBtn.disabled = true;
+
+  socket.emit('order:add_items', {
+    orderId: order.id,
+    items: itemsToAdd,
+    eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+  }, (res) => {
+    if (res && res.success) {
+      closeAddItemsModal();
+      showToast(t('items_added_toast'), 'success');
+    } else {
+      confirmBtn.disabled = false;
+      showToast((res && res.error) || t('add_items_failed'), 'error');
+    }
+  });
+});
+
 socket.on('order:paid', ({ orderId }) => {
   if (state.trackingOrder && orderId === state.trackingOrder.id) {
     _clearOrder();
+    stopPrepCountdown();
     updateTrackerStatus('paid');
+    updateAddMoreBtn('paid');
     updatePaySection();
   }
 });
@@ -3229,6 +3552,7 @@ function showSuccess(order) {
   renderDigitalReceipt(order);
   switchTrackerTab('status');
   updateTrackerStatus('pending');
+  updateAddMoreBtn('pending');
   document.getElementById('order-tracker').classList.add('visible');
 }
 
@@ -3297,6 +3621,12 @@ function updateTrackerStatus(status) {
   document.querySelectorAll('#order-tracker .step-connector').forEach((el, i) => {
     el.classList.toggle('filled', i < cfg.step);
   });
+
+  // Show "Place Another Order" only when order is done/paid
+  const newBtn = document.getElementById('trackerNewBtn');
+  if (newBtn) {
+    newBtn.style.display = (status === 'completed' || status === 'paid') ? '' : 'none';
+  }
 }
 
 function resetForm() {

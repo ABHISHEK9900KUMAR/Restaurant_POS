@@ -452,6 +452,54 @@ header {
 }
 .billing-row.discount { color: var(--green); }
 
+/* ── Add-on KOT Alert ────────────────────────────── */
+.addon-kot-alert {
+  margin: 0; padding: 10px 14px 12px;
+  background: rgba(243,156,18,0.12); border-bottom: 2px solid var(--orange);
+  animation: addonPulse 2s ease-in-out infinite;
+}
+@keyframes addonPulse {
+  0%,100% { background: rgba(243,156,18,0.12); }
+  50%      { background: rgba(243,156,18,0.22); }
+}
+.addon-kot-alert-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.addon-kot-alert-title {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  color: var(--orange); text-transform: uppercase;
+}
+.addon-kot-alert-time {
+  font-size: 10px; color: var(--text-dim);
+}
+.addon-kot-items { margin-bottom: 10px; }
+.addon-kot-item-row {
+  display: flex; gap: 6px; align-items: center;
+  font-size: 13px; padding: 2px 0;
+}
+.addon-kot-item-qty { font-weight: 800; color: var(--orange); min-width: 24px; }
+.addon-kot-item-name { color: var(--text); }
+.addon-kot-print-btn {
+  width: 100%; padding: 8px 12px; border: none; border-radius: 6px;
+  background: var(--orange); color: #fff;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.addon-kot-print-btn:hover { filter: brightness(1.1); }
+
+/* ── Admin Prep Timer ────────────────────────────── */
+.admin-prep-timer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px; margin: 0;
+  background: rgba(59,130,246,0.08); border-bottom: 1px solid rgba(59,130,246,0.15);
+  font-size: 13px;
+}
+.admin-prep-timer-label { color: var(--blue); font-weight: 700; }
+.admin-prep-timer-clock { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); }
+.admin-prep-timer-clock.overdue { color: var(--green); }
+
 .card-time {
   font-size: 11px; color: var(--text-dim);
   padding: 8px 16px 0;
@@ -594,9 +642,10 @@ header {
   pointer-events: auto;
   display: flex; align-items: center; gap: 8px;
 }
-.toast.success { border-color: var(--green); color: var(--green); }
-.toast.error   { border-color: var(--red);   color: var(--red);   }
-.toast.info    { border-color: var(--gold);  color: var(--gold);  }
+.toast.success  { border-color: var(--green);  color: var(--green);  }
+.toast.error    { border-color: var(--red);    color: var(--red);    }
+.toast.info     { border-color: var(--gold);   color: var(--gold);   }
+.toast.warning  { border-color: var(--orange); color: var(--orange); }
 .toast.out { animation: toastOut 0.25s ease forwards; }
 
 @keyframes toastIn  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
@@ -1783,6 +1832,10 @@ socket.on('order:new', (order) => {
 
 // Order updated (status change, payment, discount)
 socket.on('order:updated', (updatedOrder) => {
+  const prev = state.orders.find(o => o.id === updatedOrder.id);
+  const prevPendingCount = prev && prev.pendingKotItems ? prev.pendingKotItems.length : 0;
+  const newPendingCount  = updatedOrder.pendingKotItems ? updatedOrder.pendingKotItems.length : 0;
+
   const idx = state.orders.findIndex(o => o.id === updatedOrder.id);
   if (idx !== -1) {
     state.orders[idx] = updatedOrder;
@@ -1790,6 +1843,23 @@ socket.on('order:updated', (updatedOrder) => {
     state.orders.unshift(updatedOrder);
   }
   renderAll();
+
+  // Alert when new items are added by customer after KOT
+  if (newPendingCount > prevPendingCount) {
+    const added = updatedOrder.pendingKotItems.slice(prevPendingCount);
+    const names = added.map(i => `${i.quantity}× ${i.name}`).join(', ');
+    showToast(`⚠️ ${updatedOrder.id} — Customer added: ${names}`, 'warning', 7000);
+    playBeep();
+    // Auto-print add-on KOT if setting enabled
+    if (localStorage.getItem('dinefy-kot-autoprint') === 'true') {
+      printAddonKOT(updatedOrder, updatedOrder.pendingKotItems);
+      socket.emit('order:addon_kot_cleared', {
+        orderId: updatedOrder.id,
+        eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+      });
+    }
+  }
+
   // Auto-print KOT when customer responds "prepare the rest" to an OOS ping
   if (updatedOrder.reviewResponse === 'proceed' && localStorage.getItem('dinefy-kot-autoprint') === 'true') {
     printKOT(updatedOrder);
@@ -2034,6 +2104,37 @@ function cardHTML(order) {
           ${order.status === 'completed' || isPaid ? 'disabled' : ''}
           data-action="status" data-status="completed">${t('btn_done')}</button>`;
 
+  // Add-on KOT alert (items added by customer after original KOT was sent)
+  const pendingKot = order.pendingKotItems && order.pendingKotItems.length > 0;
+  const addonKotAlert = pendingKot ? (() => {
+    const addedAt = order.pendingKotItems[0].addedAt
+      ? new Date(order.pendingKotItems[0].addedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const rows = order.pendingKotItems.map(i =>
+      `<div class="addon-kot-item-row">
+        <span class="addon-kot-item-qty">${i.quantity}×</span>
+        <span class="addon-kot-item-name">${i.emoji || ''} ${i.name}</span>
+       </div>`
+    ).join('');
+    return `
+      <div class="addon-kot-alert">
+        <div class="addon-kot-alert-header">
+          <span class="addon-kot-alert-title">⚠️ New Items Added</span>
+          ${addedAt ? `<span class="addon-kot-alert-time">${addedAt}</span>` : ''}
+        </div>
+        <div class="addon-kot-items">${rows}</div>
+        <button class="addon-kot-print-btn" data-action="addon-kot-print">🖨 Print Add-on KOT</button>
+      </div>`;
+  })() : '';
+
+  // Prep countdown block (only when preparing)
+  const prepTimerBlock = order.status === 'preparing'
+    ? `<div class="admin-prep-timer" data-prep-start="${order.prepStartedAt || ''}" data-order-id="${order.id}">
+         <span class="admin-prep-timer-label">⏱ Prep:</span>
+         <span class="admin-prep-timer-clock">…</span>
+       </div>`
+    : '';
+
   return `
     <div class="card-header">
       <div>
@@ -2046,6 +2147,8 @@ function cardHTML(order) {
         <div class="status-badge ${statusKey}">${t(statusKey)}</div>
       </div>
     </div>
+    ${addonKotAlert}
+    ${prepTimerBlock}
     <div class="card-items">${itemsHTML}</div>
     ${flagOosSection}
     <div class="card-billing">
@@ -2080,6 +2183,23 @@ function bindCardEvents(card, order) {
           showToast(res.error || t('failed_status'), 'error');
           acceptBtn.disabled = false;
         }
+      });
+    });
+  }
+
+  // Print Add-on KOT
+  const addonKotBtn = card.querySelector('[data-action="addon-kot-print"]');
+  if (addonKotBtn) {
+    addonKotBtn.addEventListener('click', () => {
+      const liveOrder = state.orders.find(o => o.id === order.id);
+      const items = liveOrder && liveOrder.pendingKotItems && liveOrder.pendingKotItems.length > 0
+        ? liveOrder.pendingKotItems : (order.pendingKotItems || []);
+      if (items.length === 0) return;
+      printAddonKOT(liveOrder || order, items);
+      // Tell server to clear pendingKotItems
+      socket.emit('order:addon_kot_cleared', {
+        orderId: order.id,
+        eventId: 'evt_' + Math.random().toString(36).slice(2) + Date.now().toString(36),
       });
     });
   }
@@ -2417,6 +2537,69 @@ function printKOT(order) {
   }, 300);
 }
 
+// ─── Add-on KOT Printing ────────────────────────────────
+function printAddonKOT(order, pendingItems) {
+  const width   = localStorage.getItem('dinefy-kot-width')  || '80';
+  const name    = localStorage.getItem('dinefy-kot-name')   || 'Dinefy';
+  const footer  = localStorage.getItem('dinefy-kot-footer') || 'Thank you!';
+  const pxWidth = width === '58' ? '219px' : '302px';
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const itemsLines = (pendingItems || []).map(item =>
+    `<div class="kot-item"><span class="kot-qty">${item.quantity}x</span><span class="kot-name">${item.name || ''}</span></div>`
+    + (item.note ? `<div class="kot-note">  ↳ ${item.note}</div>` : '')
+  ).join('');
+
+  const totalItems = (pendingItems || []).reduce((s, i) => s + i.quantity, 0);
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8" /><title>ADD-ON KOT — ${order.id}</title>
+<style>
+  @page { size: ${width}mm auto; margin: 3mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; width: ${pxWidth}; }
+  .center { text-align: center; }
+  .divider { border: none; border-top: 1px dashed #555; margin: 5px 0; }
+  .shop-name { font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+  .addon-badge { font-size: 13px; font-weight: bold; border: 2px solid #000; padding: 3px 6px; display: inline-block; margin: 4px 0; letter-spacing: 1px; }
+  .meta { font-size: 11px; margin: 3px 0; display: flex; justify-content: space-between; }
+  .kot-item { display: flex; gap: 6px; padding: 3px 0; font-size: 13px; font-weight: bold; }
+  .kot-qty { font-weight: bold; min-width: 24px; }
+  .kot-name { flex: 1; }
+  .kot-note { font-size: 11px; color: #444; font-style: italic; padding: 0 0 3px 8px; }
+  .total-items { font-size: 12px; text-align: center; font-weight: bold; padding: 2px 0; }
+  .footer { font-size: 10px; color: #555; text-align: center; margin-top: 4px; }
+  @media print { body { -webkit-print-color-adjust: exact; } }
+</style></head><body>
+  <div class="center"><div class="shop-name">** ${name} **</div></div>
+  <div class="center"><div class="addon-badge">★ ADD-ON ORDER ★</div></div>
+  <hr class="divider" />
+  <div class="meta"><span>KOT #${order.id}</span><span>Table: ${order.tableNo}</span></div>
+  <div class="meta"><span>${timeStr}</span><span>${dateStr}</span></div>
+  <hr class="divider" />
+  ${itemsLines}
+  <hr class="divider" />
+  <div class="total-items">New Items: ${totalItems}</div>
+  <hr class="divider" />
+  <div class="center footer">** Kitchen Copy — Add to Existing Order **</div>
+  <div class="center footer">${footer}</div>
+</body></html>`;
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:-9999px;bottom:0;width:1px;height:1px;border:none';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1500);
+  }, 300);
+}
+
 // ─── Filters ─────────────────────────────────────────────
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -2470,7 +2653,7 @@ function showToast(msg, type = 'info', duration = 3500) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
   toast.innerHTML = `<span>${icons[type] || ''}</span> ${msg}`;
   container.appendChild(toast);
   setTimeout(() => {
@@ -2486,6 +2669,36 @@ setInterval(() => {
     if (order) el.textContent = t('placed_at') + ' ' + formatTime(order.createdAt);
   });
 }, 30000);
+
+// ─── Prep Countdown Tickers (admin) ──────────────────────
+function tickAdminPrepTimers() {
+  document.querySelectorAll('.admin-prep-timer').forEach(timerEl => {
+    const prepStart = timerEl.dataset.prepStart;
+    const orderId   = timerEl.dataset.orderId;
+    const clockEl   = timerEl.querySelector('.admin-prep-timer-clock');
+    if (!clockEl) return;
+
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    // Get max cook time from order items
+    const cookTimes = (order.items || []).map(i => i.cookTime || 15);
+    const maxCookMs = (cookTimes.length ? Math.max(...cookTimes) : 15) * 60 * 1000;
+    const startMs   = prepStart ? new Date(prepStart).getTime() : Date.now();
+    const remaining = (startMs + maxCookMs) - Date.now();
+
+    if (remaining <= 0) {
+      clockEl.textContent = 'Ready soon!';
+      clockEl.classList.add('overdue');
+    } else {
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      clockEl.textContent = `${mins}m ${String(secs).padStart(2, '0')}s`;
+      clockEl.classList.remove('overdue');
+    }
+  });
+}
+setInterval(tickAdminPrepTimers, 1000);
 
 // ─── Table QR Codes ──────────────────────────────────────
 const qrBtn     = document.getElementById('qrBtn');
@@ -3352,7 +3565,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
   async function submitPin() {
     errEl.textContent = '';
     try {
-      const res = await fetch('/api/auth?pin=' + entry + '&role=admin');
+      const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: entry, role: 'admin' }) });
       const data = await res.json();
       if (data.success) {
         sessionStorage.setItem('dinefy-admin-auth', '1');

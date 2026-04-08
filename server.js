@@ -9,6 +9,8 @@ const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
 const cors       = require('cors');
+const helmet     = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const path       = require('path');
 const QRCode     = require('qrcode');
 const os         = require('os');
@@ -52,17 +54,38 @@ const LOCAL_IP = getLocalIP();
 // RENDER_EXTERNAL_URL is set automatically by Render for every web service
 const PUBLIC_URL = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || null;
 
+// ─── Allowed Origins (strict in prod, open in local dev) ─────────────────────
+const isProd = !!(process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL);
+const ALLOWED_ORIGINS = isProd
+  ? ['https://dinefy.in', 'https://www.dinefy.in']
+  : true; // allow all in local dev
+
 const app = express();
 const server = http.createServer(app);
 
 // ─── Socket.io Setup ────────────────────────────────────────────────────────
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'] },
   pingTimeout: 60000,
   pingInterval: 25000,
 });
 
-app.use(cors());
+// ─── Security Middleware ─────────────────────────────────────────────────────
+// Helmet — sets secure HTTP headers (XSS, clickjacking, MIME sniffing, etc.)
+app.use(helmet({ contentSecurityPolicy: false })); // CSP disabled to avoid breaking Google Fonts / socket.io CDN
+
+// CORS — locked to dinefy.in in production, open in local dev
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+
+// Rate limiter for auth — max 10 attempts per IP per 15 minutes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
@@ -834,8 +857,10 @@ function getPublicCarts() {
 // ─── REST API ─────────────────────────────────────────────────────────────────
 
 // ── PIN Authentication ────────────────────────────────────────────────────────
-app.get('/api/auth', (req, res) => {
-  const { pin, role } = req.query;
+// POST — PIN sent in request body (never visible in URL or server logs)
+app.post('/api/auth', authLimiter, (req, res) => {
+  const { pin, role } = req.body;
+  if (!pin || !role) return res.status(400).json({ success: false, error: 'Missing pin or role' });
   const adminPin  = process.env.ADMIN_PIN  || '1234';
   const waiterPin = process.env.WAITER_PIN || '5678';
   if (role === 'admin'  && pin === adminPin)  return res.json({ success: true });
@@ -1296,6 +1321,7 @@ io.on('connection', (socket) => {
     }
 
     order.status = status;
+    if (status === 'preparing' && !order.prepStartedAt) order.prepStartedAt = getTimestamp();
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status, timestamp: getTimestamp() });
     dbUpdateOrder(order);
@@ -1487,6 +1513,7 @@ io.on('connection', (socket) => {
     }
 
     order.status = 'preparing';
+    order.prepStartedAt = order.prepStartedAt || getTimestamp();
     order.updatedAt = getTimestamp();
     order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
     dbUpdateOrder(order);
@@ -1556,6 +1583,7 @@ io.on('connection', (socket) => {
       });
       order.reviewResponse = 'proceed';
       order.status = 'preparing';
+      order.prepStartedAt = order.prepStartedAt || getTimestamp();
       order.updatedAt = getTimestamp();
       order.statusHistory.push({ status: 'preparing', timestamp: getTimestamp() });
       dbUpdateOrder(order);
@@ -1586,6 +1614,131 @@ io.on('connection', (socket) => {
     } else {
       if (typeof ack === 'function') ack({ success: false, error: 'Invalid choice' });
     }
+  });
+
+  // ── Add Items to Existing Order (Customer) ──
+  socket.on('order:add_items', (data, ack) => {
+    const { orderId, items, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    if (!items || items.length === 0) {
+      if (typeof ack === 'function') ack({ success: false, error: 'No items provided' });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    const allowedStatuses = ['pending', 'preparing'];
+    if (!allowedStatuses.includes(order.status)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Cannot add items at this stage' });
+      return;
+    }
+
+    // Merge items: increase quantity if item already in order, else append
+    // Also track in pendingKotItems so kitchen knows what's new
+    if (!order.pendingKotItems) order.pendingKotItems = [];
+    const addedAt = getTimestamp();
+
+    items.forEach(newItem => {
+      const qty = Math.max(1, Math.floor(newItem.quantity || 1));
+      const menuItem = MENU.find(m => m.id === newItem.id);
+
+      // Merge into main order items
+      const existing = order.items.find(i => i.id === newItem.id);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        order.items.push({
+          id: newItem.id,
+          name: newItem.name || (menuItem && menuItem.name) || newItem.id,
+          nameHi: newItem.nameHi || (menuItem && menuItem.nameHi) || '',
+          price: newItem.price || (menuItem && menuItem.price) || 0,
+          emoji: newItem.emoji || (menuItem && menuItem.emoji) || '',
+          quantity: qty,
+          note: newItem.note || '',
+          cookTime: newItem.cookTime || (menuItem && menuItem.cookTime) || 15,
+        });
+      }
+
+      // Track in pendingKotItems (merge if same item added multiple times)
+      const pendingExisting = order.pendingKotItems.find(i => i.id === newItem.id);
+      if (pendingExisting) {
+        pendingExisting.quantity += qty;
+      } else {
+        order.pendingKotItems.push({
+          id: newItem.id,
+          name: newItem.name || (menuItem && menuItem.name) || newItem.id,
+          emoji: newItem.emoji || (menuItem && menuItem.emoji) || '',
+          quantity: qty,
+          note: newItem.note || '',
+          addedAt,
+        });
+      }
+    });
+
+    // Recalculate billing (preserve existing discount/service charge settings)
+    order.billing = calculateBill(order.items, {
+      applyServiceCharge: order.billing.serviceCharge > 0,
+      discountPercent: order.billing.discountPercent || 0,
+    });
+    order.updatedAt = getTimestamp();
+
+    // Decrement stock for newly added items
+    const lowStockAlerts = [];
+    let menuChanged = false;
+    items.forEach(added => {
+      const menuItem = MENU.find(m => m.id === added.id);
+      if (menuItem && menuItem.stockCount !== null) {
+        const qty = Math.max(1, Math.floor(added.quantity || 1));
+        menuItem.stockCount = Math.max(0, menuItem.stockCount - qty);
+        if (menuItem.stockCount === 0) {
+          menuItem.inStock = false;
+          console.log(`[Stock] ${menuItem.name} depleted → OOS`);
+        } else if (menuItem.stockCount < 3) {
+          lowStockAlerts.push({ id: menuItem.id, name: menuItem.name, stockCount: menuItem.stockCount });
+        }
+        dbSaveMenuState(menuItem.id, menuItem.inStock, menuItem.offer, menuItem.image, menuItem.stockCount);
+        menuChanged = true;
+      }
+    });
+    if (menuChanged) io.emit('menu:updated', { menu: MENU });
+    if (lowStockAlerts.length > 0) io.emit('menu:low_stock', { items: lowStockAlerts });
+
+    dbUpdateOrder(order);
+    io.emit('order:updated', order);
+    if (typeof ack === 'function') ack({ success: true, order });
+    console.log(`[Order] Items added to ${orderId}: ${items.map(i => i.name).join(', ')}`);
+  });
+
+  // ── Clear Pending KOT Items (Admin prints add-on KOT) ──
+  socket.on('order:addon_kot_cleared', (data, ack) => {
+    const { orderId, eventId } = data;
+
+    if (isDuplicate(eventId)) {
+      if (typeof ack === 'function') ack({ success: true, duplicate: true });
+      return;
+    }
+
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      if (typeof ack === 'function') ack({ success: false, error: 'Order not found' });
+      return;
+    }
+
+    order.pendingKotItems = [];
+    order.updatedAt = getTimestamp();
+    dbUpdateOrder(order);
+    io.emit('order:updated', order);
+    if (typeof ack === 'function') ack({ success: true, order });
+    console.log(`[Order] Add-on KOT cleared for ${orderId}`);
   });
 
   // ── Manual Table Free (Admin) ──

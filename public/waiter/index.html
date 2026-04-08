@@ -600,6 +600,16 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
 .oos-action-btn.cancel  { border: 1px solid var(--red);  background: rgba(231,76,60,0.1); color: var(--red); }
 .oos-action-btn.cancel:hover  { background: var(--red);  color: #fff; }
 
+/* ── Waiter Prep Timer ───────────────────────────── */
+.waiter-prep-timer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; font-size: 13px; font-weight: 700;
+  background: rgba(59,130,246,0.1); border-bottom: 1px solid rgba(59,130,246,0.2);
+  color: var(--blue);
+}
+.waiter-prep-clock { font-variant-numeric: tabular-nums; color: var(--text); }
+.waiter-prep-clock.overdue { color: var(--green); }
+
 .card-items-list { padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .order-item-row {
   display: flex; justify-content: space-between;
@@ -1829,6 +1839,14 @@ function myOrderCardHTML(order) {
     </div>
   ` : '';
 
+  // Prep countdown for preparing orders
+  const prepTimerBlock = order.status === 'preparing'
+    ? `<div class="waiter-prep-timer" data-prep-start="${order.prepStartedAt || ''}" data-order-id="${order.id}">
+         <span>⏱</span>
+         <span class="waiter-prep-clock">…</span>
+       </div>`
+    : '';
+
   return `
     <div class="card-header">
       <div>
@@ -1838,6 +1856,7 @@ function myOrderCardHTML(order) {
       </div>
       <div class="status-badge ${badgeClass}">${badgeText}</div>
     </div>
+    ${prepTimerBlock}
     <div class="card-items-list">${itemsHTML}</div>
     ${oosAlert}
     <div class="card-billing">
@@ -1977,7 +1996,7 @@ applyTranslations();
   async function submitPin() {
     errEl.textContent = '';
     try {
-      const res = await fetch('/api/auth?pin=' + entry + '&role=waiter');
+      const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: entry, role: 'waiter' }) });
       const data = await res.json();
       if (data.success) {
         sessionStorage.setItem('dinefy-waiter-auth', '1');
@@ -2020,6 +2039,35 @@ applyTranslations();
     }
   });
 })();
+
+// ─── Waiter Prep Countdown Tickers ───────────────────────
+function tickWaiterPrepTimers() {
+  document.querySelectorAll('.waiter-prep-timer').forEach(timerEl => {
+    const prepStart = timerEl.dataset.prepStart;
+    const orderId   = timerEl.dataset.orderId;
+    const clockEl   = timerEl.querySelector('.waiter-prep-clock');
+    if (!clockEl) return;
+
+    const order = state.myOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    const cookTimes = (order.items || []).map(i => i.cookTime || 15);
+    const maxCookMs = (cookTimes.length ? Math.max(...cookTimes) : 15) * 60 * 1000;
+    const startMs   = prepStart ? new Date(prepStart).getTime() : Date.now();
+    const remaining = (startMs + maxCookMs) - Date.now();
+
+    if (remaining <= 0) {
+      clockEl.textContent = 'Ready soon!';
+      clockEl.classList.add('overdue');
+    } else {
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      clockEl.textContent = `${mins}m ${String(secs).padStart(2, '0')}s`;
+      clockEl.classList.remove('overdue');
+    }
+  });
+}
+setInterval(tickWaiterPrepTimers, 1000);
 </script>
 </body>
 </html>
