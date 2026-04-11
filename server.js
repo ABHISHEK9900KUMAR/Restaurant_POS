@@ -690,10 +690,18 @@ db.prepare('SELECT id, inStock, offer, image, stockCount, popular FROM menu_stat
   }
 });
 
-// Restore menu images from Cloudinary (handles ephemeral filesystem on Render)
+// Sync menu images with Cloudinary:
+//   1. Restore URLs for items that already have a Cloudinary upload
+//   2. Auto-upload any committed local JPGs that are not yet in Cloudinary
+//   Runs on every startup; skips files already uploaded (no re-upload).
 if (process.env.CLOUDINARY_CLOUD_NAME) {
-  cloudinary.api.resources({ type: 'upload', prefix: 'dinefy-menu/', max_results: 100 })
-    .then(result => {
+  (async () => {
+    try {
+      // Fetch what's already in Cloudinary
+      const result = await cloudinary.api.resources({ type: 'upload', prefix: 'dinefy-menu/', max_results: 200 });
+      const existing = new Set(result.resources.map(r => r.public_id.replace('dinefy-menu/', '')));
+
+      // Restore URLs for already-uploaded items
       result.resources.forEach(resource => {
         const itemId = resource.public_id.replace('dinefy-menu/', '');
         const item = MENU.find(m => m.id === itemId);
@@ -702,9 +710,43 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
           dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
         }
       });
-      console.log(`[Cloudinary] Restored ${result.resources.length} menu image(s)`);
-    })
-    .catch(e => console.error('[Cloudinary] Image restore failed:', e.message));
+      console.log(`[Cloudinary] Restored ${result.resources.length} existing menu image(s)`);
+
+      // Upload local committed JPGs that are missing from Cloudinary
+      const uploadsDir = path.join(__dirname, 'public', 'uploads', 'menu');
+      const toUpload = MENU.filter(item => {
+        if (item.image) return false;                          // already has URL
+        if (existing.has(item.id)) return false;              // already in Cloudinary
+        const localPath = path.join(uploadsDir, `${item.id}.jpg`);
+        return fs.existsSync(localPath);                      // committed file present
+      });
+
+      if (toUpload.length === 0) {
+        console.log('[Cloudinary] All menu images up to date');
+        return;
+      }
+
+      console.log(`[Cloudinary] Uploading ${toUpload.length} new menu image(s)…`);
+      let uploaded = 0;
+      for (const item of toUpload) {
+        const localPath = path.join(uploadsDir, `${item.id}.jpg`);
+        try {
+          const res = await cloudinary.uploader.upload(localPath, {
+            public_id: `dinefy-menu/${item.id}`, overwrite: false, resource_type: 'image',
+          });
+          item.image = res.secure_url;
+          dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount);
+          uploaded++;
+        } catch (e) {
+          console.error(`[Cloudinary] Failed to upload ${item.id}: ${e.message}`);
+        }
+      }
+      console.log(`[Cloudinary] Auto-uploaded ${uploaded}/${toUpload.length} menu image(s)`);
+      if (uploaded > 0) io.emit('menu:updated', { menu: MENU });
+    } catch (e) {
+      console.error('[Cloudinary] Image sync failed:', e.message);
+    }
+  })();
 }
 
 // Rebuild occupiedTables from active (non-completed/paid/cancelled) orders
