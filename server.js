@@ -639,6 +639,8 @@ db.exec(`
 
 try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE menu_state ADD COLUMN stockCount INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE menu_state ADD COLUMN popular INTEGER'); } catch (_) {}
+db.exec(`CREATE TABLE IF NOT EXISTS custom_menu_items (id TEXT PRIMARY KEY, data TEXT NOT NULL);`);
 
 // Load persisted orderCounter
 const counterRow = db.prepare("SELECT value FROM app_config WHERE key='orderCounter'").get();
@@ -665,14 +667,26 @@ orders = db.prepare('SELECT data FROM orders').all().map(row => {
   return order;
 });
 
+// Load custom menu items added by admin
+db.prepare('SELECT data FROM custom_menu_items').all().forEach(row => {
+  try {
+    const item = JSON.parse(row.data);
+    if (!MENU.find(m => m.id === item.id)) {
+      item.inStock = true; item.offer = 0; item.stockCount = null; item.image = null;
+      MENU.push(item);
+    }
+  } catch (_) {}
+});
+
 // Apply persisted menu state
-db.prepare('SELECT id, inStock, offer, image, stockCount FROM menu_state').all().forEach(row => {
+db.prepare('SELECT id, inStock, offer, image, stockCount, popular FROM menu_state').all().forEach(row => {
   const item = MENU.find(m => m.id === row.id);
   if (item) {
     item.inStock = !!row.inStock;
     item.offer = row.offer;
     item.image = row.image || null;
     item.stockCount = (row.stockCount !== null && row.stockCount !== undefined) ? row.stockCount : null;
+    if (row.popular !== null && row.popular !== undefined) item.popular = !!row.popular;
   }
 });
 
@@ -709,7 +723,7 @@ const _updateOrder = db.prepare(
   'UPDATE orders SET status=?, paymentStatus=?, updatedAt=?, paidAt=?, data=? WHERE id=?'
 );
 const _upsertMenuState = db.prepare(
-  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount) VALUES (?, ?, ?, ?, ?)'
+  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount, popular) VALUES (?, ?, ?, ?, ?, ?)'
 );
 const _upsertCounter = db.prepare(
   "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
@@ -718,16 +732,141 @@ const _upsertCounter = db.prepare(
 function dbSaveOrder(order) {
   _insertOrder.run(order.id, order.tableNo, order.status, order.paymentStatus,
     order.createdAt, order.updatedAt, order.paidAt || null, JSON.stringify(order));
+  scheduleCloudinaryBackup();
 }
 
 function dbUpdateOrder(order) {
   _updateOrder.run(order.status, order.paymentStatus, order.updatedAt,
     order.paidAt || null, JSON.stringify(order), order.id);
+  scheduleCloudinaryBackup();
 }
 
-function dbSaveMenuState(itemId, inStock, offer, image, stockCount) {
-  _upsertMenuState.run(itemId, inStock ? 1 : 0, offer, image || null,
-    (stockCount !== undefined && stockCount !== null) ? stockCount : null);
+function dbSaveMenuState(itemId, inStock, offer, image, stockCount, popular) {
+  _upsertMenuState.run(
+    itemId, inStock ? 1 : 0, offer, image || null,
+    (stockCount !== undefined && stockCount !== null) ? stockCount : null,
+    (popular !== undefined && popular !== null) ? (popular ? 1 : 0) : null
+  );
+  scheduleCloudinaryBackup();
+}
+
+// ─── Cloudinary DB Snapshot (survives Render ephemeral filesystem resets) ────
+let _backupTimer = null;
+function scheduleCloudinaryBackup() {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) return;
+  clearTimeout(_backupTimer);
+  _backupTimer = setTimeout(doCloudinaryBackup, 4000); // debounce 4s
+}
+
+async function doCloudinaryBackup() {
+  try {
+    const snapshot = {
+      v: 2,
+      savedAt: new Date().toISOString(),
+      orders,
+      orderCounter,
+      invoiceCounter,
+      menuState:   db.prepare('SELECT * FROM menu_state').all(),
+      customItems: db.prepare('SELECT * FROM custom_menu_items').all(),
+      appConfig:   db.prepare('SELECT * FROM app_config').all(),
+    };
+    const buf = Buffer.from(JSON.stringify(snapshot), 'utf8');
+    await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { public_id: 'dinefy-db/snapshot', overwrite: true, resource_type: 'raw' },
+        (err, result) => err ? reject(err) : resolve(result)
+      ).end(buf);
+    });
+    console.log(`[Cloudinary] Snapshot saved — ${orders.length} orders, ${Math.round(buf.length / 1024)}KB`);
+  } catch (e) {
+    console.error('[Cloudinary] Backup failed:', e.message);
+  }
+}
+
+async function restoreFromCloudinarySnapshot() {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) return;
+  try {
+    const resource = await cloudinary.api.resource('dinefy-db/snapshot', { resource_type: 'raw' });
+    const raw = await new Promise((resolve, reject) => {
+      const _https = require('https');
+      _https.get(resource.secure_url, res => {
+        let buf = '';
+        res.on('data', d => buf += d);
+        res.on('end', () => resolve(buf));
+        res.on('error', reject);
+      }).on('error', reject);
+    });
+    const snap = JSON.parse(raw);
+    if (!snap || snap.v !== 2) { console.log('[Cloudinary] Snapshot version mismatch, skipping'); return; }
+
+    let restoredOrders = 0;
+    // Restore orders not already in memory/DB
+    (snap.orders || []).forEach(order => {
+      if (!orders.find(o => o.id === order.id)) {
+        if (order.items) order.items = order.items.map(i => ({ ...i, quantity: i.quantity ?? i.qty }));
+        orders.push(order);
+        _insertOrder.run(order.id, order.tableNo, order.status, order.paymentStatus,
+          order.createdAt, order.updatedAt, order.paidAt || null, JSON.stringify(order));
+        restoredOrders++;
+      }
+    });
+
+    // Restore counters
+    if ((snap.orderCounter || 0) > orderCounter) {
+      orderCounter = snap.orderCounter;
+      _upsertCounter.run(String(orderCounter));
+    }
+    if ((snap.invoiceCounter || 0) > invoiceCounter) {
+      invoiceCounter = snap.invoiceCounter;
+      db.prepare("INSERT OR REPLACE INTO app_config (key, value) VALUES ('invoiceCounter', ?)").run(String(invoiceCounter));
+    }
+
+    // Restore menu state (images, stock, offers)
+    (snap.menuState || []).forEach(row => {
+      try {
+        db.prepare('INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount, popular) VALUES (?, ?, ?, ?, ?, ?)').run(
+          row.id, row.inStock ?? 1, row.offer ?? 0, row.image ?? null, row.stockCount ?? null, row.popular ?? null
+        );
+        const item = MENU.find(m => m.id === row.id);
+        if (item) {
+          item.inStock = !!row.inStock; item.offer = row.offer || 0;
+          item.image = row.image || null; item.stockCount = row.stockCount ?? null;
+          if (row.popular != null) item.popular = !!row.popular;
+        }
+      } catch (_) {}
+    });
+
+    // Restore custom menu items
+    (snap.customItems || []).forEach(row => {
+      try {
+        db.prepare('INSERT OR IGNORE INTO custom_menu_items (id, data) VALUES (?, ?)').run(row.id, row.data);
+        const item = JSON.parse(row.data);
+        if (!MENU.find(m => m.id === item.id)) {
+          item.inStock = true; item.offer = 0; item.stockCount = null; item.image = null;
+          MENU.push(item);
+        }
+      } catch (_) {}
+    });
+
+    // Restore occupied tables from active orders
+    orders.forEach(order => {
+      if (!['completed', 'paid', 'cancelled'].includes(order.status) && order.tableNo && !occupiedTables[order.tableNo]) {
+        occupiedTables[order.tableNo] = { customerName: order.customerName, orderId: order.id, since: order.createdAt };
+      }
+    });
+
+    console.log(`[Cloudinary] Restored from snapshot: ${restoredOrders} orders, ${(snap.menuState||[]).length} menu states, ${(snap.customItems||[]).length} custom items`);
+
+    // Push fresh state to any already-connected clients
+    io.emit('menu:updated', { menu: MENU });
+    io.emit('orders:restored', { orders });
+  } catch (e) {
+    if (e.http_code === 404 || (e.message || '').includes('404')) {
+      console.log('[Cloudinary] No snapshot found — fresh start');
+    } else {
+      console.error('[Cloudinary] Restore failed:', e.message);
+    }
+  }
 }
 
 function dbSaveCounter() {
@@ -1800,6 +1939,16 @@ io.on('connection', (socket) => {
     console.log(`[Menu] ${item.name} → stockCount: ${item.stockCount}`);
   });
 
+  socket.on('menu:set_popular', (data, ack) => {
+    const { itemId, popular } = data;
+    const item = MENU.find(m => m.id === itemId);
+    if (!item) { if (typeof ack === 'function') ack({ success: false, error: 'Item not found' }); return; }
+    item.popular = !!popular;
+    dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount, item.popular);
+    io.emit('menu:updated', { menu: MENU });
+    if (typeof ack === 'function') ack({ success: true });
+  });
+
   socket.on('menu:reset_stock', (data, ack) => {
     // Reset all items: clear stockCount (unlimited), restore inStock=true
     MENU.forEach(item => {
@@ -1945,6 +2094,70 @@ app.delete('/api/admin/menu/:id/image', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── Custom Menu Items CRUD ───────────────────────────────────────────────────
+const _customItemRow = db.prepare("SELECT MAX(CAST(SUBSTR(id,4) AS INTEGER)) as mx FROM custom_menu_items WHERE id LIKE 'cx_%'").get();
+let customItemCounter = (_customItemRow && _customItemRow.mx) ? _customItemRow.mx : 0;
+
+app.post('/api/admin/menu/items', express.json(), (req, res) => {
+  const { name, nameHi, category, price, emoji, tags, popular } = req.body;
+  if (!name || !String(name).trim()) return res.json({ success: false, error: 'Name is required' });
+  if (!category || !String(category).trim()) return res.json({ success: false, error: 'Category is required' });
+  if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) return res.json({ success: false, error: 'Valid price is required' });
+
+  customItemCounter++;
+  const id = `cx_${customItemCounter}`;
+  const item = {
+    id, custom: true,
+    name: String(name).trim(),
+    nameHi: String(nameHi || name).trim(),
+    category: String(category).trim(),
+    categoryHi: String(category).trim(),
+    price: parseFloat(price),
+    emoji: emoji || '🍽️',
+    popular: !!popular,
+    tags: Array.isArray(tags) ? tags : ['veg'],
+    inStock: true, offer: 0, cookTime: 15, stockCount: null, image: null,
+  };
+  MENU.push(item);
+  db.prepare('INSERT INTO custom_menu_items (id, data) VALUES (?, ?)').run(id, JSON.stringify(item));
+  dbSaveMenuState(id, true, 0, null, null, item.popular);
+  io.emit('menu:updated', { menu: MENU });
+  scheduleCloudinaryBackup();
+  console.log(`[Menu] Custom item added: ${item.name} (${id})`);
+  res.json({ success: true, item });
+});
+
+app.put('/api/admin/menu/items/:id', express.json(), (req, res) => {
+  const item = MENU.find(m => m.id === req.params.id);
+  if (!item) return res.json({ success: false, error: 'Item not found' });
+  const { name, nameHi, category, price, emoji, tags, popular } = req.body;
+  if (name !== undefined) { item.name = String(name).trim(); item.nameHi = String(nameHi || name).trim(); }
+  if (category !== undefined) { item.category = String(category).trim(); item.categoryHi = String(category).trim(); }
+  if (price !== undefined && !isNaN(parseFloat(price)) && parseFloat(price) > 0) item.price = parseFloat(price);
+  if (emoji !== undefined) item.emoji = emoji || item.emoji;
+  if (tags !== undefined && Array.isArray(tags)) item.tags = tags;
+  if (popular !== undefined) item.popular = !!popular;
+  if (item.custom) {
+    db.prepare('INSERT OR REPLACE INTO custom_menu_items (id, data) VALUES (?, ?)').run(item.id, JSON.stringify(item));
+  }
+  dbSaveMenuState(item.id, item.inStock, item.offer, item.image, item.stockCount, item.popular);
+  io.emit('menu:updated', { menu: MENU });
+  console.log(`[Menu] Item updated: ${item.name} (${item.id})`);
+  res.json({ success: true, item });
+});
+
+app.delete('/api/admin/menu/items/:id', (req, res) => {
+  const idx = MENU.findIndex(m => m.id === req.params.id && m.custom);
+  if (idx === -1) return res.json({ success: false, error: 'Item not found or cannot be deleted' });
+  const [removed] = MENU.splice(idx, 1);
+  db.prepare('DELETE FROM custom_menu_items WHERE id=?').run(req.params.id);
+  db.prepare('DELETE FROM menu_state WHERE id=?').run(req.params.id);
+  io.emit('menu:updated', { menu: MENU });
+  scheduleCloudinaryBackup();
+  console.log(`[Menu] Custom item deleted: ${removed.name} (${removed.id})`);
+  res.json({ success: true });
+});
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 server.listen(CONFIG.PORT, () => {
   const networkUrl = `http://${LOCAL_IP}:${CONFIG.PORT}`;
@@ -1962,4 +2175,7 @@ server.listen(CONFIG.PORT, () => {
     console.log(`   ℹ️   Both devices must be on the same Wi-Fi network.`);
     console.log(`   ℹ️   To use externally, set: PUBLIC_URL=https://your-url.com node server.js\n`);
   }
+
+  // Restore DB from Cloudinary snapshot (handles Render ephemeral filesystem)
+  restoreFromCloudinarySnapshot().catch(e => console.error('[Cloudinary] Startup restore error:', e.message));
 });
