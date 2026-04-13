@@ -771,6 +771,16 @@ const _upsertCounter = db.prepare(
   "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
 );
 
+function dbClearAllOrders() {
+  db.prepare('DELETE FROM orders').run();
+  orders = [];
+  orderCounter = 1000;
+  invoiceCounter = 0;
+  db.prepare("UPDATE app_config SET value=? WHERE key='orderCounter'").run(String(orderCounter));
+  db.prepare("UPDATE app_config SET value=? WHERE key='invoiceCounter'").run(String(invoiceCounter));
+  scheduleCloudinaryBackup();
+}
+
 function dbSaveOrder(order) {
   _insertOrder.run(order.id, order.tableNo, order.status, order.paymentStatus,
     order.createdAt, order.updatedAt, order.paidAt || null, JSON.stringify(order));
@@ -1050,6 +1060,18 @@ app.post('/api/auth', authLimiter, (req, res) => {
   return res.status(401).json({ success: false, error: 'Incorrect PIN' });
 });
 
+
+// POST /api/admin/clear-orders — wipe all orders (admin only, PIN verified)
+app.post('/api/admin/clear-orders', express.json(), (req, res) => {
+  const { pin } = req.body;
+  const adminPin = process.env.ADMIN_PIN;
+  if (!adminPin || pin !== adminPin) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  dbClearAllOrders();
+  io.emit('orders:update', []);
+  io.emit('admin:cart_update', { activeCarts: getPublicCarts() });
+  console.log('[Admin] All orders cleared');
+  res.json({ success: true });
+});
 
 app.get('/api/menu', (req, res) => {
   res.json({ success: true, data: MENU });

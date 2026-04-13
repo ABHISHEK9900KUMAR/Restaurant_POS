@@ -1322,6 +1322,7 @@ header {
     <button class="qr-btn" id="kotSettingsBtn">🖨 <span>KOT</span></button>
     <button class="qr-btn" id="upiSettingsBtn">💳 <span data-i18n="upi_settings_title">UPI Settings</span></button>
     <button class="qr-btn" id="gstSettingsBtn">🧾 <span data-i18n="gst_settings_title">GST Settings</span></button>
+    <button class="qr-btn" id="clearOrdersBtn" style="color:#ff6b6b;">🗑 <span>Clear Orders</span></button>
     <button class="qr-btn" id="qrBtn">⬛ <span data-i18n="table_qr">Table QR Codes</span></button>
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
@@ -2959,6 +2960,22 @@ document.getElementById('qrFreeBtn').addEventListener('click', () => {
   });
 });
 
+document.getElementById('clearOrdersBtn').addEventListener('click', async () => {
+  if (!confirm('Clear ALL orders? This cannot be undone.')) return;
+  const pin = sessionStorage.getItem('dinefy-admin-pin') || prompt('Enter admin PIN to confirm:');
+  if (!pin) return;
+  try {
+    const res = await fetch('/api/admin/clear-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    const data = await res.json();
+    if (data.success) { showToast('All orders cleared', 'success'); }
+    else { showToast(data.error || 'Failed', 'error'); }
+  } catch { showToast('Connection error', 'error'); }
+});
+
 qrBtn.addEventListener('click', () => {
   if (!qrInitialized) {
     qrInitialized = true;
@@ -3915,6 +3932,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
       const data = await res.json();
       if (data.success) {
         sessionStorage.setItem('dinefy-admin-auth', '1');
+        sessionStorage.setItem('dinefy-admin-pin', entry);
         screen.classList.add('fade-out');
         screen.addEventListener('animationend', () => screen.classList.add('hidden'), { once: true });
       } else {
