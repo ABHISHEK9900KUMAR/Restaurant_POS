@@ -834,6 +834,8 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <div class="pin-dot" id="pd1"></div>
       <div class="pin-dot" id="pd2"></div>
       <div class="pin-dot" id="pd3"></div>
+      <div class="pin-dot" id="pd4"></div>
+      <div class="pin-dot" id="pd5"></div>
     </div>
     <div class="pin-error" id="pinError"></div>
     <div class="pin-pad">
@@ -1988,7 +1990,7 @@ applyTranslations();
   }
 
   function renderDots() {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       document.getElementById('pd' + i).classList.toggle('filled', i < entry.length);
     }
   }
@@ -2016,10 +2018,10 @@ applyTranslations();
 
   document.querySelectorAll('.pin-key[data-key]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (entry.length >= 4) return;
+      if (entry.length >= 6) return;
       entry += btn.dataset.key;
       renderDots();
-      if (entry.length === 4) submitPin();
+      if (entry.length === 6) submitPin();
     });
   });
 
@@ -2031,9 +2033,9 @@ applyTranslations();
 
   document.addEventListener('keydown', (e) => {
     if (screen.classList.contains('hidden')) return;
-    if (e.key >= '0' && e.key <= '9' && entry.length < 4) {
+    if (e.key >= '0' && e.key <= '9' && entry.length < 6) {
       entry += e.key; renderDots();
-      if (entry.length === 4) submitPin();
+      if (entry.length === 6) submitPin();
     } else if (e.key === 'Backspace') {
       entry = entry.slice(0, -1); errEl.textContent = ''; renderDots();
     }

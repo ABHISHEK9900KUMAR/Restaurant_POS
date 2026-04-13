@@ -1042,8 +1042,9 @@ function getPublicCarts() {
 app.post('/api/auth', authLimiter, (req, res) => {
   const { pin, role } = req.body;
   if (!pin || !role) return res.status(400).json({ success: false, error: 'Missing pin or role' });
-  const adminPin  = process.env.ADMIN_PIN  || '1234';
-  const waiterPin = process.env.WAITER_PIN || '5678';
+  const adminPin  = process.env.ADMIN_PIN;
+  const waiterPin = process.env.WAITER_PIN;
+  if (!adminPin || !waiterPin) return res.status(500).json({ success: false, error: 'Server not configured' });
   if (role === 'admin'  && pin === adminPin)  return res.json({ success: true });
   if (role === 'waiter' && pin === waiterPin) return res.json({ success: true });
   return res.status(401).json({ success: false, error: 'Incorrect PIN' });
