@@ -17,6 +17,7 @@ const os         = require('os');
 const fs         = require('fs');
 const PDFDocument = require('pdfkit');
 const Database   = require('better-sqlite3');
+const { Pool }   = require('pg');
 const multer     = require('multer');
 const sharp      = require('sharp');
 const cloudinary = require('cloudinary').v2;
@@ -637,6 +638,49 @@ db.exec(`
   );
 `);
 
+// ─── Leads Persistence (Postgres on Render, SQLite locally) ──────────────────
+let pgPool = null;
+if (process.env.DATABASE_URL) {
+  pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+  // Ensure table exists in Postgres
+  pgPool.query(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      phone TEXT,
+      restaurant TEXT,
+      city TEXT,
+      business_type TEXT,
+      message TEXT,
+      created_at TEXT NOT NULL
+    )
+  `).catch(err => console.error('Postgres leads table init failed:', err));
+}
+
+async function insertLead(name, phone, restaurant, city, business_type, message, created_at) {
+  if (pgPool) {
+    await pgPool.query(
+      `INSERT INTO leads (name, phone, restaurant, city, business_type, message, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [name, phone, restaurant, city, business_type, message, created_at]
+    );
+  } else {
+    db.prepare(`INSERT INTO leads (name, phone, restaurant, city, business_type, message, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`).run(name, phone, restaurant, city, business_type, message, created_at);
+  }
+}
+
+async function getAllLeads() {
+  if (pgPool) {
+    const result = await pgPool.query('SELECT * FROM leads ORDER BY id DESC');
+    return result.rows;
+  }
+  return db.prepare('SELECT * FROM leads ORDER BY id DESC').all();
+}
+
 try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE menu_state ADD COLUMN stockCount INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE menu_state ADD COLUMN popular INTEGER'); } catch (_) {}
@@ -1213,18 +1257,21 @@ app.get('/api/public-url', (req, res) => {
 });
 
 // ── Contact Form Lead Capture ─────────────────────────────
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', async (req, res) => {
   const { name, phone, restaurant, city, business_type, message } = req.body;
   if (!name || !phone || !restaurant) return res.status(400).json({ error: 'Missing required fields' });
   const created_at = new Date().toISOString();
-  db.prepare(`INSERT INTO leads (name, phone, restaurant, city, business_type, message, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .run(name, phone, restaurant || '', city || '', business_type || '', message || '', created_at);
-  res.json({ success: true });
+  try {
+    await insertLead(name, phone, restaurant || '', city || '', business_type || '', message || '', created_at);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to save lead:', err);
+    res.status(500).json({ error: 'Failed to save lead' });
+  }
 });
 
 // ── Leads Viewer ──────────────────────────────────────────
-app.get('/leads', (req, res) => {
+app.get('/leads', async (req, res) => {
   // Basic Auth — password from LEADS_PASSWORD env variable
   const pwd = process.env.LEADS_PASSWORD;
   if (!pwd) return res.status(500).send('LEADS_PASSWORD env variable not set.');
@@ -1243,7 +1290,13 @@ app.get('/leads', (req, res) => {
     return res.status(401).send('Authentication required.');
   }
 
-  const rows = db.prepare('SELECT * FROM leads ORDER BY id DESC').all();
+  let rows;
+  try {
+    rows = await getAllLeads();
+  } catch (err) {
+    console.error('Failed to fetch leads:', err);
+    return res.status(500).send('Failed to fetch leads.');
+  }
   const fmt = iso => {
     const d = new Date(iso);
     return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
