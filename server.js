@@ -1361,7 +1361,7 @@ app.get('/admin/', (req, res) => res.sendFile(path.join(__dirname, 'public/admin
 app.get('/waiter', (req, res) => res.sendFile(path.join(__dirname, 'public/waiter/index.html')));
 app.get('/waiter/', (req, res) => res.sendFile(path.join(__dirname, 'public/waiter/index.html')));
 app.get('/website_landing_page', (req, res) => res.sendFile(path.join(__dirname, 'public/website_landing_page.html')));
-app.get('/', (req, res) => res.redirect('/customer'));
+app.get('/', (req, res) => res.redirect('/website_landing_page'));
 
 app.get('/api/tables', (req, res) => {
   res.json({ success: true, data: getTablesStatus() });
