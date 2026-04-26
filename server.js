@@ -88,6 +88,14 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json());
+app.use((req, res, next) => {
+  if (!req.path.includes('.') || req.path.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
@@ -595,6 +603,7 @@ let orders = [];         // Confirmed orders
 let activeCarts = {};    // Temporary cart sessions
 let orderCounter = 1000; // Starting order ID
 let invoiceCounter = 0;  // Sequential invoice number (persisted)
+let customerFavs = {};   // phone → [itemId, ...] (persisted via Cloudinary)
 
 // ─── Table Occupancy Tracking ─────────────────────────────────────────────────
 // occupiedTables: { 'T1': { customerName, orderId, since } }
@@ -684,6 +693,7 @@ async function getAllLeads() {
 try { db.exec('ALTER TABLE menu_state ADD COLUMN image TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE menu_state ADD COLUMN stockCount INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE menu_state ADD COLUMN popular INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE menu_state ADD COLUMN description TEXT'); } catch (_) {}
 db.exec(`CREATE TABLE IF NOT EXISTS custom_menu_items (id TEXT PRIMARY KEY, data TEXT NOT NULL);`);
 
 // Load persisted orderCounter
@@ -723,7 +733,7 @@ db.prepare('SELECT data FROM custom_menu_items').all().forEach(row => {
 });
 
 // Apply persisted menu state
-db.prepare('SELECT id, inStock, offer, image, stockCount, popular FROM menu_state').all().forEach(row => {
+db.prepare('SELECT id, inStock, offer, image, stockCount, popular, description FROM menu_state').all().forEach(row => {
   const item = MENU.find(m => m.id === row.id);
   if (item) {
     item.inStock = !!row.inStock;
@@ -731,6 +741,7 @@ db.prepare('SELECT id, inStock, offer, image, stockCount, popular FROM menu_stat
     item.image = row.image || null;
     item.stockCount = (row.stockCount !== null && row.stockCount !== undefined) ? row.stockCount : null;
     if (row.popular !== null && row.popular !== undefined) item.popular = !!row.popular;
+    if (row.description) item.description = row.description;
   }
 });
 
@@ -809,7 +820,7 @@ const _updateOrder = db.prepare(
   'UPDATE orders SET status=?, paymentStatus=?, updatedAt=?, paidAt=?, data=? WHERE id=?'
 );
 const _upsertMenuState = db.prepare(
-  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount, popular) VALUES (?, ?, ?, ?, ?, ?)'
+  'INSERT OR REPLACE INTO menu_state (id, inStock, offer, image, stockCount, popular, description) VALUES (?, ?, ?, ?, ?, ?, ?)'
 );
 const _upsertCounter = db.prepare(
   "INSERT OR REPLACE INTO app_config (key, value) VALUES ('orderCounter', ?)"
@@ -837,11 +848,16 @@ function dbUpdateOrder(order) {
   scheduleCloudinaryBackup();
 }
 
-function dbSaveMenuState(itemId, inStock, offer, image, stockCount, popular) {
+function dbSaveMenuState(itemId, inStock, offer, image, stockCount, popular, description) {
+  if (description === undefined) {
+    const m = MENU.find(mi => mi.id === itemId);
+    description = m ? (m.description || null) : null;
+  }
   _upsertMenuState.run(
     itemId, inStock ? 1 : 0, offer, image || null,
     (stockCount !== undefined && stockCount !== null) ? stockCount : null,
-    (popular !== undefined && popular !== null) ? (popular ? 1 : 0) : null
+    (popular !== undefined && popular !== null) ? (popular ? 1 : 0) : null,
+    description || null
   );
   scheduleCloudinaryBackup();
 }
@@ -862,6 +878,7 @@ async function doCloudinaryBackup() {
       orders,
       orderCounter,
       invoiceCounter,
+      customerFavs,
       menuState:   db.prepare('SELECT * FROM menu_state').all(),
       customItems: db.prepare('SELECT * FROM custom_menu_items').all(),
       appConfig:   db.prepare('SELECT * FROM app_config').all(),
@@ -943,6 +960,13 @@ async function restoreFromCloudinarySnapshot() {
         }
       } catch (_) {}
     });
+
+    // Restore customer favourites
+    if (snap.customerFavs && typeof snap.customerFavs === 'object') {
+      Object.entries(snap.customerFavs).forEach(([phone, favArr]) => {
+        if (Array.isArray(favArr)) customerFavs[phone] = favArr;
+      });
+    }
 
     // Restore occupied tables from active orders
     orders.forEach(order => {
@@ -1236,10 +1260,54 @@ app.get('/api/config', (req, res) => {
 app.get('/api/customer/history', (req, res) => {
   const phone = (req.query.phone || '').replace(/\D/g, '');
   if (phone.length < 10) return res.json({ success: false, error: 'Invalid phone' });
-  const rows = db.prepare(
-    "SELECT data FROM orders WHERE json_extract(data, '$.customerPhone') = ? ORDER BY json_extract(data, '$.createdAt') DESC LIMIT 3"
-  ).all(phone);
-  res.json({ success: true, history: rows.map(r => JSON.parse(r.data)) });
+
+  // Query in-memory orders (Render-safe: no SQLite race condition on startup)
+  const matched = orders
+    .filter(o => (o.customerPhone || '').replace(/\D/g, '') === phone && o.status !== 'cancelled')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (!matched.length) return res.json({ success: false });
+
+  const name = matched[0].customerName || '';
+  const visitCount = matched.length;
+
+  const recentOrders = matched.slice(0, 5).map(o => ({
+    orderId: o.id,
+    placedAt: o.createdAt,
+    items: (o.items || []).map(i => ({
+      id: i.id, name: i.name, emoji: i.emoji || '🍽️',
+      quantity: i.quantity || i.qty || 1, price: i.price,
+    })),
+    total: o.billing?.total || o.total || 0,
+  }));
+
+  // Aggregate frequent items across all orders
+  const itemMap = {};
+  matched.forEach(o => {
+    (o.items || []).forEach(i => {
+      if (!itemMap[i.id]) itemMap[i.id] = { id: i.id, name: i.name, emoji: i.emoji || '🍽️', price: i.price, count: 0 };
+      itemMap[i.id].count += (i.quantity || i.qty || 1);
+    });
+  });
+  const frequentItems = Object.values(itemMap).sort((a, b) => b.count - a.count).slice(0, 6);
+
+  res.json({ success: true, name, visitCount, recentOrders, frequentItems });
+});
+
+// ── Customer favourites (server-side, per phone) ───────────────────────────────
+app.get('/api/customer/favs', (req, res) => {
+  const phone = (req.query.phone || '').replace(/\D/g, '');
+  if (phone.length < 10) return res.json({ success: false, error: 'Invalid phone' });
+  res.json({ success: true, favs: customerFavs[phone] || [] });
+});
+
+app.post('/api/customer/favs', express.json(), (req, res) => {
+  const phone = (req.body.phone || '').replace(/\D/g, '');
+  const favs  = req.body.favs;
+  if (phone.length < 10 || !Array.isArray(favs)) return res.json({ success: false, error: 'Invalid data' });
+  customerFavs[phone] = favs.filter(id => typeof id === 'string');
+  scheduleCloudinaryBackup();
+  res.json({ success: true });
 });
 
 // ── Returns the correct public-facing URL for QR code generation ──────────────
@@ -2217,7 +2285,7 @@ const _customItemRow = db.prepare("SELECT MAX(CAST(SUBSTR(id,4) AS INTEGER)) as 
 let customItemCounter = (_customItemRow && _customItemRow.mx) ? _customItemRow.mx : 0;
 
 app.post('/api/admin/menu/items', express.json(), (req, res) => {
-  const { name, nameHi, category, price, emoji, tags, popular } = req.body;
+  const { name, nameHi, category, price, emoji, tags, popular, description } = req.body;
   if (!name || !String(name).trim()) return res.json({ success: false, error: 'Name is required' });
   if (!category || !String(category).trim()) return res.json({ success: false, error: 'Category is required' });
   if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) return res.json({ success: false, error: 'Valid price is required' });
@@ -2234,6 +2302,7 @@ app.post('/api/admin/menu/items', express.json(), (req, res) => {
     emoji: emoji || '🍽️',
     popular: !!popular,
     tags: Array.isArray(tags) ? tags : ['veg'],
+    description: description ? String(description).trim() : '',
     inStock: true, offer: 0, cookTime: 15, stockCount: null, image: null,
   };
   MENU.push(item);
@@ -2248,13 +2317,14 @@ app.post('/api/admin/menu/items', express.json(), (req, res) => {
 app.put('/api/admin/menu/items/:id', express.json(), (req, res) => {
   const item = MENU.find(m => m.id === req.params.id);
   if (!item) return res.json({ success: false, error: 'Item not found' });
-  const { name, nameHi, category, price, emoji, tags, popular } = req.body;
+  const { name, nameHi, category, price, emoji, tags, popular, description } = req.body;
   if (name !== undefined) { item.name = String(name).trim(); item.nameHi = String(nameHi || name).trim(); }
   if (category !== undefined) { item.category = String(category).trim(); item.categoryHi = String(category).trim(); }
   if (price !== undefined && !isNaN(parseFloat(price)) && parseFloat(price) > 0) item.price = parseFloat(price);
   if (emoji !== undefined) item.emoji = emoji || item.emoji;
   if (tags !== undefined && Array.isArray(tags)) item.tags = tags;
   if (popular !== undefined) item.popular = !!popular;
+  if (description !== undefined) item.description = String(description).trim();
   if (item.custom) {
     db.prepare('INSERT OR REPLACE INTO custom_menu_items (id, data) VALUES (?, ?)').run(item.id, JSON.stringify(item));
   }

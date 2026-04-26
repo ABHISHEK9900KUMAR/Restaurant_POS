@@ -267,6 +267,7 @@ header {
   .menu-item:hover .item-img-wrap img { transform: scale(1.05); }
 }
 .item-name   { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.item-desc   { font-size: 11px; color: var(--text-dim); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .item-price  { font-size: 16px; font-weight: 700; color: var(--gold); margin-top: auto; }
 .item-tag-icons {
   position: absolute; top: 8px; right: 8px;
@@ -281,6 +282,35 @@ header {
   font-size: 11px; font-weight: 700;
 }
 .item-badge.visible { display: flex; }
+
+/* ── Card Quantity Controls ───────────────────────── */
+.card-qty-wrap { position: relative; z-index: 2; margin-top: 4px; }
+.card-add-btn {
+  background: transparent; border: 1.5px solid var(--gold); color: var(--gold);
+  border-radius: 20px; padding: 4px 14px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.card-add-btn:active { background: var(--gold-dim); }
+.card-qty-controls {
+  display: inline-flex; align-items: center;
+  border: 1.5px solid var(--gold); border-radius: 20px;
+  overflow: hidden; background: var(--surface2);
+}
+.card-qty-btn {
+  background: none; border: none; color: var(--gold);
+  font-size: 15px; font-weight: 700;
+  width: 28px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.card-qty-btn:active { background: var(--gold-dim); }
+.card-qty-num {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  min-width: 20px; text-align: center;
+}
 
 /* ── Out of Stock overlay ────────────────────────── */
 .menu-item.out-of-stock {
@@ -377,6 +407,49 @@ header {
 .np-hint { font-size: 11px; color: var(--text-dim); text-align: center; }
 
 /* ── Phone Input + Reorder Strip ────────────────────── */
+/* ── Customer History Section ────────────────────────── */
+.cust-history { display: none; margin-top: 10px; }
+.cust-history.visible { display: block; }
+.cust-history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--surface2);
+  border-radius: var(--radius); margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.cust-history-welcome { font-size: 13px; font-weight: 700; color: var(--text); }
+.cust-history-visits { font-size: 11px; color: var(--gold); font-weight: 600; }
+.cust-order-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; margin-bottom: 8px; background: var(--surface2);
+}
+.cust-order-card-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+}
+.cust-order-date { font-size: 11px; color: var(--text-dim); font-weight: 600; }
+.cust-order-total { font-size: 12px; color: var(--gold); font-weight: 700; }
+.cust-order-items { font-size: 12px; color: var(--text-mid); line-height: 1.5; margin-bottom: 8px; }
+.cust-reorder-btn {
+  width: 100%; padding: 7px; border-radius: 8px;
+  background: transparent; border: 1.5px solid var(--gold); color: var(--gold);
+  font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 0.03em;
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.cust-reorder-btn:active { background: var(--gold-dim); }
+.cust-frequent { margin-top: 10px; }
+.cust-frequent-label { font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+.cust-freq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cust-freq-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 10px;
+  font-size: 12px; color: var(--text-mid); cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cust-freq-chip:active { border-color: var(--gold); color: var(--gold); }
+.cust-freq-chip-plus { font-size: 14px; color: var(--gold); font-weight: 700; margin-left: 2px; }
+
+/* ── Customer History Section ────────────────────────── */
 .reorder-strip {
   margin-top: 8px;
   background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.03));
@@ -427,6 +500,81 @@ header {
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 800;
 }
+
+/* ── Menu Nav FAB ────────────────────────────────────── */
+.menu-nav-fab {
+  position: fixed; bottom: 70px; right: 16px; z-index: 61;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  color: var(--text); border-radius: 50px;
+  padding: 9px 14px; display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35); cursor: pointer;
+  transition: all var(--transition); -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.menu-nav-fab:active { transform: scale(0.93); }
+.menu-nav-fab-icon { font-size: 15px; line-height: 1; }
+@media (min-width: 900px) { .menu-nav-fab { display: none; } }
+
+/* ── Menu Nav Panel ──────────────────────────────────── */
+.menu-nav-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.5); animation: npFadeIn 0.15s ease;
+}
+.menu-nav-overlay.open { display: block; }
+.menu-nav-panel {
+  position: fixed; top: 0; right: -320px; bottom: 0; width: 300px; max-width: 82vw;
+  background: var(--surface); border-left: 1px solid var(--border);
+  z-index: 201; display: flex; flex-direction: column;
+  transition: right 0.28s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.menu-nav-panel.open { right: 0; }
+.menu-nav-header {
+  padding: 18px 16px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--surface); z-index: 2;
+}
+.menu-nav-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.menu-nav-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 20px; cursor: pointer; padding: 4px 6px; line-height: 1;
+  -webkit-tap-highlight-color: transparent; border-radius: 50%;
+  transition: background 0.1s;
+}
+.menu-nav-close:active { background: var(--surface2); }
+.menu-nav-list { flex: 1; overflow-y: auto; padding-bottom: 40px; }
+.menu-nav-cat {
+  padding: 12px 16px 5px;
+  font-size: 10px; font-weight: 800; color: var(--gold);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s;
+}
+.menu-nav-cat:active { opacity: 0.7; }
+.menu-nav-cat-count {
+  font-size: 10px; color: var(--text-dim); font-weight: 500;
+  background: var(--surface2); padding: 1px 6px; border-radius: 8px;
+  letter-spacing: 0;
+}
+.menu-nav-item {
+  padding: 7px 12px 7px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border-left: 2.5px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-nav-item.nav-oos { opacity: 0.38; pointer-events: none; }
+.mnav-left {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  cursor: pointer; padding: 2px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.mnav-left:active { opacity: 0.7; }
+.mnav-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.menu-nav-item-emoji { font-size: 15px; flex-shrink: 0; }
+.menu-nav-item-name { font-size: 12.5px; color: var(--text-mid); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-nav-item-price { font-size: 11px; color: var(--gold); font-weight: 600; }
+.mnav-qty-wrap { flex-shrink: 0; }
 
 /* ── Combo Suggestion Strip ─────────────────────────── */
 .combo-strip {
@@ -1556,12 +1704,16 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
       <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
       <input type="tel" id="customerPhone" maxlength="15" autocomplete="tel" data-i18n-placeholder="phone_placeholder" placeholder="Phone (optional)" />
     </div>
-    <div class="reorder-strip hidden" id="reorderStrip">
-      <div class="reorder-info">
-        <div class="reorder-name" id="reorderName"></div>
-        <div class="reorder-items" id="reorderItems"></div>
+    <div class="cust-history" id="dCustHistory">
+      <div class="cust-history-header">
+        <span class="cust-history-welcome" id="dHistWelcome"></span>
+        <span class="cust-history-visits" id="dHistVisits"></span>
       </div>
-      <button class="reorder-btn" id="reorderBtn" data-i18n="order_again">Order Again</button>
+      <div id="dHistOrders"></div>
+      <div class="cust-frequent" id="dHistFrequent" style="display:none">
+        <div class="cust-frequent-label">⭐ Usually orders</div>
+        <div class="cust-freq-chips" id="dFreqChips"></div>
+      </div>
     </div>
   </div>
 
@@ -1656,12 +1808,16 @@ input:checked + .toggle-track { background: var(--gold); border-color: var(--gol
         <svg class="name-field-icon" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
         <input type="tel" id="mCustomerPhone" maxlength="15" autocomplete="tel" data-i18n-placeholder="phone_placeholder" placeholder="Phone (optional)" />
       </div>
-      <div class="reorder-strip hidden" id="mReorderStrip">
-        <div class="reorder-info">
-          <div class="reorder-name" id="mReorderName"></div>
-          <div class="reorder-items" id="mReorderItems"></div>
+      <div class="cust-history" id="mCustHistory">
+        <div class="cust-history-header">
+          <span class="cust-history-welcome" id="mHistWelcome"></span>
+          <span class="cust-history-visits" id="mHistVisits"></span>
         </div>
-        <button class="reorder-btn" id="mReorderBtn" data-i18n="order_again">Order Again</button>
+        <div id="mHistOrders"></div>
+        <div class="cust-frequent" id="mHistFrequent" style="display:none">
+          <div class="cust-frequent-label">⭐ Usually orders</div>
+          <div class="cust-freq-chips" id="mFreqChips"></div>
+        </div>
       </div>
     </div>
 
@@ -1943,6 +2099,7 @@ const TRANSLATIONS = {
     qf_on_offer:   'On Offer',
     qf_high_protein: 'High Protein',
     qf_guilt_free:   'Guilt-Free',
+    qf_jain:         'Jain',
     qf_no_items:   'No items match this filter',
     // Nutrition popup
     np_calories: 'kcal',
@@ -2071,6 +2228,7 @@ const TRANSLATIONS = {
     qf_on_offer:     'ऑफर पर',
     qf_high_protein: 'हाई प्रोटीन',
     qf_guilt_free:   'गिल्ट-फ्री',
+    qf_jain:         'जैन',
     qf_no_items:     'इस फ़िल्टर में कोई आइटम नहीं',
     // Nutrition popup
     np_calories: 'कैलोरी',
@@ -2238,7 +2396,8 @@ const state = {
   tableNo: _tableParam,
   customerName: '',
   customerPhone: '',
-  _lastHistory: null,
+  knownPhone: null,
+  _custHistory: null,
   activeQuickFilters: new Set(), // multi-select: 'bestseller' | 'on-offer' | 'high-protein' | 'guilt-free'
   activeCategory: null,          // currently selected category (null = All)
   searchQuery: '',               // current search string
@@ -2254,7 +2413,16 @@ function getFavs() {
   try { return new Set(JSON.parse(localStorage.getItem(_FAV_KEY)) || []); }
   catch(e) { return new Set(); }
 }
-function saveFavs(favs) { localStorage.setItem(_FAV_KEY, JSON.stringify([...favs])); }
+function saveFavs(favs) {
+  localStorage.setItem(_FAV_KEY, JSON.stringify([...favs]));
+  if (state.knownPhone) {
+    fetch('/api/customer/favs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: state.knownPhone, favs: [...favs] }),
+    }).catch(() => {});
+  }
+}
 function toggleFav(itemId) {
   const favs = getFavs();
   if (favs.has(itemId)) favs.delete(itemId); else favs.add(itemId);
@@ -2457,6 +2625,7 @@ function renderMenu() {
           ? `<div class="item-img-wrap"><img src="${item.image}" alt="${item.name}" loading="lazy"></div>`
           : `<div class="item-emoji">${item.emoji}</div>`}
         <div class="item-name">${iName(item)}</div>
+        ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
         <button class="fav-btn" data-fav="${item.id}" aria-label="Favourite" aria-pressed="${getFavs().has(item.id)}">${getFavs().has(item.id) ? '❤️' : '🤍'}</button>
         <div class="item-price${hasOffer ? ' offer' : ''}">
           ${hasOffer ? `<span class="item-price-original">${fmt(item.price)}</span>` : ''}${fmt(effPrice)}
@@ -2464,7 +2633,7 @@ function renderMenu() {
         ${(() => { const ic = []; if (item.popular) ic.push('🏆'); if (hasOffer) ic.push('🔥'); if ((item.tags||[]).includes('high-protein')) ic.push('💪'); if ((item.tags||[]).includes('guilt-free')) ic.push('🥗'); return ic.length ? `<div class="item-tag-icons">${ic.map(e=>`<span class="item-tag-icon">${e}</span>`).join('')}</div>` : ''; })()}
         ${oos ? `<div class="item-oos-label">${t('out_of_stock')}</div>` : ''}
         ${(!oos && item.stockCount !== null && item.stockCount > 0 && item.stockCount <= 5) ? `<div class="stock-low-badge" id="slbadge-${item.id}">${t('only_n_left').replace('{n}', item.stockCount)}</div>` : `<div class="stock-low-badge" id="slbadge-${item.id}" style="display:none"></div>`}
-        <div class="item-badge" id="badge-${item.id}">0</div>
+        <div class="card-qty-wrap" id="cqw-${item.id}"></div>
       `;
       const isLPConsumed = initLongPress(card, item);
       // Fav button — stop propagation so it doesn't trigger add-to-cart
@@ -2474,8 +2643,9 @@ function renderMenu() {
         // Re-render quick filter nav in case Favourites chip needs to appear/disappear
         renderQuickFilters();
       });
-      if (!oos) card.addEventListener('click', () => {
+      if (!oos) card.addEventListener('click', e => {
         if (isLPConsumed && isLPConsumed()) return;
+        if (e.target.closest('.fav-btn, .card-qty-wrap')) return;
         addToCart(item);
       });
       grid.appendChild(card);
@@ -2494,6 +2664,7 @@ const QF_DEFS = [
   { id: 'on-offer',     icon: '🔥', labelKey: 'qf_on_offer',     match: i => i.offer > 0 },
   { id: 'high-protein', icon: '💪', labelKey: 'qf_high_protein', match: i => (i.tags || []).includes('high-protein') },
   { id: 'guilt-free',   icon: '🥗', labelKey: 'qf_guilt_free',   match: i => (i.tags || []).includes('guilt-free') },
+  { id: 'jain',         icon: '🟢', labelKey: 'qf_jain',         match: i => (i.tags || []).includes('jain') },
   { id: 'favourites',   icon: '❤️', labelKey: 'qf_favourites',   match: i => getFavs().has(i.id) },
 ];
 
@@ -2505,6 +2676,8 @@ function renderQuickFilters() {
     if (qf.id === 'on-offer' && !state.menu.some(i => i.offer > 0)) return;
     // Hide "My Favourites" when nothing is favourited
     if (qf.id === 'favourites' && getFavs().size === 0) return;
+    // Hide "Jain" when no items are tagged jain
+    if (qf.id === 'jain' && !state.menu.some(i => (i.tags || []).includes('jain'))) return;
     const btn = document.createElement('button');
     btn.className = 'qf-btn' + (state.activeQuickFilters.has(qf.id) ? ' active' : '');
     btn.dataset.qf = qf.id;
@@ -2697,8 +2870,7 @@ function initLongPress(card, item) {
     if (_lpActive) {
       _lpActive = false;
       lpConsumed = true;
-      // Popup stays visible — user taps the backdrop to dismiss.
-      // Suppress the click that fires after touchend.
+      hideNutritionPopup();
       setTimeout(() => { lpConsumed = false; }, 400);
     }
   });
@@ -3050,14 +3222,24 @@ function syncCartDOM(container, items, isDesktop) {
 // ── Badges on menu cards ─────────────────────────────────
 function updateBadges() {
   state.menu.forEach(item => {
-    const badge = document.getElementById('badge-' + item.id);
-    if (!badge) return;
+    const wrap = document.getElementById('cqw-' + item.id);
+    if (!wrap) return;
     const inCart = state.cart[item.id];
-    if (inCart && inCart.quantity > 0) {
-      badge.textContent = inCart.quantity;
-      badge.classList.add('visible');
+    const qty = inCart ? inCart.quantity : 0;
+    const prevQty = parseInt(wrap.dataset.qty ?? '-1', 10);
+    if (prevQty === qty) return;
+    wrap.dataset.qty = qty;
+    if (qty > 0) {
+      wrap.innerHTML = `<div class="card-qty-controls">
+        <button class="card-qty-btn" data-cqdec="${item.id}">${qty === 1 ? '🗑' : '−'}</button>
+        <span class="card-qty-num">${qty}</span>
+        <button class="card-qty-btn" data-cqinc="${item.id}">+</button>
+      </div>`;
+      wrap.querySelector('[data-cqdec]').addEventListener('click', e => { e.stopPropagation(); updateQty(item.id, -1); });
+      wrap.querySelector('[data-cqinc]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
     } else {
-      badge.classList.remove('visible');
+      wrap.innerHTML = `<button class="card-add-btn" data-cqadd="${item.id}">+ ADD</button>`;
+      wrap.querySelector('[data-cqadd]').addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
     }
   });
 }
@@ -3844,57 +4026,128 @@ function onPhoneInput(value) {
   if (state.customerPhone.length >= 10) {
     _historyTimer = setTimeout(() => fetchHistory(state.customerPhone), 500);
   } else {
-    hideReorderStrip();
+    hideCustHistory();
   }
 }
 document.getElementById('customerPhone').addEventListener('input', function() { onPhoneInput(this.value); });
 document.getElementById('mCustomerPhone').addEventListener('input', function() { onPhoneInput(this.value); });
 
+async function syncFavsFromServer(phone) {
+  try {
+    const res = await fetch(`/api/customer/favs?phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+    if (data.success && Array.isArray(data.favs) && data.favs.length) {
+      const local = getFavs();
+      data.favs.forEach(id => local.add(id));
+      localStorage.setItem(_FAV_KEY, JSON.stringify([...local]));
+      renderMenu();
+      renderQuickFilters();
+    }
+  } catch (e) {}
+}
+
 async function fetchHistory(phone) {
   try {
-    const res = await fetch(`/api/customer/history?phone=${phone}`);
+    const res = await fetch(`/api/customer/history?phone=${encodeURIComponent(phone)}`);
     const data = await res.json();
-    if (data.success && data.history.length > 0) {
-      state._lastHistory = data.history[0];
-      showReorderStrip(data.history[0]);
+    if (data.success) {
+      state.knownPhone = phone;
+      state._custHistory = data;
+      if (data.name && !state.customerName.trim()) onNameInput(data.name);
+      showCustHistory(data);
+      syncFavsFromServer(phone);
     } else {
-      hideReorderStrip();
+      state.knownPhone = phone; // phone known even if no history yet
+      hideCustHistory();
+      syncFavsFromServer(phone);
     }
-  } catch (e) { hideReorderStrip(); }
+  } catch (e) { hideCustHistory(); }
 }
 
-function showReorderStrip(order) {
-  const itemsSummary = (order.items || []).map(i => `${i.quantity}× ${i.name}`).join(', ');
-  const total = order.billing?.total ? ` · ₹${Math.round(order.billing.total)}` : '';
-  const nameText = `${t('welcome_back')}, ${order.customerName}!`;
-  const itemsText = `${t('last_order')}: ${itemsSummary}${total}`;
-  ['reorderName', 'mReorderName'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = nameText; });
-  ['reorderItems', 'mReorderItems'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = itemsText; });
-  ['reorderStrip', 'mReorderStrip'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+function _relativeDate(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return `${diff} days ago`;
+  if (diff < 30) return `${Math.floor(diff / 7)} week${Math.floor(diff / 7) > 1 ? 's' : ''} ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-function hideReorderStrip() {
-  state._lastHistory = null;
-  ['reorderStrip', 'mReorderStrip'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+function _buildHistoryHTML(data, prefix) {
+  const welcome = document.getElementById(prefix + 'HistWelcome');
+  const visits  = document.getElementById(prefix + 'HistVisits');
+  const orders  = document.getElementById(prefix + 'HistOrders');
+  const freqSec = document.getElementById(prefix + 'HistFrequent');
+  const chips   = document.getElementById(prefix + 'FreqChips');
+
+  if (welcome) welcome.textContent = `👋 Welcome back, ${data.name}!`;
+  if (visits)  visits.textContent  = `${data.visitCount} order${data.visitCount > 1 ? 's' : ''}`;
+
+  if (orders) {
+    orders.innerHTML = '';
+    (data.recentOrders || []).forEach((order, idx) => {
+      const card = document.createElement('div');
+      card.className = 'cust-order-card';
+      const itemLines = (order.items || []).slice(0, 3).map(i => `${i.emoji} ${i.name} ×${i.quantity}`).join('\n');
+      const moreCount = (order.items || []).length - 3;
+      card.innerHTML = `
+        <div class="cust-order-card-header">
+          <span class="cust-order-date">📅 ${_relativeDate(order.placedAt)}</span>
+          <span class="cust-order-total">${order.total ? '₹' + Math.round(order.total) : ''}</span>
+        </div>
+        <div class="cust-order-items">${itemLines}${moreCount > 0 ? `\n+${moreCount} more` : ''}</div>
+        <button class="cust-reorder-btn" data-oidx="${idx}">🔁 Add to Cart</button>`;
+      card.querySelector('.cust-reorder-btn').addEventListener('click', () => doReorder(order));
+      orders.appendChild(card);
+    });
+  }
+
+  if (freqSec && chips && data.frequentItems?.length) {
+    chips.innerHTML = '';
+    data.frequentItems.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'cust-freq-chip';
+      chip.innerHTML = `<span>${item.emoji} ${item.name}</span><span class="cust-freq-chip-plus">+</span>`;
+      chip.addEventListener('click', () => {
+        const menuItem = state.menu.find(m => m.id === item.id);
+        if (menuItem && menuItem.inStock !== false) { addToCart(menuItem); showToast(`${menuItem.name} added`, 'success', 1500); }
+        else showToast('Item unavailable', 'error', 1500);
+      });
+      chips.appendChild(chip);
+    });
+    freqSec.style.display = 'block';
+  } else if (freqSec) {
+    freqSec.style.display = 'none';
+  }
 }
 
-function doReorder() {
-  if (!state._lastHistory) return;
-  const order = state._lastHistory;
-  onNameInput(order.customerName);
-  state.cart = {};
+function showCustHistory(data) {
+  _buildHistoryHTML(data, 'd');
+  _buildHistoryHTML(data, 'm');
+  document.getElementById('dCustHistory')?.classList.add('visible');
+  document.getElementById('mCustHistory')?.classList.add('visible');
+}
+
+function hideCustHistory() {
+  state._custHistory = null;
+  document.getElementById('dCustHistory')?.classList.remove('visible');
+  document.getElementById('mCustHistory')?.classList.remove('visible');
+}
+
+function doReorder(order) {
+  let skipped = 0;
   (order.items || []).forEach(item => {
     const menuItem = state.menu.find(m => m.id === item.id);
-    if (menuItem && menuItem.inStock) state.cart[item.id] = { ...menuItem, quantity: item.quantity };
+    if (menuItem && menuItem.inStock !== false) {
+      const existing = state.cart[item.id];
+      state.cart[item.id] = { ...menuItem, quantity: (existing ? existing.quantity : 0) + item.quantity };
+    } else { skipped++; }
   });
-  updateBillSummary();
-  broadcastCartDebounced();
-  if (isDesktop()) renderSidebarCart();
-  else openCart();
-  hideReorderStrip();
+  onCartChanged();
+  if (skipped) showToast(`${skipped} item${skipped > 1 ? 's' : ''} unavailable, skipped`, 'info');
+  else showToast('Items added to cart', 'success', 1800);
+  if (!isDesktop()) openCart();
 }
-document.getElementById('reorderBtn').addEventListener('click', doReorder);
-document.getElementById('mReorderBtn').addEventListener('click', doReorder);
 
 // ── Toast ────────────────────────────────────────────────
 function showToast(msg, type = 'info', duration = 3000) {
@@ -4023,6 +4276,113 @@ document.getElementById('menuPanel').addEventListener('scroll', onMenuScroll, { 
 
     showToastPalette(next.label);
   });
+})();
+</script>
+<!-- ── Menu Nav FAB + Panel ── -->
+<button class="menu-nav-fab" id="menuNavFab" aria-label="Browse menu">
+  <span class="menu-nav-fab-icon">☰</span>
+  <span>MENU</span>
+</button>
+<div class="menu-nav-overlay" id="menuNavOverlay"></div>
+<div class="menu-nav-panel" id="menuNavPanel" role="dialog" aria-modal="true">
+  <div class="menu-nav-header">
+    <span class="menu-nav-title">📋 Menu</span>
+    <button class="menu-nav-close" id="menuNavClose">✕</button>
+  </div>
+  <div class="menu-nav-list" id="menuNavList"></div>
+</div>
+
+<script>
+(function () {
+  const fab     = document.getElementById('menuNavFab');
+  const overlay = document.getElementById('menuNavOverlay');
+  const panel   = document.getElementById('menuNavPanel');
+  const list    = document.getElementById('menuNavList');
+
+  function openMenuNav() {
+    buildList();
+    overlay.classList.add('open');
+    panel.classList.add('open');
+  }
+  function closeMenuNav() {
+    overlay.classList.remove('open');
+    panel.classList.remove('open');
+  }
+
+  fab.addEventListener('click', openMenuNav);
+  overlay.addEventListener('click', closeMenuNav);
+  document.getElementById('menuNavClose').addEventListener('click', closeMenuNav);
+
+  function updateMnavQty(item) {
+    const wrap = document.getElementById('mnav-qty-' + item.id);
+    if (!wrap) return;
+    const inCart = state.cart[item.id];
+    const qty = inCart ? inCart.quantity : 0;
+    if (qty > 0) {
+      wrap.innerHTML = `<div class="card-qty-controls">
+        <button class="card-qty-btn" data-mndec="${item.id}">${qty === 1 ? '🗑' : '−'}</button>
+        <span class="card-qty-num">${qty}</span>
+        <button class="card-qty-btn" data-mninc="${item.id}">+</button>
+      </div>`;
+      wrap.querySelector('[data-mndec]').addEventListener('click', e => {
+        e.stopPropagation(); updateQty(item.id, -1); updateMnavQty(item);
+      });
+      wrap.querySelector('[data-mninc]').addEventListener('click', e => {
+        e.stopPropagation(); addToCart(item); updateMnavQty(item);
+      });
+    } else {
+      wrap.innerHTML = `<button class="card-add-btn" data-mnadd="${item.id}">+ ADD</button>`;
+      wrap.querySelector('[data-mnadd]').addEventListener('click', e => {
+        e.stopPropagation(); addToCart(item); updateMnavQty(item);
+      });
+    }
+  }
+
+  function buildList() {
+    list.innerHTML = '';
+    const cats = [...new Set(state.menu.map(i => i.category))];
+    cats.forEach(cat => {
+      const items = state.menu.filter(i => i.category === cat);
+
+      const catEl = document.createElement('div');
+      catEl.className = 'menu-nav-cat';
+      catEl.innerHTML = `<span>${cat}</span><span class="menu-nav-cat-count">${items.length}</span>`;
+      catEl.addEventListener('click', () => {
+        const sec = document.querySelector(`.menu-section[data-cat="${CSS.escape(cat)}"]`);
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        closeMenuNav();
+      });
+      list.appendChild(catEl);
+
+      items.forEach(item => {
+        const oos = item.inStock === false;
+        const hasOffer = item.offer > 0;
+        const effPrice = hasOffer ? Math.round(item.price * (1 - item.offer / 100) * 100) / 100 : item.price;
+
+        const el = document.createElement('div');
+        el.className = 'menu-nav-item' + (oos ? ' nav-oos' : '');
+        el.innerHTML = `
+          <div class="mnav-left">
+            <span class="menu-nav-item-emoji">${item.emoji}</span>
+            <div class="mnav-info">
+              <div class="menu-nav-item-name">${item.name}</div>
+              <div class="menu-nav-item-price">${fmt(effPrice)}${hasOffer ? ` <span style="text-decoration:line-through;color:var(--text-dim);font-size:10px">${fmt(item.price)}</span>` : ''}</div>
+            </div>
+          </div>
+          <div class="mnav-qty-wrap" id="mnav-qty-${item.id}"></div>`;
+
+        // tap left side → scroll to card
+        el.querySelector('.mnav-left').addEventListener('click', () => {
+          const card = document.getElementById('card-' + item.id);
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          closeMenuNav();
+        });
+
+        list.appendChild(el);
+        if (!oos) updateMnavQty(item);
+      });
+    });
+  }
 })();
 </script>
 </body>

@@ -1244,6 +1244,7 @@ header {
 .mgr-tag.popular { background: rgba(212,175,55,0.15); color: var(--gold); border: 1px solid rgba(212,175,55,0.4); }
 .mgr-tag.high-protein { background: rgba(52,199,89,0.12); color: var(--green); border: 1px solid rgba(52,199,89,0.3); }
 .mgr-tag.guilt-free { background: rgba(52,199,89,0.08); color: #7ed4a7; border: 1px solid rgba(52,199,89,0.2); }
+.mgr-tag.jain { background: rgba(0,180,80,0.12); color: #00b450; border: 1px solid rgba(0,180,80,0.3); }
 .mgr-tag.meal { background: rgba(90,140,255,0.12); color: #7baeff; border: 1px solid rgba(90,140,255,0.3); }
 .mgr-tag.custom-item { background: rgba(255,160,60,0.12); color: #ffaa3c; border: 1px solid rgba(255,160,60,0.3); }
 .mgr-action-btns { display: flex; gap: 5px; }
@@ -1419,12 +1420,17 @@ header {
         </div>
       </div>
       <div class="item-form-group">
+        <label class="item-form-label">Description <span style="font-weight:400;color:var(--text-dim);font-size:11px">— shown on menu card (optional, max 120 chars)</span></label>
+        <textarea id="itemDescription" maxlength="120" rows="2" placeholder="e.g. Crispy paneer tossed in tangy Indo-Chinese sauce with peppers & spring onion..." style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;resize:vertical;width:100%;box-sizing:border-box;font-family:inherit"></textarea>
+      </div>
+      <div class="item-form-group">
         <label class="item-form-label">Badges</label>
         <div class="item-tags-grid">
           <label class="item-tag-check"><input type="checkbox" id="tagPopular" /> ⭐ Best Seller</label>
           <label class="item-tag-check"><input type="checkbox" id="tagHighProtein" /> 💪 High Protein</label>
           <label class="item-tag-check"><input type="checkbox" id="tagGuiltFree" /> 🥗 Guilt Free</label>
           <label class="item-tag-check"><input type="checkbox" id="tagMeal" /> 🍱 Meal Combo</label>
+          <label class="item-tag-check"><input type="checkbox" id="tagJain" /> 🟢 Jain (No Onion/Garlic)</label>
         </div>
       </div>
     </div>
@@ -3179,6 +3185,7 @@ function renderMenuMgrList(cat) {
     if (item.popular) tagBadges.push(`<span class="mgr-tag popular">⭐ Best Seller</span>`);
     if ((item.tags||[]).includes('high-protein')) tagBadges.push(`<span class="mgr-tag high-protein">💪 High Protein</span>`);
     if ((item.tags||[]).includes('guilt-free')) tagBadges.push(`<span class="mgr-tag guilt-free">🥗 Guilt Free</span>`);
+    if ((item.tags||[]).includes('jain')) tagBadges.push(`<span class="mgr-tag jain">🟢 Jain</span>`);
     if ((item.tags||[]).includes('meal')) tagBadges.push(`<span class="mgr-tag meal">🍱 Meal</span>`);
     if (item.custom) tagBadges.push(`<span class="mgr-tag custom-item">✦ Custom</span>`);
 
@@ -3433,6 +3440,8 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
     document.getElementById('tagHighProtein').checked = !!(item && (item.tags||[]).includes('high-protein'));
     document.getElementById('tagGuiltFree').checked   = !!(item && (item.tags||[]).includes('guilt-free'));
     document.getElementById('tagMeal').checked        = !!(item && (item.tags||[]).includes('meal'));
+    document.getElementById('tagJain').checked        = !!(item && (item.tags||[]).includes('jain'));
+    document.getElementById('itemDescription').value  = (item && item.description) || '';
 
     title.textContent = item ? '✏️ Edit Item' : '➕ Add New Item';
     saveBtn.textContent = item ? 'Save Changes' : 'Add to Menu';
@@ -3463,8 +3472,10 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
     if (document.getElementById('tagHighProtein').checked) tags.push('high-protein');
     if (document.getElementById('tagGuiltFree').checked)   tags.push('guilt-free');
     if (document.getElementById('tagMeal').checked)         tags.push('meal');
+    if (document.getElementById('tagJain').checked)         tags.push('jain');
 
-    const popular = document.getElementById('tagPopular').checked;
+    const popular     = document.getElementById('tagPopular').checked;
+    const description = document.getElementById('itemDescription').value.trim();
     const editId  = idInput.value;
     const url     = editId ? `/api/admin/menu/items/${editId}` : '/api/admin/menu/items';
     const method  = editId ? 'PUT' : 'POST';
@@ -3473,7 +3484,7 @@ document.getElementById('menuMgrOverlay').addEventListener('click', e => {
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category: cat, price, emoji, tags, popular }),
+      body: JSON.stringify({ name, category: cat, price, emoji, tags, popular, description }),
     })
       .then(r => r.json())
       .then(res => {
